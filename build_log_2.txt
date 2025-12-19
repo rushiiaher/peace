@@ -1,0 +1,28 @@
+
+> my-v0-project@0.1.0 build C:\Users\rushi\Desktop\Personal\proj4\main
+> next build
+
+   ▲ Next.js 15.2.4
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully
+   Skipping validation of types
+   Skipping linting
+   Collecting page data ...
+   Generating static pages (0/130) ...
+ ⨯ useSearchParams() should be wrapped in a suspense boundary at page "/super-admin/exams/reschedule". Read more: https://nextjs.org/docs/messages/missing-suspense-with-csr-bailout
+    at a (C:\Users\rushi\Desktop\Personal\proj4\main\.next\server\chunks\4661.js:4:46438)
+    at f (C:\Users\rushi\Desktop\Personal\proj4\main\.next\server\chunks\4661.js:2:19124)
+    at x (C:\Users\rushi\Desktop\Personal\proj4\main\.next\server\app\(lms)\super-admin\exams\reschedule\page.js:1:5333)
+    at nL (C:\Users\rushi\Desktop\Personal\proj4\main\node_modules\.pnpm\next@15.2.4_react-dom@19.2.0_react@19.2.0__react@19.2.0\node_modules\next\dist\compiled\next-server\app-page.runtime.prod.js:76:46773)
+    at nF (C:\Users\rushi\Desktop\Personal\proj4\main\node_modules\.pnpm\next@15.2.4_react-dom@19.2.0_react@19.2.0__react@19.2.0\node_modules\next\dist\compiled\next-server\app-page.runtime.prod.js:76:48548)
+    at nq (C:\Users\rushi\Desktop\Personal\proj4\main\node_modules\.pnpm\next@15.2.4_react-dom@19.2.0_react@19.2.0__react@19.2.0\node_modules\next\dist\compiled\next-server\app-page.runtime.prod.js:76:67434)
+    at nH (C:\Users\rushi\Desktop\Personal\proj4\main\node_modules\.pnpm\next@15.2.4_react-dom@19.2.0_react@19.2.0__react@19.2.0\node_modules\next\dist\compiled\next-server\app-page.runtime.prod.js:76:65009)
+    at nU (C:\Users\rushi\Desktop\Personal\proj4\main\node_modules\.pnpm\next@15.2.4_react-dom@19.2.0_react@19.2.0__react@19.2.0\node_modules\next\dist\compiled\next-server\app-page.runtime.prod.js:76:47125)
+    at nF (C:\Users\rushi\Desktop\Personal\proj4\main\node_modules\.pnpm\next@15.2.4_react-dom@19.2.0_react@19.2.0__react@19.2.0\node_modules\next\dist\compiled\next-server\app-page.runtime.prod.js:76:48594)
+    at nF (C:\Users\rushi\Desktop\Personal\proj4\main\node_modules\.pnpm\next@15.2.4_react-dom@19.2.0_react@19.2.0__react@19.2.0\node_modules\next\dist\compiled\next-server\app-page.runtime.prod.js:76:64360)
+Error occurred prerendering page "/super-admin/exams/reschedule". Read more: https://nextjs.org/docs/messages/prerender-error
+Export encountered an error on /(lms)/super-admin/exams/reschedule/page: /super-admin/exams/reschedule, exiting the build.
+ ⨯ Next.js build worker exited with code: 1 and signal: null
+ ELIFECYCLE  Command failed with exit code 1.

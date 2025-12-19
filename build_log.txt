@@ -1,0 +1,28 @@
+
+> my-v0-project@0.1.0 build C:\Users\rushi\Desktop\Personal\proj4\main
+> next build
+
+   ▲ Next.js 15.2.4
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+Failed to compile.
+
+./app/(lms)/super-admin/reports/page.tsx
+Module parse failed: Identifier 'SimpleLineChart' has already been declared (6:9)
+File was processed with these loaders:
+ * ./node_modules/.pnpm/next@15.2.4_react-dom@19.2.0_react@19.2.0__react@19.2.0/node_modules/next/dist/build/webpack/loaders/next-flight-client-module-loader.js
+ * ./node_modules/.pnpm/next@15.2.4_react-dom@19.2.0_react@19.2.0__react@19.2.0/node_modules/next/dist/build/webpack/loaders/next-swc-loader.js
+You may need an additional loader to handle the result of these loaders.
+| import { Button } from "@/components/ui/button";
+| import { SimpleLineChart } from "@/components/lms/widgets";
+> import { SimpleLineChart } from "@/components/lms/widgets";
+| // import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs" - Removed
+| import { toast } from "sonner";
+
+Import trace for requested module:
+./app/(lms)/super-admin/reports/page.tsx
+
+
+> Build failed because of webpack errors
+ ELIFECYCLE  Command failed with exit code 1.

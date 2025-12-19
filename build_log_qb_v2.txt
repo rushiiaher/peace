@@ -1,0 +1,200 @@
+
+> my-v0-project@0.1.0 build C:\Users\rushi\Desktop\Personal\proj4\main
+> next build
+
+   ▲ Next.js 15.2.4
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully
+   Skipping validation of types
+   Skipping linting
+   Collecting page data ...
+   Generating static pages (0/130) ...
+   Generating static pages (32/130) 
+   Generating static pages (64/130) 
+   Generating static pages (97/130) 
+ ✓ Generating static pages (130/130)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                     Size  First Load JS
+┌ ○ /                                          364 B         102 kB
+├ ○ /_not-found                                985 B         102 kB
+├ ○ /accounting/account-heads                1.84 kB         137 kB
+├ ○ /accounting/day-book                       364 B         102 kB
+├ ○ /accounting/student-fees                   364 B         102 kB
+├ ƒ /api/accounting/stats                      364 B         102 kB
+├ ƒ /api/admit-cards                           364 B         102 kB
+├ ƒ /api/auth/login                            364 B         102 kB
+├ ƒ /api/batches                               364 B         102 kB
+├ ƒ /api/batches/[id]                          364 B         102 kB
+├ ƒ /api/batches/[id]/students                 364 B         102 kB
+├ ƒ /api/courses                               364 B         102 kB
+├ ƒ /api/courses/[id]                          364 B         102 kB
+├ ƒ /api/dashboard                             364 B         102 kB
+├ ƒ /api/enquiries                             364 B         102 kB
+├ ƒ /api/enquiries/[id]                        364 B         102 kB
+├ ƒ /api/exam-results                          364 B         102 kB
+├ ƒ /api/exams                                 364 B         102 kB
+├ ƒ /api/exams/[id]                            364 B         102 kB
+├ ƒ /api/exams/[id]/available-students         364 B         102 kB
+├ ƒ /api/exams/[id]/mark-attendance            364 B         102 kB
+├ ƒ /api/exams/[id]/reschedule-students        364 B         102 kB
+├ ƒ /api/exams/[id]/submit                     364 B         102 kB
+├ ƒ /api/exams/allocate-systems                364 B         102 kB
+├ ƒ /api/exams/bulk-reschedule                 364 B         102 kB
+├ ƒ /api/exams/create-dpp                      364 B         102 kB
+├ ƒ /api/exams/generate-dpp                    364 B         102 kB
+├ ƒ /api/exams/reschedule                      364 B         102 kB
+├ ƒ /api/exams/schedule-final                  364 B         102 kB
+├ ƒ /api/exams/undo-reschedule                 364 B         102 kB
+├ ƒ /api/exams/update-reschedule               364 B         102 kB
+├ ƒ /api/fee-payments                          364 B         102 kB
+├ ƒ /api/feedback                              364 B         102 kB
+├ ƒ /api/feedback-forms                        364 B         102 kB
+├ ƒ /api/feedback-forms/[id]                   364 B         102 kB
+├ ƒ /api/feedback-responses                    364 B         102 kB
+├ ƒ /api/feedback/institute/[id]               364 B         102 kB
+├ ƒ /api/feedback/stats                        364 B         102 kB
+├ ƒ /api/institutes                            364 B         102 kB
+├ ƒ /api/institutes/[id]                       364 B         102 kB
+├ ƒ /api/institutes/[id]/course-pricing        364 B         102 kB
+├ ƒ /api/institutes/[id]/courses               364 B         102 kB
+├ ƒ /api/institutes/[id]/courses/[courseId]    364 B         102 kB
+├ ƒ /api/institutes/[id]/exam-results          364 B         102 kB
+├ ƒ /api/institutes/[id]/status                364 B         102 kB
+├ ƒ /api/payments                              364 B         102 kB
+├ ƒ /api/payments/[id]                         364 B         102 kB
+├ ƒ /api/payments/generate                     364 B         102 kB
+├ ƒ /api/question-banks                        364 B         102 kB
+├ ƒ /api/question-banks/[id]                   364 B         102 kB
+├ ƒ /api/question-banks/[id]/questions         364 B         102 kB
+├ ƒ /api/question-banks/course/[id]            364 B         102 kB
+├ ƒ /api/question-banks/import-excel           364 B         102 kB
+├ ƒ /api/question-banks/parse-excel            364 B         102 kB
+├ ƒ /api/razorpay/order                        364 B         102 kB
+├ ƒ /api/razorpay/verify                       364 B         102 kB
+├ ƒ /api/reports                               364 B         102 kB
+├ ƒ /api/staff                                 364 B         102 kB
+├ ƒ /api/staff/[id]                            364 B         102 kB
+├ ƒ /api/student-fees                          364 B         102 kB
+├ ƒ /api/student-fees/[id]                     364 B         102 kB
+├ ƒ /api/student-fees/generate                 364 B         102 kB
+├ ƒ /api/students                              364 B         102 kB
+├ ƒ /api/students/[id]                         364 B         102 kB
+├ ƒ /api/students/[id]/batches                 364 B         102 kB
+├ ƒ /api/students/[id]/courses                 364 B         102 kB
+├ ƒ /api/students/[id]/documents               364 B         102 kB
+├ ƒ /api/students/[id]/exams                   364 B         102 kB
+├ ƒ /api/students/[id]/password                364 B         102 kB
+├ ƒ /api/students/[id]/question-banks          364 B         102 kB
+├ ƒ /api/students/[id]/results                 364 B         102 kB
+├ ƒ /api/support-tickets                       364 B         102 kB
+├ ƒ /api/support-tickets/[id]                  364 B         102 kB
+├ ƒ /api/tickets                               364 B         102 kB
+├ ƒ /api/tickets/[id]                          364 B         102 kB
+├ ƒ /api/transactions                          364 B         102 kB
+├ ƒ /api/users                                 364 B         102 kB
+├ ƒ /api/users/[id]                            364 B         102 kB
+├ ƒ /api/users/[id]/courses                    364 B         102 kB
+├ ƒ /api/users/[id]/courses/[courseId]         364 B         102 kB
+├ ƒ /api/users/[id]/status                     364 B         102 kB
+├ ○ /batches                                 4.91 kB         148 kB
+├ ○ /batches/add                             1.84 kB         137 kB
+├ ○ /complaints                                364 B         102 kB
+├ ○ /courses/add                             2.77 kB         138 kB
+├ ○ /courses/delete                            364 B         102 kB
+├ ○ /dashboard                                 364 B         102 kB
+├ ○ /enquiry/add                             3.94 kB         144 kB
+├ ○ /enquiry/list                            4.21 kB         117 kB
+├ ○ /exams/admit-card                        1.54 kB         136 kB
+├ ○ /exams/confirmation                        364 B         102 kB
+├ ○ /exams/details                           1.54 kB         136 kB
+├ ○ /exams/internal-marks                    1.55 kB         110 kB
+├ ○ /exams/results                           2.96 kB         111 kB
+├ ○ /exams/schedule                          1.84 kB         137 kB
+├ ○ /faculty                                 2.06 kB         212 kB
+├ ○ /faculty/attendance                       7.7 kB         116 kB
+├ ○ /faculty/batches                         2.06 kB         212 kB
+├ ○ /faculty/enquiries                         364 B         102 kB
+├ ○ /faculty/marks                             839 B         114 kB
+├ ○ /faculty/notifications                     839 B         114 kB
+├ ○ /faculty/profile                         1.49 kB         109 kB
+├ ○ /faculty/progress                        2.06 kB         212 kB
+├ ○ /faculty/reports                         2.06 kB         212 kB
+├ ○ /faculty/schedule                          364 B         102 kB
+├ ○ /faculty/students                          364 B         102 kB
+├ ○ /feedback/add                            1.84 kB         137 kB
+├ ○ /institute-admin                         4.39 kB         112 kB
+├ ○ /institute-admin/accounting                839 B         114 kB
+├ ○ /institute-admin/batches                 5.91 kB         149 kB
+├ ○ /institute-admin/courses                    5 kB         130 kB
+├ ○ /institute-admin/enquiries               9.61 kB         153 kB
+├ ○ /institute-admin/exams                   9.95 kB         150 kB
+├ ○ /institute-admin/fees                    9.46 kB         153 kB
+├ ○ /institute-admin/payments                11.7 kB         125 kB
+├ ○ /institute-admin/question-bank            6.8 kB         132 kB
+├ ○ /institute-admin/ratings                 2.58 kB         111 kB
+├ ○ /institute-admin/reports                    9 kB         117 kB
+├ ○ /institute-admin/settings                5.53 kB         131 kB
+├ ○ /institute-admin/staff                   9.31 kB         152 kB
+├ ○ /institute-admin/students                8.16 kB         151 kB
+├ ○ /institute-admin/support                 4.98 kB         130 kB
+├ ○ /institutes/add                          3.72 kB         139 kB
+├ ○ /login                                   4.11 kB         115 kB
+├ ○ /master/question-bank                    1.84 kB         137 kB
+├ ○ /master/salary/add                       1.84 kB         137 kB
+├ ○ /master/staff/add                        1.84 kB         137 kB
+├ ○ /notifications                           4.92 kB         113 kB
+├ ○ /ratings                                 1.84 kB         137 kB
+├ ○ /reports                                   364 B         102 kB
+├ ○ /settings                                1.84 kB         137 kB
+├ ○ /student                                 5.98 kB         114 kB
+├ ○ /student/admit-cards                     3.52 kB         112 kB
+├ ○ /student/assignments                       839 B         114 kB
+├ ○ /student/attendance                      1.54 kB         136 kB
+├ ○ /student/course                          4.37 kB         112 kB
+├ ○ /student/exams                           6.24 kB         123 kB
+├ ƒ /student/exams/[id]                      4.82 kB         125 kB
+├ ○ /student/feedback                        4.77 kB         130 kB
+├ ○ /student/fees                             4.6 kB         118 kB
+├ ○ /student/notifications                     839 B         114 kB
+├ ○ /student/profile                         6.98 kB         150 kB
+├ ○ /student/question-bank                   5.56 kB         117 kB
+├ ƒ /student/question-bank/[id]               3.6 kB         118 kB
+├ ○ /student/results                         8.96 kB         117 kB
+├ ○ /student/support                         4.99 kB         130 kB
+├ ○ /student/timetable                         364 B         102 kB
+├ ○ /students/add                            1.84 kB         137 kB
+├ ○ /students/list                             364 B         102 kB
+├ ○ /super-admin                              5.3 kB         220 kB
+├ ○ /super-admin/accounting                  6.44 kB         150 kB
+├ ○ /super-admin/courses                     6.13 kB         135 kB
+├ ○ /super-admin/courses/add                  5.9 kB         122 kB
+├ ○ /super-admin/exams                       7.06 kB         189 kB
+├ ○ /super-admin/exams/create-dpp            4.33 kB         147 kB
+├ ○ /super-admin/exams/reschedule            6.18 kB         119 kB
+├ ○ /super-admin/exams/schedule              5.14 kB         148 kB
+├ ○ /super-admin/feedback                    6.58 kB         153 kB
+├ ƒ /super-admin/feedback/[id]               15.3 kB         224 kB
+├ ○ /super-admin/institutes                  7.11 kB         150 kB
+├ ○ /super-admin/payments                    5.61 kB         155 kB
+├ ○ /super-admin/question-bank               4.69 kB         148 kB
+├ ƒ /super-admin/question-bank/[id]          4.68 kB         133 kB
+├ ƒ /super-admin/question-bank/[id]/add      4.03 kB         147 kB
+├ ○ /super-admin/question-bank/create        4.42 kB         148 kB
+├ ○ /super-admin/question-bank/import-excel  5.35 kB         145 kB
+├ ○ /super-admin/reports                      5.3 kB         257 kB
+├ ○ /super-admin/settings                      364 B         102 kB
+├ ○ /super-admin/support                     9.31 kB         152 kB
+└ ○ /super-admin/users                        7.6 kB         187 kB
++ First Load JS shared by all                 101 kB
+  ├ chunks/7569-8486080f4ca621f7.js          45.9 kB
+  ├ chunks/884316d7-4731e07f59eee8b3.js      53.3 kB
+  └ other shared chunks (total)              2.01 kB
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
