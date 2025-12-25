@@ -3,18 +3,29 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { SectionHeader } from "@/components/lms/section"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
-import { FileQuestion, HelpCircle, BookOpen, Play } from "lucide-react"
+import { FileQuestion, HelpCircle, ChevronLeft, Search } from "lucide-react"
+import { QBCourseCard, QuestionBankCard } from "@/components/lms/qb-cards"
 
 export default function StudentQuestionBankPage() {
   const router = useRouter()
+  const [courses, setCourses] = useState<any[]>([])
   const [qbs, setQbs] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [studentId, setStudentId] = useState<string | null>(null)
+
+  const [view, setView] = useState<'courses' | 'qbs'>('courses')
+  const [selectedCourse, setSelectedCourse] = useState<any>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300)
+    return () => clearTimeout(timer)
+  }, [searchQuery])
 
   useEffect(() => {
     const user = localStorage.getItem('user')
@@ -26,23 +37,53 @@ export default function StudentQuestionBankPage() {
 
   useEffect(() => {
     if (!studentId) return
-    fetch(`/api/students/${studentId}/question-banks`)
-      .then(res => res.json())
-      .then(data => {
-        setQbs(Array.isArray(data) ? data : [])
+
+    const fetchData = async () => {
+      try {
+        const res = await fetch(`/api/students/${studentId}/question-banks`)
+        const data = await res.json()
+        const allQbs = Array.isArray(data) ? data : []
+        setQbs(allQbs)
+
+        // Extract unique courses from QBs
+        const uniqueCoursesMap = new Map()
+        allQbs.forEach((qb: any) => {
+          if (qb.courseId && !uniqueCoursesMap.has(qb.courseId._id)) {
+            uniqueCoursesMap.set(qb.courseId._id, qb.courseId)
+          }
+        })
+        setCourses(Array.from(uniqueCoursesMap.values()))
         setLoading(false)
-      })
-      .catch(() => setLoading(false))
+      } catch (error) {
+        setLoading(false)
+      }
+    }
+    fetchData()
   }, [studentId])
 
-  const groupedQBs = qbs.reduce((acc: any, qb: any) => {
-    const courseId = qb.courseId._id
-    if (!acc[courseId]) {
-      acc[courseId] = { course: qb.courseId, qbs: [] }
-    }
-    acc[courseId].qbs.push(qb)
-    return acc
-  }, {})
+  const handleCourseClick = (course: any) => {
+    setSelectedCourse(course)
+    setSearchQuery('')
+    setView('qbs')
+  }
+
+  const handleBackToCourses = () => {
+    setSelectedCourse(null)
+    setSearchQuery('')
+    setView('courses')
+  }
+
+  const filteredCourses = courses.filter(c =>
+    c.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+    c.code?.toLowerCase().includes(debouncedSearch.toLowerCase())
+  )
+
+  const filteredQBs = selectedCourse
+    ? qbs.filter(qb =>
+      qb.courseId?._id === selectedCourse._id &&
+      qb.topic.toLowerCase().includes(debouncedSearch.toLowerCase())
+    )
+    : []
 
   if (loading) return <div className="space-y-6"><SectionHeader title="Question Bank" subtitle="Practice questions by course and topic" /><Skeleton className="h-32 w-full" /></div>
 
@@ -82,53 +123,62 @@ export default function StudentQuestionBankPage() {
         </Card>
       </div>
 
-      {Object.keys(groupedQBs).length === 0 ? (
-        <Card><CardContent className="py-12 text-center text-muted-foreground">No question banks available</CardContent></Card>
-      ) : (
-        <Accordion type="single" collapsible className="space-y-4">
-          {Object.values(groupedQBs).map((group: any, i) => (
-            <AccordionItem key={i} value={`course-${i}`} className="border rounded-lg px-4">
-              <AccordionTrigger className="hover:no-underline">
-                <div className="flex items-center justify-between w-full pr-4">
-                  <div className="flex items-center gap-3 text-left">
-                    <div className="h-8 w-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center shadow-sm">
-                      <BookOpen className="w-4 h-4 text-white" />
-                    </div>
-                    <div>
-                      <p className="font-semibold text-lg">{group.course.name}</p>
-                      <p className="text-sm text-muted-foreground">{group.qbs.length} Topics</p>
-                    </div>
-                  </div>
-                </div>
-              </AccordionTrigger>
-              <AccordionContent className="space-y-3 pt-4">
-                {group.qbs.map((qb: any) => (
-                  <Card key={qb._id} className="hover:shadow-md transition-shadow">
-                    <CardHeader className="pb-3 border-b">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-2">
-                          <FileQuestion className="w-4 h-4 text-muted-foreground" />
-                          <CardTitle className="text-base">{qb.topic}</CardTitle>
-                        </div>
-                        <Badge variant="outline">{qb.questions?.length || 0} Questions</Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="pt-4">
-                      <Button
-                        size="sm"
-                        onClick={() => router.push(`/student/question-bank/${qb._id}`)}
-                        disabled={!qb.questions?.length}
-                      >
-                        <Play className="w-4 h-4 mr-2" />
-                        Start Practice
-                      </Button>
-                    </CardContent>
-                  </Card>
-                ))}
-              </AccordionContent>
-            </AccordionItem>
-          ))}
-        </Accordion>
+      {/* Sticky Action Bar */}
+      <div className="sticky top-0 z-30 bg-background/95 backdrop-blur py-4 border-b flex flex-col sm:flex-row gap-4 justify-between items-center transition-all">
+        <div className="flex items-center gap-4 w-full sm:w-auto">
+          {view === 'qbs' && (
+            <Button variant="ghost" size="icon" onClick={handleBackToCourses} className="shrink-0">
+              <ChevronLeft className="w-5 h-5" />
+            </Button>
+          )}
+          <div className="relative w-full sm:w-96">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder={view === 'courses' ? "Search courses..." : "Search question banks..."}
+              className="pl-9 bg-secondary/50 border-border/50 focus:bg-background transition-colors"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+        </div>
+      </div>
+
+      {view === 'courses' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {filteredCourses.length === 0 ? (
+            <div className="col-span-full text-center py-20 text-muted-foreground">
+              No courses found matching "{searchQuery}"
+            </div>
+          ) : (
+            filteredCourses.map(course => (
+              <QBCourseCard key={course._id} course={course} onClick={() => handleCourseClick(course)} />
+            ))
+          )}
+        </div>
+      )}
+
+      {view === 'qbs' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {filteredQBs.length === 0 ? (
+            <div className="col-span-full text-center py-20 bg-muted/20 rounded-xl border border-dashed">
+              <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                <FileQuestion className="w-8 h-8 text-muted-foreground" />
+              </div>
+              <h3 className="text-lg font-semibold mb-1">No Question Banks Found</h3>
+              <p className="text-muted-foreground max-w-sm mx-auto mb-6">
+                No question banks available for this course.
+              </p>
+            </div>
+          ) : (
+            filteredQBs.map(qb => (
+              <QuestionBankCard
+                key={qb._id}
+                qb={qb}
+                role="student"
+              />
+            ))
+          )}
+        </div>
       )}
     </div>
   )

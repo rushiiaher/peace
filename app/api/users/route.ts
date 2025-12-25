@@ -3,6 +3,7 @@ import connectDB from '@/lib/mongodb'
 import User from '@/lib/models/User'
 import bcrypt from 'bcryptjs'
 import '@/lib/models/Course' // Ensure Course model is registered
+import Batch from '@/lib/models/Batch'
 
 export async function GET(req: Request) {
   try {
@@ -11,12 +12,92 @@ export async function GET(req: Request) {
     const instituteId = searchParams.get('instituteId')
     const role = searchParams.get('role')
 
+    const courseId = searchParams.get('courseId')
+    const requireRoyalty = searchParams.get('royaltyPaid') === 'true'
+    const batchId = searchParams.get('batchId')
+
     const query: any = {}
     if (instituteId) query.instituteId = instituteId
     if (role) query.role = role
 
-    const users = await User.find(query).select('-password').sort({ createdAt: -1 })
+    if (batchId) {
+      const batch = await Batch.findById(batchId).select('students').lean() as any
+      if (batch && batch.students) {
+        query._id = { $in: batch.students }
+      } else {
+        return NextResponse.json([])
+      }
+    }
+
+    if (courseId) {
+      if (requireRoyalty) {
+        query.courses = {
+          $elemMatch: {
+            courseId: courseId,
+            royaltyPaid: true
+          }
+        }
+      } else {
+        query['courses.courseId'] = courseId
+      }
+    } else if (requireRoyalty) {
+      query['courses.royaltyPaid'] = true
+    }
+
+    const users = await User.find(query).select('-password').sort({ createdAt: -1 }).lean()
     await User.populate(users, { path: 'courses.courseId' })
+
+    // augment with fee status if fetching students for an institute
+    if (instituteId && role === 'student') {
+      const FeePayment = (await import('@/lib/models/FeePayment')).default
+      const studentIds = users.map((u: any) => u._id)
+
+      const feeRecords = await FeePayment.find({
+        instituteId,
+        studentId: { $in: studentIds }
+      }).lean()
+
+      const feeMap: any = {}
+
+      // Group by Student
+      feeRecords.forEach((rec: any) => {
+        const sid = rec.studentId.toString()
+        if (!feeMap[sid]) feeMap[sid] = []
+        feeMap[sid].push(rec)
+      })
+
+      // Process each student
+      users.forEach((user: any) => {
+        const records = feeMap[user._id.toString()] || []
+
+        // Calculate total paid across all courses
+        const totalPaid = records.reduce((sum: number, r: any) => sum + (r.paidAmount || 0), 0)
+
+        // Check Fully Paid Status
+        // Logic: For every enrolled course, is there a latest fee record with dueAmount <= 0?
+        let isFullyPaid = false
+
+        if (user.courses && user.courses.length > 0) {
+          const enrolledCourseIds = user.courses.map((c: any) => c.courseId?._id?.toString() || c.courseId?.toString())
+
+          // Group records by Course
+          const coursesStatus = enrolledCourseIds.map((cid: string) => {
+            const courseRecords = records.filter((r: any) => r.courseId.toString() === cid)
+            if (courseRecords.length === 0) return false // No record = Not paid
+
+            // Get latest
+            courseRecords.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+            return courseRecords[0].dueAmount <= 0
+          })
+
+          isFullyPaid = coursesStatus.length > 0 && coursesStatus.every((status: boolean) => status === true)
+        }
+
+        user.studentPaidAmount = totalPaid
+        user.studentFullyPaid = isFullyPaid
+      })
+    }
+
     return NextResponse.json(users)
   } catch (error: any) {
     console.error('Fetch users error:', error)
@@ -28,6 +109,15 @@ export async function POST(req: Request) {
   try {
     await connectDB()
     const data = await req.json()
+
+    // Construct full name if parts are provided
+    if (data.firstName || data.lastName) {
+      const parts = [data.firstName, data.middleName, data.lastName].filter(Boolean)
+      if (parts.length > 0) {
+        data.name = parts.join(' ')
+      }
+    }
+
     const hashedPassword = await bcrypt.hash(data.password, 10)
     const user = await User.create({ ...data, password: hashedPassword })
     const { password, ...userWithoutPassword } = user.toObject()

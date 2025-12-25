@@ -6,7 +6,7 @@ import bcrypt from 'bcryptjs'
 export async function GET(req: Request, { params }: { params: { id: string } }) {
   try {
     await connectDB()
-    const user = await User.findById(params.id).select('-password')
+    const user = await User.findById(params.id).select('-password').populate('courses.courseId')
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
     return NextResponse.json(user)
   } catch (error) {

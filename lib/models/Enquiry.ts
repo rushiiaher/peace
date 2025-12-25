@@ -3,6 +3,9 @@ import mongoose from 'mongoose'
 const EnquirySchema = new mongoose.Schema({
   instituteId: { type: mongoose.Schema.Types.ObjectId, ref: 'Institute', required: true },
   name: { type: String, required: true },
+  firstName: { type: String },
+  middleName: { type: String },
+  lastName: { type: String },
   email: { type: String, required: true },
   phone: { type: String, required: true },
   courseInterested: { type: String, required: true },

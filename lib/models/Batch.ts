@@ -8,6 +8,7 @@ const BatchSchema = new mongoose.Schema({
   startDate: { type: Date, required: true },
   endDate: { type: Date, required: true },
   status: { type: String, enum: ['Active', 'Inactive'], default: 'Active' },
+  isDeliveryPaid: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now }
 })
 

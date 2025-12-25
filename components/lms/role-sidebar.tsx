@@ -8,7 +8,7 @@ import {
   CreditCard, BarChart3, Wallet, Users, Settings, Headphones,
   UserPlus, GraduationCap, Package, IndianRupee, Calendar,
   MessageSquare, UserCog, User, CheckSquare, Bell, ClipboardList,
-  ChevronLeft, ChevronRight
+  ChevronLeft, ChevronRight, Truck
 } from "lucide-react"
 
 type Role = "super-admin" | "institute-admin" | "faculty" | "student" | "parent"
@@ -27,6 +27,7 @@ const navByRole: Record<Role, NavItem[]> = {
     { href: "/super-admin/reports", label: "Global Reports", icon: BarChart3 },
     { href: "/super-admin/accounting", label: "Account Management", icon: Wallet },
     { href: "/super-admin/users", label: "User Management", icon: Users },
+    { href: "/super-admin/inventory", label: "Inventory Management", icon: Package },
 
     { href: "/super-admin/support", label: "Support & Tickets", icon: Headphones },
   ],
@@ -39,6 +40,8 @@ const navByRole: Record<Role, NavItem[]> = {
     { href: "/institute-admin/fees", label: "Fee Collection", icon: IndianRupee },
     { href: "/institute-admin/payments", label: "Payments to Super Admin", icon: CreditCard },
     { href: "/institute-admin/exams", label: "Exam Management", icon: FileText },
+    { href: "/institute-admin/final-results", label: "Final Results", icon: CheckSquare },
+    { href: "/institute-admin/delivery-status", label: "Delivery Status", icon: Truck },
     { href: "/institute-admin/question-bank", label: "Question Bank", icon: HelpCircle },
     { href: "/institute-admin/ratings", label: "Institute Ratings", icon: Star },
     { href: "/institute-admin/accounting", label: "Accounting", icon: Wallet },

@@ -8,6 +8,7 @@ const TransactionSchema = new mongoose.Schema({
   instituteId: { type: mongoose.Schema.Types.ObjectId, ref: 'Institute' },
   paymentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Payment' },
   commission: { type: Number, default: 0 },
+  mode: { type: String, default: 'Cash' },
   date: { type: Date, required: true },
   createdAt: { type: Date, default: Date.now }
 })

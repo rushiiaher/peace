@@ -397,71 +397,92 @@ export default function InstitutesPage() {
 
 
       <Dialog open={coursesOpen} onOpenChange={setCoursesOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Assign Course - {selectedInstitute?.name}</DialogTitle>
+        <DialogContent className="max-w-xl">
+          <DialogHeader className="border-b pb-4 mb-4">
+            <DialogTitle className="text-xl">Assign Course</DialogTitle>
+            <p className="text-sm text-muted-foreground">Assign a new course to {selectedInstitute?.name}</p>
           </DialogHeader>
-          <form onSubmit={handleAssignCourses} className="space-y-4">
-            <div>
-              <Label htmlFor="courseId">Select Course</Label>
-              <Select name="courseId" required>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select course" />
-                </SelectTrigger>
-                <SelectContent>
-                  {courses.map((course: any) => (
-                    <SelectItem key={course._id} value={course._id}>
-                      {course.name} ({course.code})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <form onSubmit={handleAssignCourses} className="space-y-6">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="courseId">Select Course</Label>
+                <Select name="courseId" required>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select course to assign" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {courses.map((course: any) => (
+                      <SelectItem key={course._id} value={course._id}>
+                        {course.name} ({course.code})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="startDate">Start Date</Label>
+                  <Input id="startDate" name="startDate" type="date" required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="endDate">End Date</Label>
+                  <Input id="endDate" name="endDate" type="date" required />
+                </div>
+              </div>
             </div>
-            <div>
-              <Label htmlFor="startDate">Start Date</Label>
-              <Input id="startDate" name="startDate" type="date" required />
+
+            <div className="flex justify-end gap-3 pt-4 border-t mt-6">
+              <Button type="button" variant="outline" onClick={() => setCoursesOpen(false)}>Cancel</Button>
+              <Button type="submit">Assign Course</Button>
             </div>
-            <div>
-              <Label htmlFor="endDate">End Date</Label>
-              <Input id="endDate" name="endDate" type="date" required />
-            </div>
-            <Button type="submit">Assign Course</Button>
           </form>
         </DialogContent>
       </Dialog>
 
       <Dialog open={editCourseOpen} onOpenChange={setEditCourseOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Course Assignment</DialogTitle>
+        <DialogContent className="max-w-xl">
+          <DialogHeader className="border-b pb-4 mb-4">
+            <DialogTitle className="text-xl">Edit Course Assignment</DialogTitle>
           </DialogHeader>
           {selectedCourseAssignment && (
-            <form onSubmit={handleEditCourse} className="space-y-4">
-              <div>
-                <Label>Course</Label>
-                <p className="text-sm font-medium mt-1">{selectedCourseAssignment.courseId?.name}</p>
+            <form onSubmit={handleEditCourse} className="space-y-6">
+              <div className="space-y-4">
+                <div className="p-3 bg-muted/40 border border-dashed rounded-lg">
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider">Course Name</Label>
+                  <p className="text-base font-semibold mt-1 flex items-center gap-2">
+                    <BookOpen className="w-4 h-4 text-primary" />
+                    {selectedCourseAssignment.courseId?.name}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-startDate">Start Date</Label>
+                    <Input
+                      id="edit-startDate"
+                      name="startDate"
+                      type="date"
+                      defaultValue={new Date(selectedCourseAssignment.startDate).toISOString().split('T')[0]}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-endDate">End Date</Label>
+                    <Input
+                      id="edit-endDate"
+                      name="endDate"
+                      type="date"
+                      defaultValue={new Date(selectedCourseAssignment.endDate).toISOString().split('T')[0]}
+                      required
+                    />
+                  </div>
+                </div>
               </div>
-              <div>
-                <Label htmlFor="edit-startDate">Start Date</Label>
-                <Input
-                  id="edit-startDate"
-                  name="startDate"
-                  type="date"
-                  defaultValue={new Date(selectedCourseAssignment.startDate).toISOString().split('T')[0]}
-                  required
-                />
+
+              <div className="flex justify-end gap-3 pt-4 border-t mt-6">
+                <Button type="button" variant="outline" onClick={() => setEditCourseOpen(false)}>Cancel</Button>
+                <Button type="submit">Update Course</Button>
               </div>
-              <div>
-                <Label htmlFor="edit-endDate">End Date</Label>
-                <Input
-                  id="edit-endDate"
-                  name="endDate"
-                  type="date"
-                  defaultValue={new Date(selectedCourseAssignment.endDate).toISOString().split('T')[0]}
-                  required
-                />
-              </div>
-              <Button type="submit">Update Course</Button>
             </form>
           )}
         </DialogContent>

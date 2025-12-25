@@ -30,10 +30,17 @@ const nav = [
   { label: "Reports", href: "/reports" },
 ]
 
+import { SessionHeartbeat } from "@/components/lms/session-heartbeat"
+
+import { RoyaltyGate } from "@/components/lms/royalty-gate"
+
 export default function LmsLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-dvh bg-background">
-      <main className="">{children}</main>
+      <SessionHeartbeat />
+      <RoyaltyGate>
+        <main className="">{children}</main>
+      </RoyaltyGate>
     </div>
   )
 }

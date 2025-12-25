@@ -239,12 +239,12 @@ export default function StaffPage() {
           </DialogTrigger>
         </div>
 
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto w-[95vw]">
-          <DialogHeader>
-            <DialogTitle>Add New Staff Member</DialogTitle>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="border-b pb-4 mb-4">
+            <DialogTitle className="text-xl">Add New Staff Member</DialogTitle>
             <DialogDescription>Enter the details of the new faculty or staff member.</DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleAdd} className="space-y-6 pt-4">
+          <form onSubmit={handleAdd} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label htmlFor="name">Full Name</Label>
@@ -286,15 +286,16 @@ export default function StaffPage() {
                 <Label htmlFor="experience">Experience (Years)</Label>
                 <Input id="experience" name="experience" type="number" placeholder="0" />
               </div>
+              <div className="space-y-2 col-span-1 md:col-span-2">
+                <Label htmlFor="address">Address</Label>
+                <Input id="address" name="address" placeholder="Full residential address" />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="address">Address</Label>
-              <Input id="address" name="address" placeholder="Full residential address" />
-            </div>
-            <DialogFooter className="gap-2 sm:gap-0">
+
+            <div className="flex justify-end gap-3 pt-4 border-t mt-6">
               <Button type="button" variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
               <Button type="submit">Create Profile</Button>
-            </DialogFooter>
+            </div>
           </form>
         </DialogContent>
       </Dialog>
@@ -373,12 +374,12 @@ export default function StaffPage() {
       </div>
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto w-[95vw]">
-          <DialogHeader>
-            <DialogTitle>Edit Staff Details</DialogTitle>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="border-b pb-4 mb-4">
+            <DialogTitle className="text-xl">Edit Staff Details</DialogTitle>
           </DialogHeader>
           {selectedStaff && (
-            <form onSubmit={handleEdit} className="space-y-6 pt-4">
+            <form onSubmit={handleEdit} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="edit-name">Full Name</Label>
@@ -420,7 +421,7 @@ export default function StaffPage() {
                   <Label htmlFor="edit-experience">Experience (Years)</Label>
                   <Input id="edit-experience" name="experience" type="number" defaultValue={selectedStaff.experience || 0} />
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-2 text-left">
                   <Label htmlFor="edit-status">Status</Label>
                   <Select name="status" defaultValue={selectedStaff.status}>
                     <SelectTrigger>
@@ -432,15 +433,16 @@ export default function StaffPage() {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="space-y-2 col-span-1 md:col-span-2">
+                  <Label htmlFor="edit-address">Address</Label>
+                  <Input id="edit-address" name="address" defaultValue={selectedStaff.address || ''} />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-address">Address</Label>
-                <Input id="edit-address" name="address" defaultValue={selectedStaff.address || ''} />
-              </div>
-              <DialogFooter>
+
+              <div className="flex justify-end gap-3 pt-4 border-t mt-6">
                 <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
                 <Button type="submit">Update Staff</Button>
-              </DialogFooter>
+              </div>
             </form>
           )}
         </DialogContent>

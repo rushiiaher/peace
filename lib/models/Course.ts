@@ -14,6 +14,10 @@ const CourseSchema = new mongoose.Schema({
   bookPrice: { type: Number, default: 0 },
   deliveryCharge: { type: Number, default: 0 },
   certificateCharge: { type: Number, default: 60 },
+  evaluationComponents: [{
+    name: { type: String, required: true },
+    maxMarks: { type: Number, required: true }
+  }],
   createdAt: { type: Date, default: Date.now }
 })
 

@@ -35,6 +35,7 @@ export default function LoginPage() {
         return
       }
 
+      localStorage.clear()
       localStorage.setItem("token", data.token)
       localStorage.setItem("user", JSON.stringify(data.user))
 
@@ -75,7 +76,7 @@ export default function LoginPage() {
               <Input
                 id="email"
                 type="email"
-                placeholder="admin@example.com"
+                placeholder="user@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required

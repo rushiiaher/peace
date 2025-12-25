@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import crypto from 'crypto'
 import connectDB from '@/lib/mongodb'
 import Payment from '@/lib/models/Payment'
+import Transaction from '@/lib/models/Transaction'
 
 export async function POST(req: Request) {
     try {
@@ -37,6 +38,23 @@ export async function POST(req: Request) {
                     },
                 }
             )
+
+            // Create Transaction records for Accounting
+            const verifiedPayments = await Payment.find({ _id: { $in: paymentIds } })
+            const transactions = verifiedPayments.map((p: any) => ({
+                type: 'Income',
+                category: 'Fee Collection',
+                description: `Fee collected from Institute`,
+                amount: p.totalAmount,
+                instituteId: p.instituteId,
+                paymentId: p._id,
+                date: new Date(),
+                commission: 0 // Entire amount is SA income
+            }))
+
+            if (transactions.length > 0) {
+                await Transaction.insertMany(transactions)
+            }
 
             return NextResponse.json({ success: true, message: 'Payment verified successfully' })
         } else {

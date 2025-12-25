@@ -1,0 +1,63 @@
+import { NextResponse } from 'next/server'
+import connectDB from '@/lib/mongodb'
+import RescheduleRequest from '@/lib/models/RescheduleRequest'
+import Exam from '@/lib/models/Exam'
+import User from '@/lib/models/User' // For populating if needed
+
+export async function POST(req: Request) {
+    try {
+        await connectDB()
+        const { instituteId, originalExamId, requests } = await req.json()
+
+        // Validate
+        if (!instituteId || !originalExamId || !requests || !Array.isArray(requests) || requests.length === 0) {
+            return NextResponse.json({ error: 'Invalid request data' }, { status: 400 })
+        }
+
+        const originalExam = await Exam.findById(originalExamId)
+        if (!originalExam) return NextResponse.json({ error: 'Original exam not found' }, { status: 404 })
+
+        const createdRequests = []
+
+        for (const reqData of requests) {
+            const { studentId, reason } = reqData
+            if (studentId && reason) {
+                const newReq = await RescheduleRequest.create({
+                    instituteId,
+                    originalExamId,
+                    courseId: originalExam.courseId,
+                    studentId,
+                    reason
+                })
+                createdRequests.push(newReq)
+            }
+        }
+
+        return NextResponse.json({ message: 'Requests submitted successfully', count: createdRequests.length })
+    } catch (error: any) {
+        return NextResponse.json({ error: 'Failed to submit requests: ' + error.message }, { status: 500 })
+    }
+}
+
+export async function GET(req: Request) {
+    try {
+        await connectDB()
+        const { searchParams } = new URL(req.url)
+        const instituteId = searchParams.get('instituteId')
+        const status = searchParams.get('status')
+
+        let query: any = {}
+        if (instituteId) query.instituteId = instituteId
+        if (status) query.status = status
+
+        const requests = await RescheduleRequest.find(query)
+            .populate('studentId', 'name rollNo')
+            .populate('originalExamId', 'title date')
+            .populate('courseId', 'name')
+            .sort({ requestedAt: -1 })
+
+        return NextResponse.json(requests)
+    } catch (error: any) {
+        return NextResponse.json({ error: 'Failed to fetch requests' }, { status: 500 })
+    }
+}

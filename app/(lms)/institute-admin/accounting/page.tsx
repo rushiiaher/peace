@@ -8,26 +8,81 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { AnimatedTabsProfessional } from "@/components/lms/animated-tabs"
 import Link from "next/link"
-import { Wallet, TrendingUp, TrendingDown, IndianRupee, Calendar, CreditCard, ArrowRight, Download, Printer, Users } from "lucide-react"
+import { Wallet, TrendingUp, TrendingDown, IndianRupee, Calendar, CreditCard, ArrowRight, Download, Printer, Users, Plus } from "lucide-react"
 import Loader from "@/components/ui/loader"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { toast } from "sonner"
 
 export default function AccountingPage() {
   const [activeTab, setActiveTab] = useState("transactions")
   const [loading, setLoading] = useState(true)
+  const [addOpen, setAddOpen] = useState(false)
+  const [data, setData] = useState<{ transactions: any[], stats: any }>({
+    transactions: [],
+    stats: { totalIncome: 0, totalExpense: 0, netProfit: 0, cashInHand: 0 }
+  })
+  const [instituteId, setInstituteId] = useState<string | null>(null)
 
   useEffect(() => {
-    // Simulate loading for interactions
-    const timer = setTimeout(() => setLoading(false), 800)
-    return () => clearTimeout(timer)
+    const user = JSON.parse(localStorage.getItem('user') || '{}')
+    if (user.instituteId) {
+      setInstituteId(user.instituteId)
+    }
   }, [])
 
-  const transactions = [
-    { type: "Income", category: "Student Fees", amount: "₹15,000", party: "Amit Kumar", mode: "UPI", date: "Today, 2:30 PM", id: "TXN1001" },
-    { type: "Expense", category: "Salary", amount: "₹45,000", party: "Dr. Rajesh Kumar", mode: "Bank Transfer", date: "Today, 11:00 AM", id: "TXN1002" },
-    { type: "Expense", category: "Rent", amount: "₹50,000", party: "Property Owner", mode: "Cheque", date: "Yesterday", id: "TXN1003" },
-    { type: "Income", category: "Student Fees", amount: "₹12,000", party: "Sneha Singh", mode: "Cash", date: "Yesterday, 4:00 PM", id: "TXN1004" },
-    { type: "Expense", category: "Stationery", amount: "₹2,500", party: "Local Vendor", mode: "UPI", date: "Yesterday, 10:00 AM", id: "TXN1005" },
-  ]
+  useEffect(() => {
+    if (instituteId) {
+      fetchAccountingData()
+    }
+  }, [instituteId])
+
+  const fetchAccountingData = async () => {
+    try {
+      const res = await fetch(`/api/accounting/transactions?instituteId=${instituteId}`)
+      if (res.ok) {
+        const result = await res.json()
+        setData(result)
+      }
+    } catch (error) {
+      console.error("Failed to fetch accounting")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleAddTransaction = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const formData = new FormData(e.currentTarget)
+    const data = {
+      instituteId,
+      type: formData.get('type'),
+      category: formData.get('category'),
+      amount: Number(formData.get('amount')),
+      description: formData.get('description'),
+      date: formData.get('date'),
+      mode: formData.get('mode')
+    }
+
+    try {
+      const res = await fetch('/api/accounting/transactions/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      })
+      if (res.ok) {
+        toast.success('Transaction recorded successfully')
+        setAddOpen(false)
+        fetchAccountingData()
+      } else {
+        toast.error('Failed to record transaction')
+      }
+    } catch (error) {
+      toast.error('Error recording transaction')
+    }
+  }
 
   if (loading) {
     return (
@@ -37,9 +92,11 @@ export default function AccountingPage() {
     )
   }
 
+  const { transactions, stats } = data
+
   return (
     <div className="space-y-6">
-      <SectionHeader title="Accounting" subtitle="Track institute finances, earnings, and expenses." />
+      <SectionHeader title="Accounting" subtitle="Track institute finances, earnings, expenses, and staff payroll." />
 
       <div className="grid gap-4 sm:grid-cols-4">
         {/* Income Card */}
@@ -52,8 +109,8 @@ export default function AccountingPage() {
               </div>
               <p className="text-sm font-medium text-green-700 dark:text-green-400">Total Income</p>
             </div>
-            <p className="text-2xl font-bold">₹11.6L</p>
-            <p className="text-xs text-muted-foreground mt-1">+12% from last month</p>
+            <p className="text-2xl font-bold">₹{(stats.totalIncome || 0).toLocaleString()}</p>
+            <p className="text-xs text-muted-foreground mt-1">From Student Fees</p>
           </CardContent>
         </Card>
 
@@ -67,8 +124,8 @@ export default function AccountingPage() {
               </div>
               <p className="text-sm font-medium text-red-700 dark:text-red-400">Total Expense</p>
             </div>
-            <p className="text-2xl font-bold">₹8.4L</p>
-            <p className="text-xs text-muted-foreground mt-1">Salary & Rent included</p>
+            <p className="text-2xl font-bold">₹{(stats.totalExpense || 0).toLocaleString()}</p>
+            <p className="text-xs text-muted-foreground mt-1">Royalty & Salaries</p>
           </CardContent>
         </Card>
 
@@ -82,8 +139,8 @@ export default function AccountingPage() {
               </div>
               <p className="text-sm font-medium text-blue-700 dark:text-blue-400">Net Profit</p>
             </div>
-            <p className="text-2xl font-bold">₹3.2L</p>
-            <p className="text-xs text-muted-foreground mt-1">Healthy margin</p>
+            <p className="text-2xl font-bold">₹{(stats.netProfit || 0).toLocaleString()}</p>
+            <p className="text-xs text-muted-foreground mt-1">{stats.netProfit >= 0 ? 'Surplus' : 'Deficit'}</p>
           </CardContent>
         </Card>
 
@@ -95,10 +152,10 @@ export default function AccountingPage() {
               <div className="p-2 bg-purple-100 dark:bg-purple-900/50 rounded-lg">
                 <Wallet className="w-5 h-5 text-purple-600 dark:text-purple-400" />
               </div>
-              <p className="text-sm font-medium text-purple-700 dark:text-purple-400">Cash in Hand</p>
+              <p className="text-sm font-medium text-purple-700 dark:text-purple-400">Cash Flow</p>
             </div>
-            <p className="text-2xl font-bold">₹1.2L</p>
-            <p className="text-xs text-muted-foreground mt-1">Available balance</p>
+            <p className="text-2xl font-bold">₹{(stats.cashInHand || 0).toLocaleString()}</p>
+            <p className="text-xs text-muted-foreground mt-1">Calculated Balance</p>
           </CardContent>
         </Card>
       </div>
@@ -110,7 +167,7 @@ export default function AccountingPage() {
               activeTab={activeTab}
               onChange={setActiveTab}
               tabs={[
-                { id: "transactions", label: "Recent Transactions" },
+                { id: "transactions", label: "Recent Transactions", count: transactions.length },
                 { id: "daybook", label: "Day Book" },
                 { id: "pl", label: "P&L Statement" }
               ]}
@@ -130,7 +187,11 @@ export default function AccountingPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {transactions.map((txn, i) => (
+                  {transactions.length === 0 ? (
+                    <div className="text-center py-10 text-muted-foreground">
+                      No transactions found.
+                    </div>
+                  ) : transactions.map((txn: any, i: number) => (
                     <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 border rounded-lg hover:shadow-sm hover:bg-muted/30 transition-all gap-4">
 
                       <div className="flex items-center gap-4">
@@ -140,18 +201,19 @@ export default function AccountingPage() {
                         <div>
                           <div className="flex items-center gap-2">
                             <p className="font-semibold text-sm">{txn.category}</p>
-                            <Badge variant="secondary" className="text-[10px] h-4 px-1">{txn.id}</Badge>
+                            <Badge variant="secondary" className="text-[10px] h-4 px-1">{txn.id.slice(0, 10)}...</Badge>
                           </div>
                           <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                             {txn.party} • {txn.date}
                           </p>
+                          <p className="text-[10px] text-muted-foreground italic truncate max-w-[200px]">{txn.details}</p>
                         </div>
                       </div>
 
                       <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto pl-12 sm:pl-0">
                         <div className="flex flex-col sm:items-end">
                           <p className={`font-bold ${txn.type === "Income" ? "text-green-600" : "text-red-600"}`}>
-                            {txn.type === "Income" ? "+" : "-"}{txn.amount}
+                            {txn.type === "Income" ? "+" : "-"}₹{txn.amount?.toLocaleString()}
                           </p>
                           <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
                             <CreditCard className="w-3 h-3" /> {txn.mode}
@@ -235,6 +297,12 @@ export default function AccountingPage() {
               <CardTitle className="text-base">Quick Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
+              <Button className="w-full justify-start h-10 px-4 group bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => setAddOpen(true)}>
+                <div className="bg-white/20 p-1.5 rounded-md mr-3 transition-colors">
+                  <Plus className="w-4 h-4" />
+                </div>
+                Add Manual Payment/Expense
+              </Button>
               <Button variant="outline" className="w-full justify-start h-10 px-4 group" asChild>
                 <a href="/accounting/student-fees">
                   <div className="bg-primary/10 p-1.5 rounded-md mr-3 group-hover:bg-primary/20 transition-colors">
@@ -261,6 +329,71 @@ export default function AccountingPage() {
           </Card>
         </div>
       </div>
+
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Record New Transaction</DialogTitle>
+            <DialogDescription>Manually record an income or expense.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleAddTransaction} className="space-y-4">
+            <div className="space-y-2">
+              <Label>Type</Label>
+              <Select name="type" defaultValue="Expense">
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Expense">Expense (Spending)</SelectItem>
+                  <SelectItem value="Income">Income (Earning)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Category</Label>
+              <Select name="category" defaultValue="Miscellaneous">
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Rent">Rent</SelectItem>
+                  <SelectItem value="Utilities">Utilities (Electricity/Water)</SelectItem>
+                  <SelectItem value="Maintenance">Maintenance</SelectItem>
+                  <SelectItem value="Equipment">Equipment</SelectItem>
+                  <SelectItem value="Salary">Salary (Ad-hoc)</SelectItem>
+                  <SelectItem value="Marketing">Marketing</SelectItem>
+                  <SelectItem value="Miscellaneous">Miscellaneous</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Amount (₹)</Label>
+              <Input name="amount" type="number" required min="1" step="0.01" />
+            </div>
+            <div className="space-y-2">
+              <Label>Description / Party Name</Label>
+              <Input name="description" placeholder="e.g. Paid for Office Paint" required />
+            </div>
+            <div className="space-y-2">
+              <Label>Date</Label>
+              <Input name="date" type="date" required defaultValue={new Date().toISOString().split('T')[0]} />
+            </div>
+            <div className="space-y-2">
+              <Label>Payment Mode</Label>
+              <Select name="mode" defaultValue="Cash">
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Cash">Cash</SelectItem>
+                  <SelectItem value="UPI">UPI</SelectItem>
+                  <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
+                  <SelectItem value="Cheque">Cheque</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
+              <Button type="submit">Save Record</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

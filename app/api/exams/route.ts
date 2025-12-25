@@ -24,56 +24,50 @@ export async function GET(req: Request) {
       .lean()
 
     const User = (await import('@/lib/models/User')).default
+
     for (const exam of exams) {
+      // 1. Populate top-level systemAssignments
       if (exam.systemAssignments?.length > 0) {
         for (let i = 0; i < exam.systemAssignments.length; i++) {
           const studentId = exam.systemAssignments[i].studentId
-          if (studentId) {
+          if (studentId && !studentId.name) {
             const student = await User.findById(studentId).select('name rollNo').lean()
-            if (student) {
-              exam.systemAssignments[i].studentId = student
-            }
+            if (student) exam.systemAssignments[i].studentId = student
           }
         }
 
-        // Get rescheduled date info for exams with rescheduled students
+        // Rescheduled Logic (Only relevant if systemAssignments exists)
         const hasRescheduled = exam.systemAssignments.some((sa: any) => sa.isRescheduled)
         if (hasRescheduled) {
-          // Get all rescheduled admit cards for this exam
           const rescheduledAdmitCards = await AdmitCard.find({
             examId: exam._id,
             isRescheduled: true
           }).sort({ examDate: -1 }).lean()
 
-          console.log('Rescheduled admit cards for exam', exam.title, ':', rescheduledAdmitCards.length)
           if (rescheduledAdmitCards.length > 0) {
-            console.log('First admit card data:', {
-              _id: rescheduledAdmitCards[0]._id,
-              examDate: rescheduledAdmitCards[0].examDate,
-              startTime: rescheduledAdmitCards[0].startTime,
-              isRescheduled: rescheduledAdmitCards[0].isRescheduled
-            })
-          }
-
-          if (rescheduledAdmitCards.length > 0) {
-            // Use the most recent rescheduled date
             const latestReschedule = rescheduledAdmitCards[0]
             exam.rescheduledDate = latestReschedule.examDate
             exam.rescheduledStartTime = latestReschedule.startTime
             exam.rescheduledEndTime = latestReschedule.endTime
-            console.log('Set rescheduled date:', exam.rescheduledDate, 'from admit card:', latestReschedule._id)
-          } else {
-            console.log('No rescheduled admit cards found for exam:', exam.title)
+          }
+        }
+      }
+
+      // 2. Populate sections systemAssignments
+      if (exam.sections?.length > 0) {
+        for (const section of exam.sections) {
+          if (section.systemAssignments?.length > 0) {
+            for (let i = 0; i < section.systemAssignments.length; i++) {
+              const studentId = section.systemAssignments[i].studentId
+              if (studentId && !studentId.name) {
+                const student = await User.findById(studentId).select('name rollNo').lean()
+                if (student) section.systemAssignments[i].studentId = student
+              }
+            }
           }
         }
       }
     }
-
-    console.log('Final exams:', exams.filter((e: any) => e.type === 'Final').map((e: any) => ({
-      title: e.title,
-      attendanceEnabled: e.attendanceEnabled,
-      hasSystemAssignments: !!e.systemAssignments?.length
-    })))
 
     return NextResponse.json(exams)
   } catch (error: any) {

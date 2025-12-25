@@ -9,9 +9,17 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { toast } from "sonner"
-import { FileText, Clock, CheckCircle, Calendar, Users, Award, Search, Filter, AlertTriangle, AlertCircle, ArrowRight } from "lucide-react"
+import {
+  FileText, Clock, CheckCircle, Calendar, Users, Award, Search, Filter,
+  AlertTriangle, AlertCircle, ArrowRight, DollarSign, Ban, RefreshCw,
+  Timer, XCircle, MapPin, Download
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Loader from "@/components/ui/loader"
+import { Checkbox } from "@/components/ui/checkbox"
+import Link from "next/link"
+import { generateAdmitCardHtml } from "@/utils/generate-admit-card"
+
 
 export default function InstituteExamsPage() {
   const [exams, setExams] = useState<any[]>([])
@@ -20,15 +28,35 @@ export default function InstituteExamsPage() {
   const [loading, setLoading] = useState(true)
   const [instituteId, setInstituteId] = useState<string | null>(null)
   const [students, setStudents] = useState<any[]>([])
-  const [activeTab, setActiveTab] = useState("exams")
+  const [courses, setCourses] = useState<any[]>([])
 
-  const [examSearch, setExamSearch] = useState('')
-  const [examTypeFilter, setExamTypeFilter] = useState('all')
-  const [attendanceSearch, setAttendanceSearch] = useState('')
-  const [dppSearch, setDppSearch] = useState('')
-  const [overallSearch, setOverallSearch] = useState('')
-  const [admitSearch, setAdmitSearch] = useState('')
-  const [admitExamFilter, setAdmitExamFilter] = useState('all')
+  const [activeTab, setActiveTab] = useState("schedule")
+
+  // Filters for Exam Lists
+  const [filterCourseId, setFilterCourseId] = useState('all')
+  const [filterStatus, setFilterStatus] = useState('all')
+  const [searchQuery, setSearchQuery] = useState('')
+
+  // Admit Card Filters
+  const [admitFilterCourse, setAdmitFilterCourse] = useState('all')
+  const [admitFilterExam, setAdmitFilterExam] = useState('all')
+  const [admitSearchQuery, setAdmitSearchQuery] = useState('')
+
+  const [resultFilterCourse, setResultFilterCourse] = useState('all')
+  const [resultFilterExam, setResultFilterExam] = useState('all')
+  const [resultSearchQuery, setResultSearchQuery] = useState('')
+
+  // Attendance Filters
+  const [attendanceFilterCourse, setAttendanceFilterCourse] = useState('all')
+  const [attendanceFilterExam, setAttendanceFilterExam] = useState('all')
+  const [attendanceSearchQuery, setAttendanceSearchQuery] = useState('')
+
+  // Scheduling State
+  const [selectedCourseId, setSelectedCourseId] = useState<string>('')
+  const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([])
+  const [scheduleDate, setScheduleDate] = useState('')
+  const [scheduleTitle, setScheduleTitle] = useState('')
+  const [scheduling, setScheduling] = useState(false)
 
   useEffect(() => {
     const user = localStorage.getItem('user')
@@ -44,7 +72,55 @@ export default function InstituteExamsPage() {
     fetchResults()
     fetchAdmitCards()
     fetchStudents()
+    fetchCourses()
   }, [instituteId])
+
+  const handleDownloadAdmitCard = (card: any) => {
+    try {
+      const adjustTime = (timeStr: string, minutesToSubtract: number) => {
+        if (!timeStr) return '00:00'
+        const [hours, minutes] = timeStr.split(':').map(Number)
+        const date = new Date()
+        date.setHours(hours, minutes, 0, 0)
+        date.setMinutes(date.getMinutes() - minutesToSubtract)
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }).toLowerCase()
+      }
+
+      const batchName = card.examTitle?.includes('-') ? card.examTitle.split('-').pop().trim() : 'Regular Batch'
+
+      const data = {
+        instituteName: "PEACEXperts Academy, Nashik",
+        candidateName: card.studentName,
+        photoUrl: card.studentId?.documents?.photo,
+        systemName: card.systemName,
+        rollNo: card.rollNo,
+        studentName: card.studentName,
+        motherName: card.studentId?.motherName || '__________',
+        aadhaarCard: card.studentId?.aadhaarCardNo || '__________',
+        examCentreCode: 'DLC-IT' + (card.rollNo?.substring(0, 4) || '1081'),
+        batch: batchName,
+        examDate: new Date(card.examDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-'),
+        reportingTime: adjustTime(card.startTime, 30),
+        gateClosingTime: adjustTime(card.startTime, 5),
+        examStartTime: adjustTime(card.startTime, 0),
+        examDuration: `${card.duration} Minutes`,
+        examCentreName: card.instituteName,
+        examCentreAddress: "Exam Center Address will be provided by Institute."
+      }
+
+      const html = generateAdmitCardHtml(data)
+      const win = window.open('', '_blank')
+      if (win) {
+        win.document.write(html)
+        win.document.close()
+      } else {
+        toast.error("Please allow popups to download admit card")
+      }
+    } catch (e) {
+      console.error(e)
+      // toast.error("Failed to generate admit card")
+    }
+  }
 
   const fetchExams = async () => {
     try {
@@ -64,63 +140,124 @@ export default function InstituteExamsPage() {
       const data = await res.json()
       setResults(data)
     } catch (error) {
-      toast.error('Failed to fetch results')
+      // toast.error('Failed to fetch results')
     }
   }
 
   const fetchAdmitCards = async () => {
+    if (!instituteId) return
     try {
-      const res = await fetch('/api/admit-cards')
+      const res = await fetch(`/api/admit-cards?instituteId=${instituteId}`)
       const data = await res.json()
-      setAdmitCards(data)
+      setAdmitCards(Array.isArray(data) ? data : [])
     } catch (error) {
-      toast.error('Failed to fetch admit cards')
+      setAdmitCards([])
     }
   }
 
   const fetchStudents = async () => {
     try {
-      const res = await fetch('/api/users?role=Student')
+      const res = await fetch(`/api/users?role=Student&instituteId=${instituteId}`)
       const data = await res.json()
-      setStudents(data.filter((s: any) => s.instituteId === instituteId))
+      setStudents(data.filter((s: any) => s.instituteId === instituteId || s.instituteId?._id === instituteId))
     } catch (error) {
       console.error('Failed to fetch students')
     }
   }
 
-  const getExamResults = (examId: string) => {
-    return results.filter((r: any) => r.examId?._id === examId)
+  const fetchCourses = async () => {
+    if (!instituteId) return
+    try {
+      const res = await fetch(`/api/institutes/${instituteId}/courses`)
+      const data = await res.json()
+      // Extract the nested course object from the assignment and filter out any nulls
+      const validCourses = data.map((item: any) => item.courseId).filter((c: any) => c)
+      setCourses(validCourses)
+    } catch (error) {
+      console.error('Failed to fetch courses')
+    }
   }
 
-  const getScoreboard = (examId: string) => {
-    const examResults = getExamResults(examId)
-    return examResults.sort((a: any, b: any) => b.score - a.score).slice(0, 10)
-  }
+  const handlePayRoyalty = async (studentId: string, courseId: string) => {
+    try {
+      const res = await fetch('/api/payments/royalty', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          studentId,
+          courseId,
+          instituteId,
+          amount: 50, // Hardcoded royalty amount for now
+          paymentMode: 'Manual',
+          transactionId: `ROYALTY-${Date.now()}`
+        })
+      })
 
-  const getOverallScoreboard = () => {
-    const dppResults = results.filter((r: any) => r.examId?.type === 'DPP')
-    const studentScores: any = {}
-
-    dppResults.forEach((r: any) => {
-      const studentId = r.studentId?._id
-      if (!studentScores[studentId]) {
-        studentScores[studentId] = {
-          name: r.studentId?.name,
-          rollNo: r.studentId?.rollNo,
-          totalScore: 0,
-          totalMarks: 0,
-          attempts: 0
-        }
+      if (res.ok) {
+        toast.success('Royalty Paid Successfully')
+        fetchStudents() // Refresh student list to update status
+      } else {
+        toast.error('Failed to pay royalty')
       }
-      studentScores[studentId].totalScore += r.score
-      studentScores[studentId].totalMarks += r.totalMarks
-      studentScores[studentId].attempts++
-    })
+    } catch (error) {
+      toast.error('Payment Error')
+    }
+  }
 
-    return Object.values(studentScores)
-      .map((s: any) => ({ ...s, percentage: (s.totalScore / s.totalMarks) * 100 }))
-      .sort((a: any, b: any) => b.percentage - a.percentage)
-      .slice(0, 10)
+  const handleScheduleExam = async () => {
+    if (!selectedCourseId || selectedStudentIds.length === 0 || !scheduleDate) {
+      toast.error('Please select course, students, and date')
+      return
+    }
+
+    setScheduling(true)
+    try {
+      const res = await fetch('/api/exams/schedule-final', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          instituteId,
+          courseId: selectedCourseId,
+          studentIds: selectedStudentIds,
+          proposedDate: scheduleDate,
+          title: scheduleTitle
+        })
+      })
+
+      const data = await res.json()
+      if (res.ok) {
+        toast.success(`Exam Scheduled! ${data.sectionsCount} sections created.`)
+        setExams([...exams, data.exam]) // Optimistic update
+        setSelectedStudentIds([])
+        setScheduleTitle('')
+        setActiveTab('final') // Switch view to final exams
+        fetchAdmitCards()
+      } else {
+        toast.error(data.error || 'Failed to schedule')
+      }
+    } catch (error) {
+      toast.error('Scheduling failed')
+    } finally {
+      setScheduling(false)
+    }
+  }
+
+  const getFilteredExams = (type: string, isRescheduled: boolean = false) => {
+    return exams.filter((exam: any) => {
+      // In institute panel, we might want to see both Final and DPP, but the request focuses on Final/Rescheduled
+      // Adjust logic: if type is 'Final', checking matches
+      if (type === 'Final') {
+        if (exam.type !== 'Final') return false
+      }
+
+      const reschMatch = isRescheduled ? exam.title.includes('(Rescheduled)') : !exam.title.includes('(Rescheduled)')
+
+      const courseMatch = filterCourseId === 'all' || exam.courseId?._id === filterCourseId || exam.courseId === filterCourseId
+      const statusMatch = filterStatus === 'all' || exam.status === filterStatus
+      const searchMatch = !searchQuery || exam.title.toLowerCase().includes(searchQuery.toLowerCase())
+
+      return reschMatch && courseMatch && statusMatch && searchMatch
+    })
   }
 
   const isExamStarted = (exam: any) => {
@@ -130,350 +267,623 @@ export default function InstituteExamsPage() {
     return new Date() >= examDateTime
   }
 
-  const filteredExams = exams.filter((e: any) => {
-    const matchesSearch = e.title?.toLowerCase().includes(examSearch.toLowerCase()) ||
-      e.courseId?.name?.toLowerCase().includes(examSearch.toLowerCase())
-    const matchesType = examTypeFilter === 'all' || e.type === examTypeFilter
-    const hasRescheduled = e.studentAssignments?.some((sa: any) => sa.isRescheduled)
-    return matchesSearch && matchesType && !hasRescheduled
-  })
-
-  const filteredAttendanceExams = exams.filter((e: any) => {
-    const isAttendanceExam = e.type === 'Final' && e.attendanceEnabled
-    const matchesSearch = e.title?.toLowerCase().includes(attendanceSearch.toLowerCase())
-    const hasRescheduled = e.title?.includes('(Rescheduled)')
-    return isAttendanceExam && matchesSearch
-  })
-
-  const filteredDPPs = exams.filter((e: any) => {
-    const isDPP = e.type === 'DPP'
-    const matchesSearch = e.title?.toLowerCase().includes(dppSearch.toLowerCase())
-    return isDPP && matchesSearch
-  })
-
-  const filteredOverall = getOverallScoreboard().filter((s: any) =>
-    s.name?.toLowerCase().includes(overallSearch.toLowerCase()) ||
-    s.rollNo?.toLowerCase().includes(overallSearch.toLowerCase())
+  // Filter students for schedule table
+  const studentsForCourse = students.filter(s =>
+    s.courses?.some((c: any) => (c.courseId?._id === selectedCourseId || c.courseId === selectedCourseId))
   )
 
-  const groupedAdmitCards = Array.isArray(admitCards) ? admitCards.reduce((acc: any, card: any) => {
-    const examId = card.examId?._id || card.examId
-    if (!acc[examId]) acc[examId] = []
-    acc[examId].push(card)
-    return acc
-  }, {}) : {}
-
-  const filteredAdmitCards = Object.entries(groupedAdmitCards).filter(([examId, cards]: any) => {
-    const exam = exams.find((e: any) => e._id === examId)
-    const matchesSearch = cards.some((c: any) =>
-      c.studentName?.toLowerCase().includes(admitSearch.toLowerCase()) ||
-      c.rollNo?.toLowerCase().includes(admitSearch.toLowerCase())
-    )
-    const matchesExam = admitExamFilter === 'all' || exam?.title === admitExamFilter
-    return matchesSearch && matchesExam
-  })
-
-  if (loading) {
-    return (
-      <div className="flex min-h-[calc(100vh-140px)] items-center justify-center">
-        <Loader />
-      </div>
-    )
+  const toggleStudentSelection = (studentId: string) => {
+    if (selectedStudentIds.includes(studentId)) {
+      setSelectedStudentIds(selectedStudentIds.filter(id => id !== studentId))
+    } else {
+      setSelectedStudentIds([...selectedStudentIds, studentId])
+    }
   }
 
+  if (loading) return <div className="flex justify-center py-20 px-4"><Loader /></div>
+
   const totalExams = exams.length
-  const dppCount = exams.filter((e: any) => e.type === 'DPP').length
-  const finalCount = exams.filter((e: any) => e.type === 'Final').length
-  const totalResults = results.length
 
   return (
     <div className="space-y-6">
-      <SectionHeader title="Exam Management" subtitle="Schedule exams, manage results, and issue admit cards." />
-
-      {/* Stats Grid */}
-      <div className="grid gap-4 sm:grid-cols-4">
-        <Card className="relative overflow-hidden border-blue-200 dark:border-blue-800 bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/20 dark:to-background">
-          <div className="absolute right-0 top-0 h-full w-1 bg-blue-500" />
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-blue-100 dark:bg-blue-900/50 rounded-xl shadow-sm">
-                <FileText className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-blue-600 dark:text-blue-400 mb-1">Total Exams</p>
-                <p className="text-2xl font-bold">{totalExams}</p>
-                <p className="text-xs text-muted-foreground mt-1">Scheduled</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="relative overflow-hidden border-green-200 dark:border-green-800 bg-gradient-to-br from-green-50 to-white dark:from-green-950/20 dark:to-background">
-          <div className="absolute right-0 top-0 h-full w-1 bg-green-500" />
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-green-100 dark:bg-green-900/50 rounded-xl shadow-sm">
-                <Clock className="w-6 h-6 text-green-600 dark:text-green-400" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-green-600 dark:text-green-400 mb-1">DPP Exams</p>
-                <p className="text-2xl font-bold">{dppCount}</p>
-                <p className="text-xs text-muted-foreground mt-1">Practice Tests</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="relative overflow-hidden border-purple-200 dark:border-purple-800 bg-gradient-to-br from-purple-50 to-white dark:from-purple-950/20 dark:to-background">
-          <div className="absolute right-0 top-0 h-full w-1 bg-purple-500" />
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-purple-100 dark:bg-purple-900/50 rounded-xl shadow-sm">
-                <Award className="w-6 h-6 text-purple-600 dark:text-purple-400" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-purple-600 dark:text-purple-400 mb-1">Final Exams</p>
-                <p className="text-2xl font-bold">{finalCount}</p>
-                <p className="text-xs text-muted-foreground mt-1">Major Tests</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="relative overflow-hidden border-orange-200 dark:border-orange-800 bg-gradient-to-br from-orange-50 to-white dark:from-orange-950/20 dark:to-background">
-          <div className="absolute right-0 top-0 h-full w-1 bg-orange-500" />
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-orange-100 dark:bg-orange-900/50 rounded-xl shadow-sm">
-                <CheckCircle className="w-6 h-6 text-orange-600 dark:text-orange-400" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-orange-600 dark:text-orange-400 mb-1">Total Results</p>
-                <p className="text-2xl font-bold">{totalResults}</p>
-                <p className="text-xs text-muted-foreground mt-1">Published</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="flex justify-between items-center">
+        <SectionHeader title="Exam Management" subtitle="Schedule exams, manage admit cards, and view results." />
+        <Button variant="outline" className="gap-2" asChild>
+          <Link href="/institute-admin/exams/reschedule">
+            <RefreshCw className="w-4 h-4" />
+            Request Reschedule
+          </Link>
+        </Button>
       </div>
 
-      <div className="pb-4 flex justify-center">
+      <div className="flex justify-center pb-2 w-full overflow-x-auto">
         <AnimatedTabsProfessional
           activeTab={activeTab}
           onChange={setActiveTab}
           tabs={[
-            { id: "exams", label: "All Exams", count: totalExams },
-            { id: "rescheduled", label: "Rescheduled", count: exams.filter((e: any) => e.type === 'Final' && e.title?.includes('(Rescheduled)')).length },
+            { id: "schedule", label: "Schedule Exam" },
+            { id: "final", label: "Final Exams", count: getFilteredExams('Final', false).length },
+            { id: "rescheduled", label: "Rescheduled", count: getFilteredExams('Final', true).length },
             { id: "attendance", label: "Attendance" },
-            { id: "dpp-results", label: "DPP Results" },
-            { id: "overall", label: "Scoreboard" },
-            { id: "admit", label: "Admit Cards", count: admitCards.length }
+            { id: "admit", label: "Admit Cards", count: admitCards.length },
+            { id: "results", label: "Results" },
           ]}
         />
       </div>
 
       <div className="space-y-6">
-        {activeTab === 'rescheduled' && (
-          <div className="space-y-4">
-            {exams.filter((e: any) => e.type === 'Final' && e.title?.includes('(Rescheduled)')).length === 0 ? (
-              <div className="py-12 text-center border-dashed border-2 rounded-xl bg-muted/20">
-                <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-3" />
-                <p className="text-muted-foreground">No rescheduled exams found</p>
-              </div>
-            ) : (
-              exams.filter((e: any) => e.type === 'Final' && e.title?.includes('(Rescheduled)')).map((exam: any) => {
-                const rescheduledStudents = exam.systemAssignments || []
-                return (
-                  <Card key={exam._id} className="border-l-4 border-l-yellow-500">
-                    <CardHeader className="pb-3 bg-yellow-50/50 dark:bg-yellow-900/10">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <CardTitle className="text-base flex items-center gap-2">
-                            <AlertTriangle className="w-4 h-4 text-yellow-600" />
-                            {exam.title}
-                          </CardTitle>
-                          <p className="text-sm text-muted-foreground">{exam.courseId?.name}</p>
-                          <p className="text-xs text-muted-foreground mt-1">Date: {new Date(exam.date).toLocaleDateString()} • Time: {exam.startTime}</p>
-                        </div>
-                        <Badge variant="outline" className="bg-yellow-100/50 text-yellow-700 border-yellow-200">
-                          {rescheduledStudents.length} Students Affected
-                        </Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="pt-4 space-y-4">
-                      <div className="text-sm">
-                        <p className="text-muted-foreground mb-3 font-medium text-xs uppercase tracking-wide">Rescheduled Students</p>
-                        <div className="grid gap-2">
-                          {rescheduledStudents.map((sa: any, i: number) => {
-                            const student = students.find((s: any) => s._id?.toString() === sa.studentId?.toString())
-                            return (
-                              <div key={i} className="flex items-center justify-between border rounded-lg p-3 bg-card hover:bg-muted/30 transition-colors">
-                                <div className="flex items-center gap-3">
-                                  <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
-                                    {student?.name?.charAt(0)}
-                                  </div>
-                                  <div>
-                                    <p className="font-medium">{student?.name || 'Student'}</p>
-                                    <p className="text-xs text-muted-foreground">{student?.rollNo} • {sa.systemName} • Section 999</p>
-                                  </div>
-                                </div>
-                                <div className="text-right">
-                                  <Badge variant={sa.attended ? 'default' : 'secondary'} className={sa.attended ? 'bg-green-100 text-green-700 hover:bg-green-200 border-green-200' : ''}>
-                                    {sa.attended ? 'Present' : 'Absent'}
-                                  </Badge>
-                                  <p className="text-xs text-muted-foreground mt-1">Reason: <span className="italic">{sa.rescheduledReason || 'Not specified'}</span></p>
-                                </div>
+        {/* SCHEDULE EXAM TAB */}
+        {activeTab === 'schedule' && (
+          <div className="grid gap-6 lg:grid-cols-3">
+            <Card className="lg:col-span-1 h-fit shadow-md border-t-4 border-t-primary">
+              <CardHeader>
+                <CardTitle>Exam Configuration</CardTitle>
+                <CardDescription>Set up a new final exam</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Select Course</label>
+                  <Select value={selectedCourseId} onValueChange={setSelectedCourseId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose course..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {courses.map((c: any) => (
+                        <SelectItem key={c._id} value={c._id}>{c.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Proposed Date</label>
+                  <Input type="date" value={scheduleDate} onChange={(e) => setScheduleDate(e.target.value)} min={new Date(Date.now() + 6 * 86400000).toISOString().split('T')[0]} />
+                  <p className="text-xs text-muted-foreground">Must be at least 6 days from today.</p>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Exam Title (Optional)</label>
+                  <Input placeholder="e.g. Final Assessment Batch A" value={scheduleTitle} onChange={(e) => setScheduleTitle(e.target.value)} />
+                </div>
+
+                <div className="pt-4 p-4 bg-muted/30 rounded-lg border text-sm space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Selected Students:</span>
+                    <span className="font-bold">{selectedStudentIds.length}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Estimated Sections:</span>
+                    <span className="font-bold">{selectedStudentIds.length > 0 ? Math.ceil(selectedStudentIds.length / 10) : 0}</span>
+                  </div>
+                </div>
+
+                <Button className="w-full" onClick={handleScheduleExam} disabled={scheduling || selectedStudentIds.length === 0}>
+                  {scheduling ? 'Scheduling...' : 'Schedule Exam'}
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card className="lg:col-span-2 shadow-sm">
+              <CardHeader>
+                <CardTitle>Select Students</CardTitle>
+                <CardDescription>Only students with Royalty Paid are eligible.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {!selectedCourseId ? (
+                  <div className="text-center py-10 text-muted-foreground">Please select a course first</div>
+                ) : (studentsForCourse.length === 0 ? (
+                  <div className="text-center py-10 text-muted-foreground">No students found for this course</div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[50px]"><Checkbox disabled checked={false} /></TableHead>
+                        <TableHead>Student Name</TableHead>
+                        <TableHead>Royalty Status</TableHead>
+                        <TableHead className="text-right">Action</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {studentsForCourse.map((student: any) => {
+                        // Find course enrollment
+                        const courseData = student.courses.find((c: any) => (c.courseId?._id || c.courseId) === selectedCourseId)
+                        const isRoyaltyPaid = courseData?.royaltyPaid
+
+                        return (
+                          <TableRow key={student._id}>
+                            <TableCell>
+                              <Checkbox
+                                checked={selectedStudentIds.includes(student._id)}
+                                onCheckedChange={() => toggleStudentSelection(student._id)}
+                                disabled={!isRoyaltyPaid}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <div>
+                                <div className="font-medium">{student.name}</div>
+                                <div className="text-xs text-muted-foreground">{student.rollNo || 'No ID'}</div>
                               </div>
-                            )
-                          })}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )
-              })
-            )}
+                            </TableCell>
+                            <TableCell>
+                              {isRoyaltyPaid ? (
+                                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Paid to Super Admin</Badge>
+                              ) : (
+                                <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">Pending</Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {!isRoyaltyPaid && (
+                                <Button size="sm" variant="outline" className="h-7 text-xs border-green-200 text-green-700 hover:bg-green-50" onClick={() => handlePayRoyalty(student._id, selectedCourseId)}>
+                                  <DollarSign className="w-3 h-3 mr-1" /> Pay Royalty
+                                </Button>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })}
+                    </TableBody>
+                  </Table>
+                ))}
+              </CardContent>
+            </Card>
           </div>
         )}
 
-        {activeTab === 'exams' && (
+        {/* FINAL EXAMS & RESCHEDULED TAB (Shared Design) */}
+        {(activeTab === 'final' || activeTab === 'rescheduled') && (
           <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row gap-4 bg-muted/20 p-4 rounded-xl border">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Search exam title or course..." value={examSearch} onChange={(e) => setExamSearch(e.target.value)} className="pl-9 bg-background" />
-              </div>
-              <Select value={examTypeFilter} onValueChange={setExamTypeFilter}>
-                <SelectTrigger className="w-full sm:w-[180px] bg-background">
-                  <Filter className="w-4 h-4 mr-2" />
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="DPP">DPP</SelectItem>
-                  <SelectItem value="Final">Final</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex flex-wrap gap-3">
+                  <Select value={filterCourseId} onValueChange={(value) => {
+                    setFilterCourseId(value === 'all' ? '' : value)
+                  }}>
+                    <SelectTrigger className="w-[200px]">
+                      <SelectValue placeholder="Filter by Course" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Courses</SelectItem>
+                      {courses.map((course: any) => (
+                        <SelectItem key={course._id} value={course._id}>{course.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
 
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {filteredExams.map((exam: any) => (
-                <Card key={exam._id} className="hover:shadow-md transition-all duration-200 group border-l-4 border-l-primary/50">
-                  <CardHeader className="pb-3 border-b bg-muted/10">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <CardTitle className="text-base line-clamp-1">{exam.title}</CardTitle>
-                        <p className="text-sm text-muted-foreground line-clamp-1">{exam.courseId?.name}</p>
+                  <Select value={filterStatus} onValueChange={setFilterStatus}>
+                    <SelectTrigger className="w-[200px]">
+                      <SelectValue placeholder="Filter by Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="Scheduled">Scheduled</SelectItem>
+                      <SelectItem value="Active">Active</SelectItem>
+                      <SelectItem value="Completed">Completed</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <Input
+                    placeholder="Search Exams..."
+                    className="w-[200px]"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                  <Button variant="outline" onClick={() => { setFilterCourseId('all'); setSearchQuery(''); setFilterStatus('all') }}>Clear</Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="grid gap-6">
+              {getFilteredExams('Final', activeTab === 'rescheduled').map((exam: any) => (
+                <Card key={exam._id} className={`hover:shadow-lg transition-all border-l-4 overflow-hidden group ${activeTab === 'rescheduled' ? 'border-l-orange-500' : 'border-l-blue-500'}`}>
+                  <CardContent className="p-0">
+                    <div className="p-4 border-b bg-muted/5 flex items-start justify-between">
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-2">
+                          <div className={`p-2 rounded-lg group-hover:scale-105 transition-transform ${activeTab === 'rescheduled' ? 'bg-orange-100 text-orange-600' : 'bg-blue-100 text-blue-600'}`}>
+                            {activeTab === 'rescheduled' ? <RefreshCw className="w-5 h-5" /> : <Award className="w-5 h-5" />}
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-lg leading-none">{exam.title}</h3>
+                            <div className="flex items-center gap-2 mt-1.5">
+                              <Badge variant="outline" className="text-xs font-normal border-blue-200 text-blue-700 bg-blue-50">
+                                {exam.courseId?.name || 'N/A'}
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex flex-col gap-1 items-end">
-                        <Badge variant="outline">{exam.type}</Badge>
-                        {exam.studentAssignments?.some((sa: any) => sa.isRescheduled) && (
-                          <Badge variant="destructive" className="text-[10px] px-1.5 h-5">Rescheduled</Badge>
-                        )}
-                      </div>
+                      <Badge variant={exam.status === 'Active' ? 'default' : 'secondary'} className={exam.status === 'Active' ? "bg-green-600 hover:bg-green-700 shadow-sm" : ""}>
+                        {exam.status}
+                      </Badge>
                     </div>
-                  </CardHeader>
-                  <CardContent className="pt-4">
-                    <div className="space-y-3 text-sm">
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground flex items-center gap-2"><Calendar className="w-3 h-3" /> Date</span>
-                        <span className="font-medium">{new Date(exam.date).toLocaleDateString()}</span>
+
+                    <div className="p-5 grid grid-cols-2 md:grid-cols-4 gap-6">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-orange-100 rounded-full">
+                          <Calendar className="w-4 h-4 text-orange-600" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Date</p>
+                          <p className="font-medium text-sm">{new Date(exam.date).toLocaleDateString()}</p>
+                        </div>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground flex items-center gap-2"><Clock className="w-3 h-3" /> Duration</span>
-                        <span className="font-medium">{exam.duration} mins</span>
+
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-purple-100 rounded-full">
+                          <Timer className="w-4 h-4 text-purple-600" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Duration</p>
+                          <p className="font-medium text-sm">{exam.duration} mins</p>
+                        </div>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground flex items-center gap-2"><Users className="w-3 h-3" /> Attempts</span>
-                        <span className="font-medium">{getExamResults(exam._id).length}</span>
+
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-indigo-100 rounded-full">
+                          <Users className="w-4 h-4 text-indigo-600" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Students</p>
+                          <p className="font-medium text-sm">{exam.systemAssignments?.length || 0}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-emerald-100 rounded-full">
+                          <Award className="w-4 h-4 text-emerald-600" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Marks</p>
+                          <p className="font-medium text-sm">{exam.totalMarks}</p>
+                        </div>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
               ))}
+              {getFilteredExams('Final', activeTab === 'rescheduled').length === 0 && (
+                <div className="text-center py-10 border-2 border-dashed rounded-lg text-muted-foreground">
+                  No exams found for the selected filters.
+                </div>
+              )}
             </div>
           </div>
         )}
 
+        {/* ATTENDANCE TAB */}
         {activeTab === 'attendance' && (
-          <div className="space-y-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search attendance exams..." value={attendanceSearch} onChange={(e) => setAttendanceSearch(e.target.value)} className="pl-9" />
-            </div>
+          <div className="space-y-6">
+            <Card>
+              <CardContent className="p-4 flex flex-wrap gap-4 items-center">
+                <Select value={attendanceFilterCourse} onValueChange={(val) => {
+                  setAttendanceFilterCourse(val)
+                  setAttendanceFilterExam('all') // Reset exam filter when course changes
+                }}>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="Filter by Course" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Courses</SelectItem>
+                    {courses.map((c: any) => (
+                      <SelectItem key={c._id} value={c._id}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
 
-            {filteredAttendanceExams.length === 0 ? (
-              <div className="py-12 text-center border-dashed border-2 rounded-xl bg-muted/20">
-                <Users className="w-12 h-12 text-muted-foreground mx-auto mb-3 opacity-50" />
-                <p className="text-muted-foreground">No final exams with attendance tracking enabled</p>
-              </div>
-            ) : (
-              filteredAttendanceExams.map((exam: any) => {
-                const examStarted = isExamStarted(exam)
+                <Select value={attendanceFilterExam} onValueChange={setAttendanceFilterExam}>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="Filter by Exam" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Exams</SelectItem>
+                    {exams
+                      .filter(e => e.type === 'Final' && e.attendanceEnabled)
+                      .filter(e => {
+                        if (attendanceFilterCourse === 'all') return true
+                        return (e.courseId?._id || e.courseId) === attendanceFilterCourse
+                      })
+                      .map((e: any) => (
+                        <SelectItem key={e._id} value={e._id}>{e.title}</SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+
+                <div className="relative">
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Search Student..."
+                    className="max-w-xs pl-9"
+                    value={attendanceSearchQuery}
+                    onChange={(e) => setAttendanceSearchQuery(e.target.value)}
+                  />
+                </div>
+                <Button variant="outline" onClick={() => { setAttendanceFilterCourse('all'); setAttendanceFilterExam('all'); setAttendanceSearchQuery('') }}>Clear</Button>
+              </CardContent>
+            </Card>
+
+            {(() => {
+              const filteredExams = exams.filter(e => {
+                if (e.type !== 'Final' || !e.attendanceEnabled) return false
+
+                // Course Filter
+                if (attendanceFilterCourse !== 'all') {
+                  if ((e.courseId?._id || e.courseId) !== attendanceFilterCourse) return false
+                }
+
+                // Exam Filter
+                if (attendanceFilterExam !== 'all') {
+                  if (e._id !== attendanceFilterExam) return false
+                }
+
+                // Search Filter
+                if (attendanceSearchQuery) {
+                  const query = attendanceSearchQuery.toLowerCase()
+                  const titleMatch = e.title.toLowerCase().includes(query)
+                  const studentMatch = e.systemAssignments?.some((sa: any) => sa.studentId?.name?.toLowerCase().includes(query))
+                  return titleMatch || studentMatch
+                }
+
+                return true
+              })
+
+              if (filteredExams.length === 0) {
                 return (
-                  <Card key={exam._id} className="hover:shadow-md transition-shadow overflow-hidden">
-                    <CardHeader className="border-b bg-muted/10">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 bg-background rounded-lg border">
-                            <Calendar className="w-5 h-5 text-primary" />
-                          </div>
-                          <div>
-                            <CardTitle className="text-base">{exam.title}</CardTitle>
-                            <p className="text-sm text-muted-foreground">{new Date(exam.date).toLocaleString()}</p>
+                  <div className="py-12 text-center border-dashed border-2 rounded-xl bg-muted/20">
+                    <p className="text-muted-foreground">No attendance records found matching filters.</p>
+                  </div>
+                )
+              }
+
+              return (
+                <div className="space-y-8">
+                  {filteredExams.map((exam: any) => {
+                    let displayedAssignments = exam.systemAssignments || []
+                    if (attendanceSearchQuery) {
+                      const query = attendanceSearchQuery.toLowerCase()
+                      if (!exam.title.toLowerCase().includes(query)) {
+                        displayedAssignments = displayedAssignments.filter((sa: any) => sa.studentId?.name?.toLowerCase().includes(query))
+                      }
+                    }
+
+                    const total = displayedAssignments.length
+                    const present = displayedAssignments.filter((sa: any) => sa.attended).length
+                    const absent = total - present
+
+                    if (total === 0) return null
+
+                    return (
+                      <div key={exam._id} className="space-y-3">
+                        <div className="flex items-center justify-between px-1">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                              <Users className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                            </div>
+                            <div>
+                              <h3 className="font-bold text-lg leading-none text-foreground flex items-center gap-2">
+                                {exam.title}
+                                <Badge variant="outline" className="text-xs font-normal">
+                                  {new Date(exam.date).toLocaleDateString()}
+                                </Badge>
+                              </h3>
+                              <div className="flex items-center gap-4 mt-1.5 text-xs text-muted-foreground">
+                                <span className="flex items-center gap-1"><Users className="w-3 h-3" /> {total} Students</span>
+                                <span className="flex items-center gap-1 text-green-600"><CheckCircle className="w-3 h-3" /> {present} Present</span>
+                                <span className="flex items-center gap-1 text-red-600"><XCircle className="w-3 h-3" /> {absent} Absent</span>
+                              </div>
+                            </div>
                           </div>
                         </div>
-                        {examStarted && <Badge variant="destructive" className="animate-pulse">Exam Started</Badge>}
+
+                        <div className="border rounded-xl bg-background/50 backdrop-blur-sm shadow-sm overflow-hidden">
+                          <Table>
+                            <TableHeader className="bg-muted/40">
+                              <TableRow>
+                                <TableHead className="w-[300px] pl-6">Student</TableHead>
+                                <TableHead>System</TableHead>
+                                <TableHead>Attendance Status</TableHead>
+                                <TableHead className="text-right pr-6">Action</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {displayedAssignments.map((sa: any, i: number) => (
+                                <TableRow key={i} className="group hover:bg-muted/30 transition-colors">
+                                  <TableCell className="pl-6 py-3">
+                                    <div className="flex items-center gap-3">
+                                      <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shadow-sm ring-2 ring-background overflow-hidden relative">
+                                        {sa.studentId?.documents?.photo ? (
+                                          <img src={sa.studentId.documents.photo} alt={sa.studentId.name} className="w-full h-full object-cover" />
+                                        ) : (
+                                          (sa.studentId?.name || 'U').charAt(0).toUpperCase()
+                                        )}
+                                      </div>
+                                      <div>
+                                        <p className="font-semibold text-sm text-foreground">{sa.studentId?.name || 'Unknown'}</p>
+                                        <p className="text-xs text-muted-foreground">{sa.studentId?.rollNo || 'No Info'}</p>
+                                      </div>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell>
+                                    <div className="flex items-center gap-2">
+                                      <div className={`w-2 h-2 rounded-full ${sa.attended ? 'bg-green-500' : 'bg-gray-300'} ${exam.status === 'Active' ? 'animate-pulse' : ''}`} />
+                                      <span className="font-mono text-sm">{sa.systemName}</span>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell>
+                                    {sa.attended ? (
+                                      <Badge className="bg-green-100 text-green-700 hover:bg-green-200 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800 gap-1.5 px-3 py-1">
+                                        <CheckCircle className="w-3.5 h-3.5 fill-current" />
+                                        Present
+                                      </Badge>
+                                    ) : (
+                                      <Badge variant="outline" className="text-muted-foreground gap-1.5 px-3 py-1">
+                                        <Ban className="w-3.5 h-3.5" />
+                                        Absent
+                                      </Badge>
+                                    )}
+                                  </TableCell>
+                                  <TableCell className="text-right pr-6">
+                                    {!sa.attended && exam.status !== 'Completed' && (
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-8 text-xs border-green-200 text-green-700 hover:bg-green-50 hover:text-green-800"
+                                        onClick={() => {
+                                          fetch(`/api/exams/${exam._id}/mark-attendance`, {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ studentId: sa.studentId._id || sa.studentId })
+                                          }).then(() => { toast.success('Marked Present'); fetchExams() })
+                                        }}
+                                      >
+                                        <CheckCircle className="w-3 h-3 mr-1.5" />
+                                        Mark Present
+                                      </Button>
+                                    )}
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )
+            })()}
+          </div>
+        )}
+
+        {/* ADMIT CARDS TAB */}
+        {activeTab === 'admit' && (
+          <div className="space-y-6">
+            <Card>
+              <CardContent className="p-4 flex flex-wrap gap-4 items-center">
+                <Select value={admitFilterCourse} onValueChange={(val) => setAdmitFilterCourse(val)}>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="Filter by Course" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Courses</SelectItem>
+                    {courses.map((c: any) => (
+                      <SelectItem key={c._id} value={c._id}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={admitFilterExam} onValueChange={(val) => setAdmitFilterExam(val)}>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="Filter by Exam" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Exams</SelectItem>
+                    {Array.from(new Set(
+                      admitCards
+                        .filter((c: any) => {
+                          if (admitFilterCourse === 'all') return true
+                          const relatedExam = exams.find((e: any) => e.title === c.examTitle)
+                          return relatedExam && (relatedExam.courseId?._id === admitFilterCourse || relatedExam.courseId === admitFilterCourse)
+                        })
+                        .map((c: any) => c.examTitle)
+                    )).sort().map((title: any) => (
+                      <SelectItem key={title} value={title}>{title}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <div className="relative">
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Search Student..."
+                    className="max-w-xs pl-9"
+                    value={admitSearchQuery}
+                    onChange={(e) => setAdmitSearchQuery(e.target.value)}
+                  />
+                </div>
+
+                <Button variant="outline" onClick={() => { setAdmitFilterCourse('all'); setAdmitFilterExam('all'); setAdmitSearchQuery('') }}>Clear</Button>
+              </CardContent>
+            </Card>
+
+            {admitCards.length === 0 ? (
+              <p className="text-muted-foreground text-center py-10">No admit cards generated yet.</p>
+            ) : (
+              <div className="space-y-6">
+                {Object.entries(
+                  admitCards
+                    .filter((c: any) => {
+                      const nameMatch = !admitSearchQuery || c.studentName?.toLowerCase().includes(admitSearchQuery.toLowerCase())
+                      const examMatch = admitFilterExam === 'all' || c.examTitle === admitFilterExam
+
+                      let courseMatch = true
+                      if (admitFilterCourse !== 'all') {
+                        const relatedExam = exams.find((e: any) => e.title === c.examTitle)
+                        if (relatedExam) {
+                          courseMatch = relatedExam.courseId?._id === admitFilterCourse || relatedExam.courseId === admitFilterCourse
+                        }
+                      }
+                      return nameMatch && examMatch && courseMatch
+                    })
+                    .reduce<Record<string, any[]>>((acc, card: any) => {
+                      const examTitle = card.examTitle || 'Unknown Exam'
+                      if (!acc[examTitle]) acc[examTitle] = []
+                      acc[examTitle].push(card)
+                      return acc
+                    }, {})
+                ).map(([examTitle, cards]) => (
+                  <Card key={examTitle}>
+                    <CardHeader className="py-3 bg-muted/5 border-b">
+                      <div className="flex items-center gap-2">
+                        <div className="p-1.5 bg-primary/10 rounded-md">
+                          <FileText className="w-4 h-4 text-primary" />
+                        </div>
+                        <CardTitle className="text-base font-semibold">{examTitle}</CardTitle>
+                        <Badge variant="secondary" className="ml-2 text-xs font-normal">
+                          {cards.length} Students
+                        </Badge>
                       </div>
                     </CardHeader>
                     <CardContent className="p-0">
                       <Table>
                         <TableHeader>
-                          <TableRow className="hover:bg-transparent">
+                          <TableRow>
                             <TableHead className="pl-6">Student Name</TableHead>
+                            <TableHead>Roll No</TableHead>
                             <TableHead>System</TableHead>
-                            <TableHead>Status</TableHead>
+                            <TableHead>Date & Time</TableHead>
                             <TableHead className="text-right pr-6">Action</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {exam.systemAssignments?.map((assignment: any, i: number) => (
-                            <TableRow key={i} className="hover:bg-muted/30">
-                              <TableCell className="font-medium pl-6">{assignment.studentId?.name || 'Student'}</TableCell>
-                              <TableCell><Badge variant="outline">{assignment.systemName}</Badge></TableCell>
+                          {cards.map((card: any) => (
+                            <TableRow key={card._id}>
+                              <TableCell className="pl-6 font-medium">{card.studentName}</TableCell>
+                              <TableCell className="text-muted-foreground">{card.rollNo}</TableCell>
                               <TableCell>
-                                <Badge variant={assignment.attended ? 'default' : 'secondary'} className={assignment.attended ? 'bg-green-100 text-green-700 hover:bg-green-200 border-green-200' : ''}>
-                                  {assignment.attended ? 'Present' : 'Absent'}
-                                </Badge>
+                                <Badge variant="outline">{card.systemName}</Badge>
+                              </TableCell>
+                              <TableCell>
+                                <div className="text-xs space-y-0.5">
+                                  <div className="flex items-center gap-1.5 font-medium">
+                                    <Calendar className="w-3 h-3 text-muted-foreground" />
+                                    {new Date(card.examDate).toLocaleDateString()}
+                                  </div>
+                                  <div className="flex items-center gap-1.5 text-muted-foreground">
+                                    <Clock className="w-3 h-3" />
+                                    {card.startTime} - {card.endTime}
+                                  </div>
+                                </div>
                               </TableCell>
                               <TableCell className="text-right pr-6">
-                                {!assignment.attended && !examStarted && (
-                                  <Button
-                                    size="sm"
-                                    onClick={async () => {
-                                      try {
-                                        const res = await fetch(`/api/exams/${exam._id}/mark-attendance`, {
-                                          method: 'POST',
-                                          headers: { 'Content-Type': 'application/json' },
-                                          body: JSON.stringify({ studentId: assignment.studentId?._id || assignment.studentId })
-                                        })
-                                        if (res.ok) {
-                                          toast.success('Attendance marked')
-                                          fetchExams()
-                                        }
-                                      } catch (error) {
-                                        toast.error('Failed to mark attendance')
-                                      }
-                                    }}
-                                  >
-                                    Mark Present
-                                  </Button>
-                                )}
-                                {examStarted && !assignment.attended && (
-                                  <span className="text-xs text-muted-foreground flex items-center justify-end gap-1">
-                                    <AlertCircle className="w-3 h-3" /> Late
-                                  </span>
-                                )}
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-8 gap-2 text-xs"
+                                  onClick={() => handleDownloadAdmitCard(card)}
+                                >
+                                  <Download className="w-3.5 h-3.5" />
+                                  Download
+                                </Button>
                               </TableCell>
                             </TableRow>
                           ))}
@@ -481,188 +891,225 @@ export default function InstituteExamsPage() {
                       </Table>
                     </CardContent>
                   </Card>
-                )
-              })
+                ))}
+
+                {admitCards.filter((c: any) => {
+                  const nameMatch = !admitSearchQuery || c.studentName?.toLowerCase().includes(admitSearchQuery.toLowerCase())
+                  const examMatch = admitFilterExam === 'all' || c.examTitle === admitFilterExam
+
+                  let courseMatch = true
+                  if (admitFilterCourse !== 'all') {
+                    const relatedExam = exams.find((e: any) => e.title === c.examTitle)
+                    if (relatedExam) {
+                      courseMatch = relatedExam.courseId?._id === admitFilterCourse || relatedExam.courseId === admitFilterCourse
+                    }
+                  }
+                  return nameMatch && examMatch && courseMatch
+                }).length === 0 && (
+                    <div className="text-center py-10 text-muted-foreground border-2 border-dashed rounded-lg">
+                      No students/exams found matching your filters.
+                    </div>
+                  )}
+              </div>
             )}
           </div>
         )}
 
-        {activeTab === 'dpp-results' && (
-          <div className="space-y-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search DPP title..." value={dppSearch} onChange={(e) => setDppSearch(e.target.value)} className="pl-9" />
-            </div>
-
-            {filteredDPPs.map((exam: any) => {
-              const scoreboard = getScoreboard(exam._id)
-              return (
-                <Card key={exam._id} className="hover:shadow-md transition-shadow overflow-hidden">
-                  <CardHeader className="border-b bg-muted/10 py-3">
-                    <div className="flex items-center gap-2">
-                      <Award className="w-5 h-5 text-orange-500" />
-                      <CardTitle className="text-base">{exam.title} <span className="text-muted-foreground font-normal text-sm">- Top Performers</span></CardTitle>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="p-0">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-muted/20 hover:bg-muted/20">
-                          <TableHead className="w-16 pl-6">Rank</TableHead>
-                          <TableHead>Student Name</TableHead>
-                          <TableHead>Roll No</TableHead>
-                          <TableHead className="text-right">Score</TableHead>
-                          <TableHead className="text-right pr-6">Percentage</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {scoreboard.map((result: any, i: number) => (
-                          <TableRow key={i}>
-                            <TableCell className="font-bold pl-6 text-primary">#{i + 1}</TableCell>
-                            <TableCell className="font-medium">{result.studentId?.name}</TableCell>
-                            <TableCell className="text-muted-foreground text-sm">{result.studentId?.rollNo}</TableCell>
-                            <TableCell className="text-right font-bold">{result.score}<span className="text-muted-foreground font-normal">/{result.totalMarks}</span></TableCell>
-                            <TableCell className="text-right pr-6">
-                              <Badge variant={result.percentage >= 80 ? 'default' : result.percentage >= 50 ? 'secondary' : 'destructive'}>
-                                {result.percentage?.toFixed(1)}%
-                              </Badge>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                </Card>
-              )
-            })}
-          </div>
-        )}
-
-        {activeTab === 'overall' && (
-          <div className="space-y-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search student name or roll no..." value={overallSearch} onChange={(e) => setOverallSearch(e.target.value)} className="pl-9" />
-            </div>
-
-            <Card className="hover:shadow-md transition-shadow overflow-hidden border-t-4 border-t-purple-500">
-              <CardHeader className="border-b bg-purple-50/50 dark:bg-purple-900/10">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-                    <Award className="w-5 h-5 text-purple-600" />
-                  </div>
-                  <div>
-                    <CardTitle>Overall Performance Leaderboard</CardTitle>
-                    <CardDescription>Cumulative scores from all DPP exams.</CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-muted/20 hover:bg-muted/20">
-                      <TableHead className="w-16 pl-6">Rank</TableHead>
-                      <TableHead>Student Name</TableHead>
-                      <TableHead>Roll No</TableHead>
-                      <TableHead className="text-right">Total Score</TableHead>
-                      <TableHead className="text-right">Win Rate</TableHead>
-                      <TableHead className="text-right pr-6">Attempts</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredOverall.map((student: any, i: number) => (
-                      <TableRow key={i} className={i < 3 ? "bg-gradient-to-r from-yellow-50/50 to-transparent dark:from-yellow-900/10" : ""}>
-                        <TableCell className="pl-6">
-                          {i === 0 ? <span className="text-2xl">🥇</span> :
-                            i === 1 ? <span className="text-2xl">🥈</span> :
-                              i === 2 ? <span className="text-2xl">🥉</span> :
-                                <span className="font-bold text-muted-foreground">#{i + 1}</span>}
-                        </TableCell>
-                        <TableCell className="font-medium text-base">{student.name}</TableCell>
-                        <TableCell className="text-muted-foreground">{student.rollNo}</TableCell>
-                        <TableCell className="text-right font-bold text-base">{student.totalScore}<span className="text-muted-foreground text-sm font-normal">/{student.totalMarks}</span></TableCell>
-                        <TableCell className="text-right">
-                          <div className="w-full max-w-[80px] ml-auto">
-                            <Badge variant="outline" className="w-full justify-center bg-background">
-                              {student.percentage?.toFixed(1)}%
-                            </Badge>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right pr-6 text-muted-foreground">{student.attempts}</TableCell>
-                      </TableRow>
+        {/* RESULTS TAB */}
+        {/* RESULTS TAB */}
+        {activeTab === 'results' && (
+          <div className="space-y-6">
+            <Card>
+              <CardContent className="p-4 flex flex-wrap gap-4 items-center">
+                <Select value={resultFilterCourse} onValueChange={setResultFilterCourse}>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="Filter by Course" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Courses</SelectItem>
+                    {courses.map((c: any) => (
+                      <SelectItem key={c._id} value={c._id}>{c.name}</SelectItem>
                     ))}
-                  </TableBody>
-                </Table>
+                  </SelectContent>
+                </Select>
+
+                <Select value={resultFilterExam} onValueChange={setResultFilterExam}>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="Filter by Exam" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Exams</SelectItem>
+                    {Array.from(new Set(
+                      results
+                        .filter((r: any) => {
+                          if (resultFilterCourse === 'all') return true
+                          return r.examId?.courseId === resultFilterCourse || r.examId?.courseId?._id === resultFilterCourse
+                        })
+                        .map((r: any) => r.examId?.title)
+                        .filter(Boolean)
+                    )).sort().map((title: any) => (
+                      <SelectItem key={title} value={title}>{title}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <div className="relative">
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Search Student..."
+                    className="max-w-xs pl-9"
+                    value={resultSearchQuery}
+                    onChange={(e) => setResultSearchQuery(e.target.value)}
+                  />
+                </div>
+
+                <Button variant="outline" onClick={() => { setResultFilterCourse('all'); setResultFilterExam('all'); setResultSearchQuery('') }}>Clear</Button>
               </CardContent>
             </Card>
-          </div>
-        )}
 
-        {activeTab === 'admit' && (
-          <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row gap-4 bg-muted/20 p-4 rounded-xl border">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Search student name..." value={admitSearch} onChange={(e) => setAdmitSearch(e.target.value)} className="pl-9 bg-background" />
-              </div>
-              <Select value={admitExamFilter} onValueChange={setAdmitExamFilter}>
-                <SelectTrigger className="w-full sm:w-[200px] bg-background">
-                  <Filter className="w-4 h-4 mr-2" />
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Exams</SelectItem>
-                  {exams.filter((e: any) => e.type === 'Final').map((e: any) => (
-                    <SelectItem key={e._id} value={e.title}>{e.title}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {results.length === 0 ? (
+              <div className="text-center py-10 text-muted-foreground">No results available.</div>
+            ) : (
+              <div className="space-y-8">
+                {(() => {
+                  const filteredResults = results.filter((res: any) => {
+                    const nameMatch = !resultSearchQuery || res.studentId?.name?.toLowerCase().includes(resultSearchQuery.toLowerCase())
+                    const examMatch = resultFilterExam === 'all' || res.examId?.title === resultFilterExam
 
-            {filteredAdmitCards.map(([examId, cards]: any) => {
-              const exam = exams.find((e: any) => e._id === examId)
-              return (
-                <Card key={examId} className="hover:shadow-md transition-shadow overflow-hidden">
-                  <CardHeader className="border-b bg-muted/10">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-background rounded-lg border">
-                        <FileText className="w-5 h-5 text-primary" />
+                    let courseMatch = true
+                    if (resultFilterCourse !== 'all') {
+                      courseMatch = res.examId?.courseId === resultFilterCourse || res.examId?.courseId?._id === resultFilterCourse
+                    }
+
+                    return nameMatch && examMatch && courseMatch
+                  })
+
+                  if (filteredResults.length === 0) {
+                    return (
+                      <div className="text-center py-10 text-muted-foreground border-2 border-dashed rounded-lg">
+                        No results found matching your filters.
                       </div>
-                      <div>
-                        <CardTitle className="text-base">{exam?.title || 'Exam'}</CardTitle>
-                        <CardDescription>Admit cards issued for this exam</CardDescription>
+                    )
+                  }
+
+                  // Group by Exam Title
+                  const groupedResults = filteredResults.reduce<Record<string, any[]>>((acc, res: any) => {
+                    const examTitle = res.examId?.title || 'Unknown Exam'
+                    if (!acc[examTitle]) acc[examTitle] = []
+                    acc[examTitle].push(res)
+                    return acc
+                  }, {})
+
+                  return Object.entries(groupedResults).map(([examTitle, examResults]) => (
+                    <div key={examTitle} className="space-y-3">
+                      <div className="flex items-center gap-3 px-1">
+                        <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                          <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-lg leading-none text-foreground">{examTitle}</h3>
+                          <p className="text-xs text-muted-foreground mt-1">{examResults.length} students participated</p>
+                        </div>
+                      </div>
+
+                      <div className="border rounded-xl bg-background/50 backdrop-blur-sm shadow-sm overflow-hidden">
+                        <Table>
+                          <TableHeader className="bg-muted/40">
+                            <TableRow>
+                              <TableHead className="w-[280px] pl-6">Student Name</TableHead>
+                              <TableHead>Roll No</TableHead>
+                              <TableHead>Score Details</TableHead>
+                              <TableHead className="w-[180px]">Performance</TableHead>
+                              <TableHead>Date</TableHead>
+                              <TableHead className="text-right pr-6">Status</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {examResults.map((res: any) => {
+                              const percentage = Math.round((res.score / res.totalMarks) * 100) || 0
+                              let gradeColor = 'bg-gray-100 text-gray-700 border-gray-200'
+                              let statusText = 'Fail'
+
+                              if (percentage >= 75) {
+                                gradeColor = 'bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800'
+                                statusText = 'Distinction'
+                              } else if (percentage >= 60) {
+                                gradeColor = 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800'
+                                statusText = 'First Class'
+                              } else if (percentage >= 35) {
+                                gradeColor = 'bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800'
+                                statusText = 'Pass'
+                              } else {
+                                gradeColor = 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800'
+                                statusText = 'Fail'
+                              }
+
+                              return (
+                                <TableRow key={res._id} className="group hover:bg-muted/30 transition-colors">
+                                  <TableCell className="pl-6 py-3">
+                                    <div className="flex items-center gap-3">
+                                      <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shadow-sm ring-2 ring-background overflow-hidden relative">
+                                        {res.studentId?.documents?.photo ? (
+                                          <img src={res.studentId.documents.photo} alt={res.studentId.name} className="w-full h-full object-cover" />
+                                        ) : (
+                                          (res.studentId?.name || 'U').charAt(0).toUpperCase()
+                                        )}
+                                      </div>
+                                      <div>
+                                        <p className="font-semibold text-sm text-foreground">{res.studentId?.name || 'Unknown User'}</p>
+                                        <p className="text-xs text-muted-foreground">{res.studentId?.email}</p>
+                                      </div>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge variant="outline" className="font-mono text-xs bg-muted/50 text-muted-foreground border-muted-foreground/20">
+                                      {res.studentId?.rollNo || 'N/A'}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell>
+                                    <div className="flex flex-col">
+                                      <span className="font-bold text-sm">{res.score} <span className="text-muted-foreground font-normal">/ {res.totalMarks}</span></span>
+                                      <span className="text-xs text-muted-foreground">Scored Marks</span>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell>
+                                    <div className="space-y-1.5">
+                                      <div className="flex justify-between text-xs">
+                                        <span className="font-medium">{percentage}%</span>
+                                      </div>
+                                      <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
+                                        <div
+                                          className={`h-full rounded-full transition-all ${percentage >= 35 ? 'bg-green-500' : 'bg-red-500'}`}
+                                          style={{ width: `${percentage}%` }}
+                                        />
+                                      </div>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="text-muted-foreground text-sm">
+                                    <div className="flex items-center gap-1.5">
+                                      <Calendar className="w-3.5 h-3.5 opacity-70" />
+                                      {new Date(res.createdAt).toLocaleDateString()}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="text-right pr-6">
+                                    <Badge variant="outline" className={`border ${gradeColor}`}>
+                                      {statusText}
+                                    </Badge>
+                                  </TableCell>
+                                </TableRow>
+                              )
+                            })}
+                          </TableBody>
+                        </Table>
                       </div>
                     </div>
-                  </CardHeader>
-                  <CardContent className="p-0">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="hover:bg-transparent">
-                          <TableHead className="pl-6">Student Name</TableHead>
-                          <TableHead>Roll No</TableHead>
-                          <TableHead>Exam Date</TableHead>
-                          <TableHead>Time</TableHead>
-                          <TableHead>System</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {cards.map((card: any) => (
-                          <TableRow key={card._id} className="hover:bg-muted/30">
-                            <TableCell className="font-medium pl-6">{card.studentName}</TableCell>
-                            <TableCell className="text-muted-foreground">{card.rollNo}</TableCell>
-                            <TableCell>{new Date(card.examDate).toLocaleDateString()}</TableCell>
-                            <TableCell className="text-xs font-mono bg-muted/50 p-1 rounded w-fit px-2">{card.startTime} - {card.endTime}</TableCell>
-                            <TableCell><Badge variant="outline">{card.systemName}</Badge></TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                </Card>
-              )
-            })}
+                  ))
+                })()}
+              </div>
+            )}
           </div>
         )}
+
       </div>
     </div>
   )

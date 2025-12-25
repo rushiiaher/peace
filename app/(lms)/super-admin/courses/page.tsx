@@ -208,12 +208,11 @@ export default function CoursesPage() {
                       size="icon"
                       variant="ghost"
                       className="h-8 w-8 text-muted-foreground hover:text-primary"
-                      onClick={() => {
-                        setSelectedCourse(course)
-                        setEditOpen(true)
-                      }}
+                      asChild
                     >
-                      <Edit className="w-4 h-4" />
+                      <Link href={`/super-admin/courses/${course._id}/edit`}>
+                        <Edit className="w-4 h-4" />
+                      </Link>
                     </Button>
                     <Button
                       size="icon"

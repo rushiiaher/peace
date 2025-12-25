@@ -37,9 +37,10 @@ export default function CoursesPage() {
 
   useEffect(() => {
     if (selectedCourse) {
-      const basePrice = (selectedCourse.courseId?.baseFee || 0) + (selectedCourse.courseId?.examFee || 0)
+      const royalty = (selectedCourse.courseId?.examFee || 0) + (selectedCourse.courseId?.certificateCharge || 0)
+      const suggestedPrice = (selectedCourse.courseId?.baseFee || 0) + royalty
       setPricingForm({
-        institutePrice: selectedCourse.institutePrice || basePrice
+        institutePrice: selectedCourse.institutePrice || suggestedPrice
       })
     }
   }, [selectedCourse])
@@ -58,10 +59,10 @@ export default function CoursesPage() {
 
   const handlePricing = async (e: React.FormEvent) => {
     e.preventDefault()
-    const basePrice = (selectedCourse.courseId.baseFee || 0) + (selectedCourse.courseId.examFee || 0)
+    const royalty = (selectedCourse.courseId?.examFee || 0) + (selectedCourse.courseId?.certificateCharge || 0)
 
-    if (pricingForm.institutePrice < basePrice) {
-      toast.error(`Price must be >= ₹${basePrice.toLocaleString()} (base + exam fee)`)
+    if (pricingForm.institutePrice < royalty) {
+      toast.error(`Price must be >= ₹${royalty.toLocaleString()} (Royalty amount)`)
       return
     }
 
@@ -97,9 +98,10 @@ export default function CoursesPage() {
 
   const totalCourses = courses.length
   const avgProfit = courses.length > 0 ? Math.round(courses.reduce((sum: number, c: any) => {
-    const basePrice = (c.courseId?.baseFee || 0) + (c.courseId?.examFee || 0)
-    const institutePrice = c.institutePrice || basePrice
-    return sum + (institutePrice - basePrice)
+    const royalty = (c.courseId?.examFee || 0) + (c.courseId?.certificateCharge || 0)
+    const suggestedPrice = (c.courseId?.baseFee || 0) + royalty
+    const institutePrice = c.institutePrice || suggestedPrice
+    return sum + (institutePrice - royalty)
   }, 0) / courses.length) : 0
 
   const totalProjectedProfit = avgProfit * totalCourses // Simple projection
@@ -168,13 +170,15 @@ export default function CoursesPage() {
 
             const baseFee = course?.baseFee || 0
             const examFee = course?.examFee || 0
+            const certCharge = course?.certificateCharge || 0
             const bookPrice = course?.bookPrice || 0
             const deliveryCharge = course?.deliveryCharge || 0
 
-            const basePrice = baseFee + examFee
-            const institutePrice = courseAssignment.institutePrice || basePrice
-            const profit = institutePrice - basePrice
-            const profitPercentage = basePrice > 0 ? Math.round((profit / basePrice) * 100) : 0
+            const royalty = examFee + certCharge
+            const suggestedPrice = baseFee + royalty
+            const institutePrice = courseAssignment.institutePrice || suggestedPrice
+            const profit = institutePrice - royalty
+            const profitPercentage = royalty > 0 ? Math.round((profit / royalty) * 100) : 100
 
             return (
               <Card key={courseAssignment._id} className="group hover:shadow-lg transition-all border-muted/60 overflow-hidden flex flex-col">
@@ -195,23 +199,23 @@ export default function CoursesPage() {
                   {/* Financials Breakdown */}
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
-                      <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Base Cost</p>
-                      <p className="font-medium text-lg">₹{basePrice.toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Royalty (Costs)</p>
+                      <p className="font-medium text-lg">₹{royalty.toLocaleString()}</p>
                     </div>
                     <div className="space-y-1 text-right">
-                      <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Selling Price</p>
+                      <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Total Price</p>
                       <p className="font-bold text-lg text-primary">₹{institutePrice.toLocaleString()}</p>
                     </div>
                   </div>
 
                   <div className="space-y-2">
                     <div className="flex justify-between text-xs mb-1">
-                      <span className="text-muted-foreground">Profit Margin</span>
+                      <span className="text-muted-foreground">Institute Profit</span>
                       <span className={`font-semibold ${profit > 0 ? 'text-green-600' : 'text-gray-500'}`}>
-                        +₹{profit.toLocaleString()} ({profitPercentage}%)
+                        +₹{profit.toLocaleString()}
                       </span>
                     </div>
-                    <Progress value={Math.min(profitPercentage, 100)} className="h-2" />
+                    <Progress value={Math.min(profitPercentage / 2, 100)} className="h-2" />
                   </div>
 
                   <div className="pt-4 border-t grid grid-cols-2 gap-2 text-xs text-muted-foreground">
@@ -245,76 +249,138 @@ export default function CoursesPage() {
       </div>
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="sm:max-w-[600px] p-0 overflow-hidden gap-0">
-          <DialogHeader className="p-6 pb-4 bg-muted/30">
-            <DialogTitle className="text-xl">Pricing Strategy</DialogTitle>
+        <DialogContent className="sm:max-w-[800px] p-0 overflow-hidden gap-0">
+          <DialogHeader className="p-6 pb-4 bg-muted/30 border-b">
+            <DialogTitle className="text-xl flex items-center gap-2">
+              <IndianRupee className="w-5 h-5 text-primary" />
+              Pricing Strategy
+            </DialogTitle>
             <DialogDescription>
-              Set the selling price for <span className="text-foreground font-medium">{selectedCourse?.courseId?.name}</span>
+              Configure the fee structure for <span className="text-foreground font-medium">{selectedCourse?.courseId?.name}</span>
             </DialogDescription>
           </DialogHeader>
 
-          <div className="p-6 space-y-8">
+          <div className="p-6">
             {selectedCourse && (() => {
-              const baseFee = (selectedCourse.courseId?.baseFee || 0)
               const examFee = (selectedCourse.courseId?.examFee || 0)
-              const baseTotal = baseFee + examFee
-              const currentProfit = Math.max(0, pricingForm.institutePrice - baseTotal)
+              const certCharge = (selectedCourse.courseId?.certificateCharge || 0)
+              const royalty = examFee + certCharge
+
+              const bookPrice = (selectedCourse.courseId?.bookPrice || 0)
+              const deliveryCharge = (selectedCourse.courseId?.deliveryCharge || 0)
+              const materialCost = bookPrice // Delivery is per batch, not per student
+
+              const currentProfit = Math.max(0, pricingForm.institutePrice - royalty)
 
               return (
-                <div className="space-y-6">
-                  {/* Cost Structure Visual */}
-                  <div className="rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden">
-                    <div className="p-4 grid grid-cols-3 gap-4 text-center divide-x bg-muted/20">
-                      <div className="space-y-1">
-                        <p className="text-xs text-muted-foreground">Base Fee</p>
-                        <p className="font-semibold">₹{baseFee.toLocaleString()}</p>
+                <div className="grid md:grid-cols-2 gap-8">
+                  {/* Left Column: Cost Breakdown */}
+                  <div className="space-y-6">
+                    <div>
+                      <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4 text-orange-500" /> Fixed Costs (Royalty)
+                      </h4>
+                      <div className="bg-card border rounded-xl overflow-hidden shadow-sm">
+                        <div className="p-3 border-b bg-muted/20 flex justify-between text-sm">
+                          <span className="text-muted-foreground">Exam Fee</span>
+                          <span className="font-medium">₹{examFee.toLocaleString()}</span>
+                        </div>
+                        <div className="p-3 border-b bg-muted/20 flex justify-between text-sm">
+                          <span className="text-muted-foreground">Certificate Charge</span>
+                          <span className="font-medium">₹{certCharge.toLocaleString()}</span>
+                        </div>
+                        <div className="p-3 bg-orange-50/50 dark:bg-orange-900/10 flex justify-between items-center">
+                          <span className="text-xs font-semibold text-orange-700 dark:text-orange-400">Total Royalty / Student</span>
+                          <span className="font-bold text-lg text-orange-700 dark:text-orange-300">₹{royalty.toLocaleString()}</span>
+                        </div>
                       </div>
-                      <div className="space-y-1">
-                        <p className="text-xs text-muted-foreground">Exam Fee</p>
-                        <p className="font-semibold">₹{examFee.toLocaleString()}</p>
+                    </div>
+
+                    <div>
+                      <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                        <Package className="w-4 h-4 text-blue-500" /> Optional Costs
+                      </h4>
+                      <div className="bg-card border rounded-xl overflow-hidden shadow-sm mb-3">
+                        <div className="p-3 border-b bg-muted/20 flex justify-between text-sm">
+                          <span className="text-muted-foreground">Books & Study Material</span>
+                          <span className="font-medium">₹{bookPrice.toLocaleString()}</span>
+                        </div>
+                        <div className="p-3 bg-blue-50/50 dark:bg-blue-900/10 flex justify-between items-center">
+                          <span className="text-xs font-semibold text-blue-700 dark:text-blue-400">Student Book Cost</span>
+                          <span className="font-bold text-lg text-blue-700 dark:text-blue-300">₹{materialCost.toLocaleString()}</span>
+                        </div>
                       </div>
-                      <div className="space-y-1 bg-blue-50/50 dark:bg-blue-900/10 -m-4 p-4 flex flex-col justify-center">
-                        <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">Total Base Cost</p>
-                        <p className="font-bold text-lg text-blue-700 dark:text-blue-300">₹{baseTotal.toLocaleString()}</p>
+
+                      <div className="flex items-start gap-2 p-3 bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-100 dark:border-yellow-900/30 rounded-lg text-xs text-yellow-800 dark:text-yellow-400">
+                        <Truck className="w-4 h-4 mt-0.5 shrink-0" />
+                        <div>
+                          <p className="font-semibold">Batch Delivery Charge</p>
+                          <p>₹{deliveryCharge.toLocaleString()} (One-time fee per batch order)</p>
+                        </div>
                       </div>
                     </div>
                   </div>
 
-                  <div className="grid gap-6 pt-2">
+                  {/* Right Column: Pricing Input & Preview */}
+                  <div className="space-y-6">
                     <div className="space-y-3">
-                      <Label htmlFor="institutePrice" className="text-base">Your Selling Price to Students</Label>
+                      <Label htmlFor="institutePrice" className="text-base font-semibold">Set Base Course Fee</Label>
                       <div className="relative">
                         <IndianRupee className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                         <Input
                           id="institutePrice"
                           type="number"
-                          className="pl-9 text-lg h-12"
+                          className="pl-9 text-lg h-12 shadow-sm border-primary/20 focus-visible:ring-primary/30"
                           value={pricingForm.institutePrice}
                           onChange={(e) => setPricingForm({ ...pricingForm, institutePrice: Number(e.target.value) })}
-                          min={baseTotal}
+                          min={royalty}
+                          placeholder="Enter tuition fee..."
                         />
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        * Students will be charged this amount + optional book/delivery fees if selected.
+                        This is your tuition fee. It must cover the royalty (₹{royalty}) at minimum.
                       </p>
                     </div>
 
-                    {/* Profit Projection */}
-                    <div className="bg-green-50 dark:bg-green-900/10 border border-green-100 dark:border-green-900/30 rounded-xl p-4 flex items-center justify-between">
+                    {/* Pricing Preview Table */}
+                    <div className="rounded-xl border shadow-sm overflow-hidden">
+                      <div className="bg-muted/40 p-3 border-b">
+                        <h4 className="text-sm font-medium text-center">Student Pricing Preview</h4>
+                      </div>
+                      <div className="divide-y">
+                        <div className="p-3 flex justify-between items-center bg-white dark:bg-card">
+                          <div>
+                            <p className="font-medium text-sm">Tuition Only</p>
+                            <p className="text-[10px] text-muted-foreground">Base Fee</p>
+                          </div>
+                          <span className="font-bold text-lg">₹{pricingForm.institutePrice.toLocaleString()}</span>
+                        </div>
+                        <div className="p-3 flex justify-between items-center bg-blue-50/30 dark:bg-blue-900/10">
+                          <div>
+                            <p className="font-medium text-sm text-blue-900 dark:text-blue-200">Tuition + Books</p>
+                            <p className="text-[10px] text-blue-700/70 dark:text-blue-300/70">Base Fee + Books</p>
+                          </div>
+                          <span className="font-bold text-lg text-blue-700 dark:text-blue-300">
+                            ₹{(pricingForm.institutePrice + materialCost).toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Profit Display */}
+                    <div className="bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-xl p-4 flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="p-2 bg-green-100 dark:bg-green-900/50 rounded-full">
-                          <TrendingUp className="w-5 h-5 text-green-600 dark:text-green-400" />
+                        <div className="p-2 bg-green-200 dark:bg-green-900/50 rounded-full text-green-700 dark:text-green-300">
+                          <TrendingUp className="w-5 h-5" />
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-green-900 dark:text-green-100">Projected Profit per Student</p>
-                          <p className="text-xs text-green-700 dark:text-green-400">Calculated based on your selling price</p>
+                          <p className="text-sm font-bold text-green-800 dark:text-green-200">Net Profit / Student</p>
+                          <p className="text-xs text-green-700 dark:text-green-400">After royalty deduction</p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                          +₹{currentProfit.toLocaleString()}
-                        </p>
-                      </div>
+                      <span className="text-2xl font-bold text-green-700 dark:text-green-300 flex items-center">
+                        +₹{currentProfit.toLocaleString()}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -322,12 +388,12 @@ export default function CoursesPage() {
             })()}
           </div>
 
-          <DialogFooter className="p-6 pt-2 bg-gray-50/50 dark:bg-gray-900/30 border-t gap-2 sm:gap-0">
+          <DialogFooter className="p-6 pt-4 bg-gray-50/50 dark:bg-gray-900/30 border-t">
             <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
-            <Button onClick={handlePricing} className="bg-primary shadow-lg shadow-primary/25">Save Pricing Strategy</Button>
+            <Button onClick={handlePricing} className="bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 px-8">Save Pricing</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </div >
   )
 }

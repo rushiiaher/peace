@@ -2,33 +2,22 @@
 
 import { useState, useEffect } from 'react'
 import { SectionHeader } from "@/components/lms/section"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { AnimatedTabsProfessional } from "@/components/lms/animated-tabs"
 import { toast } from "sonner"
-import { UserPlus, Mail, Phone, BookOpen, Calendar, Plus, Edit, Trash2, Clock, User } from "lucide-react"
+import { UserPlus, Mail, Phone, BookOpen, Calendar, Plus, Edit, Trash2, Clock, GraduationCap } from "lucide-react"
 import Loader from "@/components/ui/loader"
+import Link from 'next/link'
 
 export default function EnquiriesPage() {
   const [enquiries, setEnquiries] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [addOpen, setAddOpen] = useState(false)
-  const [editOpen, setEditOpen] = useState(false)
-  const [selectedEnquiry, setSelectedEnquiry] = useState<any>(null)
-  const [staff, setStaff] = useState<any[]>([])
-  const [admins, setAdmins] = useState<any[]>([])
-  const [handlers, setHandlers] = useState<Map<string, any>>(new Map())
   const [activeTab, setActiveTab] = useState("all")
 
   useEffect(() => {
     fetchEnquiries()
-    fetchStaffAndAdmins()
   }, [])
 
   const fetchEnquiries = async () => {
@@ -37,7 +26,6 @@ export default function EnquiriesPage() {
       const res = await fetch(`/api/enquiries?instituteId=${user.instituteId}`)
       const data = await res.json()
       setEnquiries(Array.isArray(data) ? data : [])
-      await fetchHandlers(data)
     } catch (error) {
       toast.error('Failed to fetch enquiries')
     } finally {
@@ -45,116 +33,8 @@ export default function EnquiriesPage() {
     }
   }
 
-  const fetchStaffAndAdmins = async () => {
-    try {
-      const user = JSON.parse(localStorage.getItem('user') || '{}')
-      const [staffRes, adminRes] = await Promise.all([
-        fetch(`/api/staff?instituteId=${user.instituteId}`),
-        fetch(`/api/users?instituteId=${user.instituteId}&role=institute-admin`)
-      ])
-      const staffData = await staffRes.json()
-      const adminData = await adminRes.json()
-      setStaff(staffData.filter((s: any) => s.status === 'Active'))
-      setAdmins(adminData)
-    } catch (error) {
-      console.error('Failed to fetch staff/admins')
-    }
-  }
-
-  const fetchHandlers = async (enquiries: any[]) => {
-    const handlerMap = new Map()
-    for (const enquiry of enquiries) {
-      if (enquiry.handledBy && enquiry.handledByModel) {
-        const key = `${enquiry.handledBy}-${enquiry.handledByModel}`
-        if (!handlerMap.has(key)) {
-          try {
-            const endpoint = enquiry.handledByModel === 'User' ? '/api/users' : '/api/staff'
-            const res = await fetch(`${endpoint}/${enquiry.handledBy}`)
-            if (res.ok) {
-              const data = await res.json()
-              handlerMap.set(key, data)
-            }
-          } catch (error) {
-            console.error('Failed to fetch handler')
-          }
-        }
-      }
-    }
-    setHandlers(handlerMap)
-  }
-
-  const handleAdd = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    const formData = new FormData(e.currentTarget)
-    const user = JSON.parse(localStorage.getItem('user') || '{}')
-    const handledByValue = formData.get('handledBy') as string
-    const [handledBy, handledByModel] = handledByValue ? handledByValue.split('|') : [null, null]
-
-    const data = {
-      instituteId: user.instituteId,
-      name: formData.get('name'),
-      email: formData.get('email'),
-      phone: formData.get('phone'),
-      courseInterested: formData.get('courseInterested'),
-      status: formData.get('status'),
-      notes: formData.get('notes'),
-      followUpDate: formData.get('followUpDate'),
-      handledBy,
-      handledByModel
-    }
-
-    try {
-      const res = await fetch('/api/enquiries', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      })
-      if (res.ok) {
-        toast.success('Enquiry added successfully')
-        setAddOpen(false)
-        fetchEnquiries()
-        e.currentTarget.reset()
-      }
-    } catch (error) {
-      toast.error('Failed to add enquiry')
-    }
-  }
-
-  const handleEdit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    const formData = new FormData(e.currentTarget)
-    const handledByValue = formData.get('handledBy') as string
-    const [handledBy, handledByModel] = handledByValue ? handledByValue.split('|') : [null, null]
-
-    const data = {
-      name: formData.get('name'),
-      email: formData.get('email'),
-      phone: formData.get('phone'),
-      courseInterested: formData.get('courseInterested'),
-      status: formData.get('status'),
-      notes: formData.get('notes'),
-      followUpDate: formData.get('followUpDate'),
-      handledBy,
-      handledByModel
-    }
-
-    try {
-      const res = await fetch(`/api/enquiries/${selectedEnquiry._id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      })
-      if (res.ok) {
-        toast.success('Enquiry updated successfully')
-        setEditOpen(false)
-        fetchEnquiries()
-      }
-    } catch (error) {
-      toast.error('Failed to update enquiry')
-    }
-  }
-
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: string, e: React.MouseEvent) => {
+    e.preventDefault() // prevent navigation if inside link
     if (!confirm('Are you sure you want to delete this enquiry?')) return
 
     try {
@@ -187,85 +67,11 @@ export default function EnquiriesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <SectionHeader title="Enquiry Management" subtitle="Manage student enquiries" />
-        <Dialog open={addOpen} onOpenChange={setAddOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2"><Plus className="w-4 h-4" />Add Enquiry</Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Add New Enquiry</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleAdd} className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Full Name</Label>
-                  <Input id="name" name="name" placeholder="John Doe" required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number</Label>
-                  <Input id="phone" name="phone" placeholder="+91..." required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email Address</Label>
-                  <Input id="email" name="email" type="email" placeholder="john@example.com" required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="courseInterested">Course of Interest</Label>
-                  <Input id="courseInterested" name="courseInterested" placeholder="e.g. JEE Mains" required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="status">Enquiry Status</Label>
-                  <Select name="status" defaultValue="New">
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="New">New</SelectItem>
-                      <SelectItem value="Contacted">Contacted</SelectItem>
-                      <SelectItem value="Converted">Converted</SelectItem>
-                      <SelectItem value="Lost">Lost</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="followUpDate">Follow Up Date</Label>
-                  <Input id="followUpDate" name="followUpDate" type="date" />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="handledBy">Assigned To</Label>
-                <Select name="handledBy">
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select staff member" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {admins.map((admin) => (
-                      <SelectItem key={admin._id} value={`${admin._id}|User`}>
-                        {admin.name} (Admin)
-                      </SelectItem>
-                    ))}
-                    {staff.map((member) => (
-                      <SelectItem key={member._id} value={`${member._id}|Staff`}>
-                        {member.name} ({member.role})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="notes">Notes / Remarks</Label>
-                <Textarea id="notes" name="notes" placeholder="Additional details..." rows={3} />
-              </div>
-
-              <div className="flex justify-end gap-3 pt-2">
-                <Button variant="outline" type="button" onClick={() => setAddOpen(false)}>Cancel</Button>
-                <Button type="submit">Create Enquiry</Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <Button asChild className="gap-2">
+          <Link href="/institute-admin/enquiries/add">
+            <Plus className="w-4 h-4" />Add Enquiry
+          </Link>
+        </Button>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-4">
@@ -392,21 +198,35 @@ export default function EnquiriesPage() {
                 {/* Footer Actions */}
                 <div className="pt-3 mt-1 flex items-center gap-2 border-t border-dashed">
                   <Button
+                    asChild
                     className="flex-1 h-8 text-xs font-medium"
                     variant="outline"
-                    onClick={() => { setSelectedEnquiry(enq); setEditOpen(true) }}
                   >
-                    Edit Details
+                    <Link href={`/institute-admin/enquiries/${enq._id}/edit`}>
+                      Edit Details
+                    </Link>
                   </Button>
                   <Button
                     size="icon"
                     variant="ghost"
                     className="h-8 w-8 text-muted-foreground hover:text-red-600"
-                    onClick={() => handleDelete(enq._id)}
+                    onClick={(e) => handleDelete(enq._id, e)}
                   >
                     <Trash2 className="w-4 h-4" />
                   </Button>
                 </div>
+                {enq.status !== 'Converted' && (
+                  <Button
+                    asChild
+                    className="w-full mt-3 bg-green-600 hover:bg-green-700 text-white gap-2 h-9"
+                    size="sm"
+                  >
+                    <Link href={`/institute-admin/enquiries/${enq._id}/convert`}>
+                      <GraduationCap className="w-4 h-4" />
+                      Convert to Admission
+                    </Link>
+                  </Button>
+                )}
               </CardContent>
             </Card>
           )
@@ -420,90 +240,6 @@ export default function EnquiriesPage() {
         )}
       </div>
 
-      <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Edit Enquiry Details</DialogTitle>
-          </DialogHeader>
-          {selectedEnquiry && (
-            <form onSubmit={handleEdit} className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-name">Full Name</Label>
-                  <Input id="edit-name" name="name" defaultValue={selectedEnquiry.name} required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-phone">Phone Number</Label>
-                  <Input id="edit-phone" name="phone" defaultValue={selectedEnquiry.phone} required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-email">Email Address</Label>
-                  <Input id="edit-email" name="email" type="email" defaultValue={selectedEnquiry.email} required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-courseInterested">Course of Interest</Label>
-                  <Input id="edit-courseInterested" name="courseInterested" defaultValue={selectedEnquiry.courseInterested} required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-status">Status</Label>
-                  <Select name="status" defaultValue={selectedEnquiry.status}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="New">New</SelectItem>
-                      <SelectItem value="Contacted">Contacted</SelectItem>
-                      <SelectItem value="Converted">Converted</SelectItem>
-                      <SelectItem value="Lost">Lost</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-followUpDate">Follow Up Date</Label>
-                  <Input
-                    id="edit-followUpDate"
-                    name="followUpDate"
-                    type="date"
-                    defaultValue={selectedEnquiry?.followUpDate ? new Date(selectedEnquiry.followUpDate).toISOString().split('T')[0] : undefined}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="edit-handledBy">Assigned To</Label>
-                <Select name="handledBy" defaultValue={selectedEnquiry.handledBy && selectedEnquiry.handledByModel ? `${selectedEnquiry.handledBy}|${selectedEnquiry.handledByModel}` : undefined}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select staff member" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {admins.map((admin) => (
-                      <SelectItem key={admin._id} value={`${admin._id}|User`}>
-                        {admin.name} (Admin)
-                      </SelectItem>
-                    ))}
-                    {staff.map((member) => (
-                      <SelectItem key={member._id} value={`${member._id}|Staff`}>
-                        {member.name} ({member.role})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="edit-notes">Notes / Remarks</Label>
-                <Textarea id="edit-notes" name="notes" rows={3} defaultValue={selectedEnquiry.notes} />
-              </div>
-
-              <div className="flex justify-end gap-3 pt-2">
-                <Button variant="outline" type="button" onClick={() => setEditOpen(false)}>Cancel</Button>
-                <Button type="submit">save Changes</Button>
-              </div>
-            </form>
-          )}
-        </DialogContent>
-      </Dialog>
-
-    </div>
+    </div >
   )
 }

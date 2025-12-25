@@ -9,7 +9,10 @@ export async function GET(req: Request) {
     const userId = searchParams.get('userId')
 
     if (userId) {
-      const student = await User.findById(userId).select('-password')
+      const student = await User.findById(userId)
+        .select('-password')
+        .populate('instituteId')
+        .populate('courses.courseId')
       if (!student) return NextResponse.json({ error: 'Student not found' }, { status: 404 })
       return NextResponse.json(student)
     }

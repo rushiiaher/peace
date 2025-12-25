@@ -186,90 +186,102 @@ export default function UsersPage() {
           <DialogTrigger asChild>
             <Button className="gap-2"><Plus className="w-4 h-4" />Create New User</Button>
           </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Create New User</DialogTitle>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader className="border-b pb-4 mb-4">
+              <DialogTitle className="text-xl">Create New User</DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleAdd} className="space-y-4">
-              <div>
-                <Label htmlFor="name">Full Name</Label>
-                <Input id="name" name="name" required />
+            <form onSubmit={handleAdd} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Full Name</Label>
+                  <Input id="name" name="name" placeholder="John Doe" required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input id="email" name="email" type="email" placeholder="john@example.com" required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <Input id="password" name="password" type="password" required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="role">Role</Label>
+                  <Select name="role" value={selectedRole} onValueChange={setSelectedRole} required>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="institute-admin">Institute Admin</SelectItem>
+                      <SelectItem value="faculty">Faculty</SelectItem>
+                      <SelectItem value="student">Student</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="instituteId">Institute {selectedRole === 'student' ? '(Required)' : '(Optional)'}</Label>
+                  <Select name="instituteId" value={selectedInstituteId} onValueChange={setSelectedInstituteId} required={selectedRole === 'student'}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select institute" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {institutes.map((inst: any) => (
+                        <SelectItem key={inst._id} value={inst._id}>{inst.name} ({inst.code})</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="status">Status</Label>
+                  <Select name="status" defaultValue="Active">
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Active">Active</SelectItem>
+                      <SelectItem value="Inactive">Inactive</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <div>
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" name="email" type="email" required />
-              </div>
-              <div>
-                <Label htmlFor="password">Password</Label>
-                <Input id="password" name="password" type="password" required />
-              </div>
-              <div>
-                <Label htmlFor="role">Role</Label>
-                <Select name="role" value={selectedRole} onValueChange={setSelectedRole} required>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="institute-admin">Institute Admin</SelectItem>
-                    <SelectItem value="faculty">Faculty</SelectItem>
-                    <SelectItem value="student">Student</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="instituteId">Institute {selectedRole === 'student' ? '(Required)' : '(Optional)'}</Label>
-                <Select name="instituteId" value={selectedInstituteId} onValueChange={setSelectedInstituteId} required={selectedRole === 'student'}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select institute" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {institutes.map((inst: any) => (
-                      <SelectItem key={inst._id} value={inst._id}>{inst.name} ({inst.code})</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+
               {selectedRole === 'student' && (
-                <>
-                  <div>
-                    <Label htmlFor="rollNo">Roll Number</Label>
-                    <Input id="rollNo" name="rollNo" value={rollNo} onChange={(e) => setRollNo(e.target.value)} required />
+                <div className="space-y-4 pt-4 border-t">
+                  <h4 className="font-medium text-sm text-muted-foreground flex items-center gap-2">
+                    <GraduationCap className="w-4 h-4" /> Student Details
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="rollNo">Roll Number</Label>
+                      <Input id="rollNo" name="rollNo" value={rollNo} onChange={(e) => setRollNo(e.target.value)} placeholder="ST-2024-001" required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Phone</Label>
+                      <Input id="phone" name="phone" placeholder="+91..." />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="dateOfBirth">Date of Birth</Label>
+                      <Input id="dateOfBirth" name="dateOfBirth" type="date" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="address">Address</Label>
+                      <Input id="address" name="address" placeholder="City, State" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="guardianName">Guardian Name</Label>
+                      <Input id="guardianName" name="guardianName" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="guardianPhone">Guardian Phone</Label>
+                      <Input id="guardianPhone" name="guardianPhone" />
+                    </div>
                   </div>
-                  <div>
-                    <Label htmlFor="phone">Phone</Label>
-                    <Input id="phone" name="phone" />
-                  </div>
-                  <div>
-                    <Label htmlFor="address">Address</Label>
-                    <Input id="address" name="address" />
-                  </div>
-                  <div>
-                    <Label htmlFor="dateOfBirth">Date of Birth</Label>
-                    <Input id="dateOfBirth" name="dateOfBirth" type="date" />
-                  </div>
-                  <div>
-                    <Label htmlFor="guardianName">Guardian Name</Label>
-                    <Input id="guardianName" name="guardianName" />
-                  </div>
-                  <div>
-                    <Label htmlFor="guardianPhone">Guardian Phone</Label>
-                    <Input id="guardianPhone" name="guardianPhone" />
-                  </div>
-                </>
+                </div>
               )}
-              <div>
-                <Label htmlFor="status">Status</Label>
-                <Select name="status" defaultValue="Active">
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Active">Active</SelectItem>
-                    <SelectItem value="Inactive">Inactive</SelectItem>
-                  </SelectContent>
-                </Select>
+
+              <div className="flex justify-end gap-3 pt-4 border-t mt-6">
+                <Button type="button" variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
+                <Button type="submit">Create User</Button>
               </div>
-              <Button type="submit">Create User</Button>
             </form>
           </DialogContent>
         </Dialog>
@@ -602,63 +614,69 @@ export default function UsersPage() {
       </div>
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit User</DialogTitle>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="border-b pb-4 mb-4">
+            <DialogTitle className="text-xl">Edit User Details</DialogTitle>
           </DialogHeader>
           {selectedUser && (
-            <form onSubmit={handleEdit} className="space-y-4">
-              <div>
-                <Label htmlFor="edit-name">Full Name</Label>
-                <Input id="edit-name" name="name" defaultValue={selectedUser.name} required />
+            <form onSubmit={handleEdit} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-name">Full Name</Label>
+                  <Input id="edit-name" name="name" defaultValue={selectedUser.name} required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-email">Email</Label>
+                  <Input id="edit-email" name="email" type="email" defaultValue={selectedUser.email} required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-password">Password (New)</Label>
+                  <Input id="edit-password" name="password" type="password" placeholder="Leave blank to keep current" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-role">Role</Label>
+                  <Select name="role" defaultValue={selectedUser.role}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="institute-admin">Institute Admin</SelectItem>
+                      <SelectItem value="faculty">Faculty</SelectItem>
+                      <SelectItem value="student">Student</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-instituteId">Institute</Label>
+                  <Select name="instituteId" defaultValue={selectedUser.instituteId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select institute" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {institutes.map((inst: any) => (
+                        <SelectItem key={inst._id} value={inst._id}>{inst.name} ({inst.code})</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-status">Status</Label>
+                  <Select name="status" defaultValue={selectedUser.status}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Active">Active</SelectItem>
+                      <SelectItem value="Inactive">Inactive</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <div>
-                <Label htmlFor="edit-email">Email</Label>
-                <Input id="edit-email" name="email" type="email" defaultValue={selectedUser.email} required />
+
+              <div className="flex justify-end gap-3 pt-4 border-t mt-6">
+                <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
+                <Button type="submit">Update User</Button>
               </div>
-              <div>
-                <Label htmlFor="edit-password">Password (leave blank to keep current)</Label>
-                <Input id="edit-password" name="password" type="password" />
-              </div>
-              <div>
-                <Label htmlFor="edit-role">Role</Label>
-                <Select name="role" defaultValue={selectedUser.role}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="institute-admin">Institute Admin</SelectItem>
-                    <SelectItem value="faculty">Faculty</SelectItem>
-                    <SelectItem value="student">Student</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="edit-instituteId">Institute</Label>
-                <Select name="instituteId" defaultValue={selectedUser.instituteId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select institute" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {institutes.map((inst: any) => (
-                      <SelectItem key={inst._id} value={inst._id}>{inst.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="edit-status">Status</Label>
-                <Select name="status" defaultValue={selectedUser.status}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Active">Active</SelectItem>
-                    <SelectItem value="Inactive">Inactive</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button type="submit">Update User</Button>
             </form>
           )}
         </DialogContent>

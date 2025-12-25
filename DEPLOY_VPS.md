@@ -117,7 +117,7 @@ sudo nano /etc/nginx/sites-available/lms-app
 ```nginx
 server {
     listen 80;
-    server_name your_domain.com www.your_domain.com; # Or your VPS IP address
+    server_name test.peaceindiaorg.in www.test.peaceindiaorg.in; # Or your VPS IP address
 
     location / {
         proxy_pass http://localhost:3000;
@@ -149,7 +149,7 @@ If you have a domain pointing to your VPS IP:
 
 ```bash
 sudo apt install certbot python3-certbot-nginx -y
-sudo certbot --nginx -d your_domain.com -d www.your_domain.com
+sudo certbot --nginx -d test.peaceindiaorg.in -d www.test.peaceindiaorg.in
 ```
 
 ## Step 7: Seeding Data (First Time Only)

@@ -16,7 +16,9 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       if (answers[i] === q.correctAnswer) score += 2
     })
 
-    const percentage = (score / exam.totalMarks) * 100
+    // Enforce 2 marks per question for total marks calculation to ensure accuracy
+    const calculatedTotalMarks = exam.questions.length * 2
+    const percentage = calculatedTotalMarks > 0 ? (score / calculatedTotalMarks) * 100 : 0
 
     const existingResult = await ExamResult.findOne({ examId: params.id, studentId })
 
@@ -24,6 +26,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       existingResult.answers = answers
       existingResult.score = score
       existingResult.percentage = percentage
+      existingResult.totalMarks = calculatedTotalMarks // update total marks reference
       existingResult.timeTaken = timeTaken
       existingResult.submittedAt = new Date()
       await existingResult.save()
@@ -35,7 +38,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       studentId,
       answers,
       score,
-      totalMarks: exam.totalMarks,
+      totalMarks: calculatedTotalMarks, // Use calculated total
       percentage,
       timeTaken
     })

@@ -2,28 +2,33 @@
 
 import { useState, useEffect } from 'react'
 import { SectionHeader } from "@/components/lms/section"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "sonner"
-import { Users, GraduationCap, Mail, Phone, Plus, Edit, Trash2, BookOpen, Calendar, User, Search, Filter, MapPin, CreditCard, UserCircle2 } from "lucide-react"
+import { Users, GraduationCap, Mail, Phone, Plus, Edit, Trash2, BookOpen, Filter, Search } from "lucide-react"
 import Loader from "@/components/ui/loader"
+import Link from 'next/link'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 
 export default function InstituteStudentsPage() {
-  const [students, setStudents] = useState([])
-  const [courses, setCourses] = useState([])
+  const [students, setStudents] = useState<any[]>([])
+  const [courses, setCourses] = useState<any[]>([])
+  const [batches, setBatches] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [addOpen, setAddOpen] = useState(false)
-  const [editOpen, setEditOpen] = useState(false)
-  const [selectedStudent, setSelectedStudent] = useState<any>(null)
-  const [rollNo, setRollNo] = useState<string>('')
   const [instituteId, setInstituteId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [filterCourse, setFilterCourse] = useState('all')
+  const [filterBatch, setFilterBatch] = useState('all')
   const [filterStatus, setFilterStatus] = useState('all')
 
   useEffect(() => {
@@ -37,12 +42,13 @@ export default function InstituteStudentsPage() {
     if (instituteId) {
       fetchStudents()
       fetchCourses()
+      fetchBatches()
     }
   }, [instituteId])
 
   const fetchStudents = async () => {
     try {
-      const res = await fetch('/api/users')
+      const res = await fetch(`/api/users?instituteId=${instituteId}&role=student`)
       const data = await res.json()
       const instituteStudents = data.filter((u: any) => u.role === 'student' && u.instituteId === instituteId)
       setStudents(instituteStudents)
@@ -63,87 +69,18 @@ export default function InstituteStudentsPage() {
     }
   }
 
-
-
-  const handleAdd = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    const formData = new FormData(e.currentTarget)
-    const data = {
-      name: formData.get('name'),
-      email: formData.get('email'),
-      password: formData.get('password'),
-      role: 'student',
-      instituteId,
-      rollNo: formData.get('rollNo'),
-      courses: [{
-        courseId: formData.get('courseId'),
-        booksIncluded: formData.get('booksIncluded') === 'true'
-      }],
-      phone: formData.get('phone'),
-      address: formData.get('address'),
-      dateOfBirth: formData.get('dateOfBirth'),
-      guardianName: formData.get('guardianName'),
-      guardianPhone: formData.get('guardianPhone'),
-      status: 'Active'
-    }
-
+  const fetchBatches = async () => {
     try {
-      const res = await fetch('/api/users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      })
-      if (res.ok) {
-        toast.success('Student added successfully')
-        fetchStudents()
-        setRollNo('')
-        setAddOpen(false)
-      } else {
-        const errorData = await res.json()
-        console.error('Error response:', errorData)
-        toast.error(errorData.error || 'Failed to add student')
-      }
+      const res = await fetch(`/api/batches?instituteId=${instituteId}`)
+      const data = await res.json()
+      setBatches(Array.isArray(data) ? data : [])
     } catch (error) {
-      console.error('Fetch error:', error)
-      toast.error('Failed to add student')
+      console.error("Failed to fetch batches")
     }
   }
 
-  const handleEdit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.preventDefault()
-    const formData = new FormData(e.currentTarget)
-    const data: any = {
-      name: formData.get('name'),
-      email: formData.get('email'),
-      phone: formData.get('phone'),
-      address: formData.get('address'),
-      dateOfBirth: formData.get('dateOfBirth'),
-      guardianName: formData.get('guardianName'),
-      guardianPhone: formData.get('guardianPhone')
-    }
-
-    const password = formData.get('password')
-    if (password) data.password = password
-
-    try {
-      const res = await fetch(`/api/users/${selectedStudent._id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      })
-      if (res.ok) {
-        toast.success('Student updated successfully')
-        setEditOpen(false)
-        fetchStudents()
-      } else {
-        toast.error('Failed to update student')
-      }
-    } catch (error) {
-      toast.error('Failed to update student')
-    }
-  }
-
-  const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this student?')) return
 
     try {
@@ -164,147 +101,44 @@ export default function InstituteStudentsPage() {
   const filteredStudents = students.filter((student: any) => {
     const matchesSearch = searchQuery === '' ||
       student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      student.rollNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      student.rollNo?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       student.email.toLowerCase().includes(searchQuery.toLowerCase())
 
     const matchesCourse = filterCourse === 'all' ||
       student.courses?.some((c: any) => (c.courseId?._id || c.courseId) === filterCourse)
 
+    const matchesBatch = filterBatch === 'all' || (() => {
+      const batch = batches.find(b => b._id === filterBatch)
+      return batch?.students?.some((s: any) => (s._id || s) === student._id)
+    })()
+
     const matchesStatus = filterStatus === 'all' || student.status === filterStatus
 
-    return matchesSearch && matchesCourse && matchesStatus
+    return matchesSearch && matchesCourse && matchesStatus && matchesBatch
   })
+
+  // Reset batch filter when course changes
+  const handleCourseChange = (val: string) => {
+    setFilterCourse(val)
+    setFilterBatch('all')
+  }
 
   const totalStudents = students.length
   const activeStudents = students.filter((s: any) => s.status === 'Active').length
+
+  const availableBatches = filterCourse === 'all'
+    ? []
+    : batches.filter(b => (b.courseId?._id || b.courseId) === filterCourse)
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <SectionHeader title="Student Management" subtitle="Add and manage students" />
-        <Dialog open={addOpen} onOpenChange={setAddOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2"><Plus className="w-4 h-4" />Add Student</Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Add New Student</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleAdd} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Account Details */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2 text-primary font-semibold border-b pb-2">
-                    <UserCircle2 className="w-5 h-5" />
-                    <h3>Account Details</h3>
-                  </div>
-                  <div className="space-y-3">
-                    <div className="space-y-2">
-                      <Label htmlFor="rollNo">Roll Number</Label>
-                      <Input id="rollNo" name="rollNo" value={rollNo || ''} onChange={(e) => setRollNo(e.target.value)} placeholder="ST-2024-001" required />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email Address</Label>
-                      <Input id="email" name="email" type="email" placeholder="student@example.com" required />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="password">Password</Label>
-                      <Input id="password" name="password" type="password" required />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="status">Status</Label>
-                      <Select name="status" defaultValue="Active">
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Active">Active</SelectItem>
-                          <SelectItem value="Inactive">Inactive</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Personal Info */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2 text-primary font-semibold border-b pb-2">
-                    <User className="w-5 h-5" />
-                    <h3>Personal Info</h3>
-                  </div>
-                  <div className="space-y-3">
-                    <div className="space-y-2">
-                      <Label htmlFor="name">Full Name</Label>
-                      <Input id="name" name="name" placeholder="John Doe" required />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="phone">Phone Number</Label>
-                      <Input id="phone" name="phone" placeholder="+91..." />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="dateOfBirth">Date of Birth</Label>
-                      <Input id="dateOfBirth" name="dateOfBirth" type="date" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="address">Address</Label>
-                      <Input id="address" name="address" placeholder="City, State" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="guardianName">Guardian Name</Label>
-                      <Input id="guardianName" name="guardianName" />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Academic Info */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2 text-primary font-semibold border-b pb-2">
-                    <BookOpen className="w-5 h-5" />
-                    <h3>Academic</h3>
-                  </div>
-                  <div className="space-y-3">
-                    <div className="space-y-2">
-                      <Label htmlFor="courseId">Assign Course</Label>
-                      <Select name="courseId" required>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select course" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {courses.map((courseAssignment: any) => (
-                            <SelectItem key={courseAssignment.courseId?._id} value={courseAssignment.courseId?._id}>
-                              {courseAssignment.courseId?.name} ({courseAssignment.courseId?.code})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="booksIncluded">Include Books</Label>
-                      <Select name="booksIncluded" defaultValue="false">
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="true">Yes - Include Books</SelectItem>
-                          <SelectItem value="false">No - Course Only</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="guardianPhone">Guardian Phone</Label>
-                      <Input id="guardianPhone" name="guardianPhone" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-4 border-t">
-                <Button type="button" variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
-                <Button type="submit">Add Student</Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <Button asChild className="gap-2">
+          <Link href="/institute-admin/students/add">
+            <Plus className="w-4 h-4" />Add Student
+          </Link>
+        </Button>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
@@ -349,290 +183,221 @@ export default function InstituteStudentsPage() {
         </Card>
       </div>
 
-      <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-md p-4 rounded-xl border shadow-sm space-y-3">
-        <div className="flex items-center gap-2 mb-1">
-          <Filter className="w-4 h-4 text-primary" />
-          <h3 className="font-semibold text-sm">Search & Filter</h3>
+      <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-md p-4 rounded-xl border shadow-sm space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-primary" />
+            <h3 className="font-semibold text-sm">Search & Filter</h3>
+          </div>
+          {(searchQuery || filterCourse !== 'all' || filterStatus !== 'all' || filterBatch !== 'all') && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2 text-xs text-muted-foreground hover:text-red-500 hover:bg-red-50"
+              onClick={() => { setSearchQuery(''); setFilterCourse('all'); setFilterBatch('all'); setFilterStatus('all') }}
+            >
+              <Trash2 className="w-3 h-3 mr-1.5" />
+              Clear Filters
+            </Button>
+          )}
         </div>
-        <div className="grid gap-4 md:grid-cols-3">
-          <div className="relative">
+
+        <div className="flex flex-col lg:flex-row gap-3">
+          <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               placeholder="Search by name, roll no, email..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 bg-background"
+              className="pl-9 bg-background/50 focus:bg-background transition-colors"
             />
           </div>
-          <Select value={filterCourse} onValueChange={setFilterCourse}>
-            <SelectTrigger className="bg-background">
-              <SelectValue placeholder="Filter by course" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Courses</SelectItem>
-              {courses.map((ca: any) => (
-                <SelectItem key={ca.courseId?._id} value={ca.courseId?._id}>
-                  {ca.courseId?.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger className="bg-background">
-              <SelectValue placeholder="Filter by status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="Active">Active</SelectItem>
-              <SelectItem value="Inactive">Inactive</SelectItem>
-            </SelectContent>
-          </Select>
+
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Select value={filterCourse} onValueChange={handleCourseChange}>
+              <SelectTrigger className="w-full sm:w-[200px] bg-background/50">
+                <SelectValue placeholder="All Courses" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Courses</SelectItem>
+                {courses.map((ca: any) => (
+                  <SelectItem key={ca.courseId?._id} value={ca.courseId?._id}>
+                    {ca.courseId?.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={filterBatch} onValueChange={setFilterBatch} disabled={filterCourse === 'all'}>
+              <SelectTrigger className="w-full sm:w-[200px] bg-background/50">
+                <SelectValue placeholder={filterCourse === 'all' ? "Select Course First" : "All Batches"} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Batches</SelectItem>
+                {availableBatches.map((b: any) => (
+                  <SelectItem key={b._id} value={b._id}>{b.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="w-full sm:w-[150px] bg-background/50">
+                <SelectValue placeholder="All Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="Active">Active</SelectItem>
+                <SelectItem value="Inactive">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-        <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
-          <p>Showing {filteredStudents.length} of {totalStudents} students</p>
-          {(searchQuery || filterCourse !== 'all' || filterStatus !== 'all') && (
-            <Button variant="ghost" size="sm" className="h-auto p-0 text-xs hover:bg-transparent hover:text-red-500"
-              onClick={() => { setSearchQuery(''); setFilterCourse('all'); setFilterStatus('all') }}
-            >Clear Filters</Button>
-          )}
+
+        <div className="text-xs text-muted-foreground pt-1">
+          <p>Showing <strong>{filteredStudents.length}</strong> of <strong>{totalStudents}</strong> students</p>
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <div className="border rounded-xl bg-background/50 backdrop-blur-sm shadow-sm overflow-hidden">
         {filteredStudents.length === 0 ? (
-          <div className="col-span-full py-16 text-center text-muted-foreground bg-muted/20 rounded-xl border border-dashed">
+          <div className="py-16 text-center text-muted-foreground bg-muted/20 border-dashed m-2 rounded-lg border">
             <Users className="w-12 h-12 mx-auto mb-3 opacity-20" />
             <p className="text-lg font-medium text-foreground">No students found</p>
             <p className="text-sm">Try adjusting your search or filters</p>
           </div>
         ) : (
-          filteredStudents.map((student: any) => {
-            const getCourseDetails = () => {
-              if (!student.courses || student.courses.length === 0) {
-                return { display: 'Not enrolled in any course', isEmpty: true }
-              }
-              const courseList = student.courses.map((c: any) => {
-                const name = c.courseId?.name || 'Unknown Course'
-                const code = c.courseId?.code || ''
-                return code ? `${name} (${code})` : name
-              })
-              return { display: courseList.join(' • '), isEmpty: false }
-            }
+          <Table>
+            <TableHeader className="bg-muted/40">
+              <TableRow>
+                <TableHead className="w-[250px] pl-4">Student Name</TableHead>
+                <TableHead>Roll No</TableHead>
+                <TableHead>Contact Info</TableHead>
+                <TableHead>Enrolled Courses</TableHead>
+                <TableHead>Payment Status</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right pr-4">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredStudents.map((student: any) => {
+                const getCourseDetails = () => {
+                  if (!student.courses || student.courses.length === 0) {
+                    return { display: 'Not enrolled', isEmpty: true }
+                  }
+                  const courseList = student.courses.map((c: any) => {
+                    const name = c.courseId?.name || 'Unknown'
+                    const code = c.courseId?.code || ''
+                    return code ? `${name} (${code})` : name
+                  })
+                  return { display: courseList.join(', '), isEmpty: false }
+                }
 
-            const courseInfo = getCourseDetails()
+                const courseInfo = getCourseDetails()
 
-            return (
-              <Card key={student._id} className="hover:shadow-lg transition-all hover:border-primary/50 group overflow-hidden py-0 border-muted/60 flex flex-col">
-                <div className={`h-1.5 w-full ${student.status === 'Active' ? 'bg-green-500' : 'bg-gray-300'}`} />
-                <CardContent className="p-0 flex-1 flex flex-col">
-                  <div className="p-5 flex-1 space-y-4">
-                    <div className="flex justify-between items-start">
-                      <div className="flex gap-3">
-                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-lg">
-                          {student.name.charAt(0).toUpperCase()}
+                return (
+                  <TableRow key={student._id} className="group hover:bg-muted/30 transition-colors">
+                    <TableCell className="pl-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shadow-sm ring-2 ring-background overflow-hidden relative">
+                          {student.documents?.photo ? (
+                            <img
+                              src={student.documents.photo}
+                              alt={student.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            student.name.charAt(0).toUpperCase()
+                          )}
                         </div>
                         <div>
-                          <h3 className="font-semibold text-base line-clamp-1">{student.name}</h3>
-                          <p className="text-xs text-muted-foreground font-mono">{student.rollNo}</p>
+                          <p className="font-semibold text-sm text-foreground">{student.name}</p>
                         </div>
                       </div>
-                      <Badge variant={student.status === 'Active' ? 'default' : 'secondary'} className="shadow-none">
-                        {student.status}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="font-mono text-xs bg-muted/50 text-muted-foreground border-muted-foreground/20">
+                        {student.rollNo || 'N/A'}
                       </Badge>
-                    </div>
-
-                    <div className="space-y-2 text-sm pt-2">
-                      <div className="flex items-center gap-2.5 text-muted-foreground">
-                        <Mail className="w-3.5 h-3.5 flex-shrink-0" />
-                        <span className="truncate">{student.email}</span>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <Mail className="w-3 h-3 text-primary/70" />
+                          <span className="truncate max-w-[150px]" title={student.email}>{student.email}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <Phone className="w-3 h-3 text-primary/70" />
+                          <span>{student.phone || '-'}</span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2.5 text-muted-foreground">
-                        <Phone className="w-3.5 h-3.5 flex-shrink-0" />
-                        <span className="truncate">{student.phone || 'N/A'}</span>
-                      </div>
-                      <div className="flex items-start gap-2.5 text-muted-foreground">
-                        <BookOpen className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
-                        <span className={`line-clamp-2 ${courseInfo.isEmpty ? 'italic opacity-70' : ''}`}>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-start gap-1.5 max-w-[200px]">
+                        <BookOpen className="w-3.5 h-3.5 mt-0.5 text-muted-foreground/70 shrink-0" />
+                        <span className={`text-sm truncate ${courseInfo.isEmpty ? 'italic text-muted-foreground/60' : 'text-muted-foreground'}`} title={courseInfo.display}>
                           {courseInfo.display}
                         </span>
                       </div>
-                    </div>
-                  </div>
-
-                  {/* Footer */}
-                  <div className="bg-muted/30 p-3 border-t flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="flex-1 h-8 text-xs font-medium bg-background"
-                      onClick={() => {
-                        setSelectedStudent(student)
-                        setEditOpen(true)
-                      }}
-                    >
-                      <Edit className="w-3.5 h-3.5 mr-1" /> Edit
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-8 w-8 text-muted-foreground hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20"
-                      onClick={() => handleDelete(student._id)}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )
-          })
+                    </TableCell>
+                    <TableCell>
+                      {student.studentFullyPaid ? (
+                        <Badge variant="outline" className="text-[10px] h-4 px-1 py-0 border-green-200 text-green-700 bg-green-50">
+                          Paid Inst.
+                        </Badge>
+                      ) : (student.studentPaidAmount || 0) > 0 ? (
+                        <Badge variant="outline" className="text-[10px] h-4 px-1 py-0 border-blue-200 text-blue-700 bg-blue-50">
+                          Paid Inst: ₹{(student.studentPaidAmount || 0).toLocaleString()}
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-[10px] h-4 px-1 py-0 border-yellow-200 text-yellow-700 bg-yellow-50">
+                          Not Paid Inst.
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="secondary"
+                        className={`
+                          ${student.status === 'Active'
+                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800'
+                            : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400 border-gray-200 dark:border-gray-700'
+                          } border shadow-none
+                        `}
+                      >
+                        {student.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right pr-4">
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
+                          asChild
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/5 rounded-full"
+                          title="Edit Student"
+                        >
+                          <Link href={`/institute-admin/students/${student._id}/edit`}>
+                            <Edit className="w-4 h-4" />
+                          </Link>
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 text-muted-foreground hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-full"
+                          onClick={(e) => handleDelete(student._id, e)}
+                          title="Delete Student"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
+            </TableBody>
+          </Table>
         )}
       </div>
-
-      <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Edit Student</DialogTitle>
-          </DialogHeader>
-          {selectedStudent && (
-            <form onSubmit={handleEdit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Roll Number</Label>
-                  <Input value={selectedStudent.rollNo} disabled className="bg-muted" />
-                </div>
-                <div>
-                  <Label htmlFor="edit-name">Full Name</Label>
-                  <Input id="edit-name" name="name" defaultValue={selectedStudent.name} required />
-                </div>
-                <div>
-                  <Label htmlFor="edit-email">Email</Label>
-                  <Input id="edit-email" name="email" type="email" defaultValue={selectedStudent.email} required />
-                </div>
-                <div>
-                  <Label htmlFor="edit-password">Password (New)</Label>
-                  <Input id="edit-password" name="password" type="password" placeholder="Leave blank to keep current" />
-                </div>
-                <div>
-                  <Label htmlFor="edit-phone">Phone</Label>
-                  <Input id="edit-phone" name="phone" defaultValue={selectedStudent.phone || ''} />
-                </div>
-                <div>
-                  <Label htmlFor="edit-dateOfBirth">Date of Birth</Label>
-                  <Input
-                    id="edit-dateOfBirth"
-                    name="dateOfBirth"
-                    type="date"
-                    defaultValue={selectedStudent.dateOfBirth ? new Date(selectedStudent.dateOfBirth).toISOString().split('T')[0] : ''}
-                  />
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="edit-address">Address</Label>
-                <Input id="edit-address" name="address" defaultValue={selectedStudent.address || ''} />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="edit-guardianName">Guardian Name</Label>
-                  <Input id="edit-guardianName" name="guardianName" defaultValue={selectedStudent.guardianName || ''} />
-                </div>
-                <div>
-                  <Label htmlFor="edit-guardianPhone">Guardian Phone</Label>
-                  <Input id="edit-guardianPhone" name="guardianPhone" defaultValue={selectedStudent.guardianPhone || ''} />
-                </div>
-              </div>
-
-              <div className="pt-4 border-t">
-                <Label className="text-base font-semibold">Course Enrollments</Label>
-                <div className="mt-3 space-y-4">
-                  <div className="flex gap-2 p-3 bg-muted/40 rounded-lg">
-                    <div className="flex-1">
-                      <Label className="text-xs mb-1 block">Add New Course</Label>
-                      <Select onValueChange={async (courseId) => {
-                        try {
-                          const res = await fetch(`/api/users/${selectedStudent._id}/courses`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ courseId, booksIncluded: false })
-                          })
-                          if (res.ok) {
-                            toast.success('Course added')
-                            fetchStudents()
-                            const updated = await res.json()
-                            setSelectedStudent(updated)
-                          } else {
-                            toast.error('Failed to add course')
-                          }
-                        } catch (error) {
-                          toast.error('Failed to add course')
-                        }
-                      }}>
-                        <SelectTrigger className="w-full bg-background">
-                          <SelectValue placeholder="Select course to enroll" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {courses
-                            .filter((ca: any) => !selectedStudent.courses?.some((c: any) => (c.courseId?._id || c.courseId) === ca.courseId?._id))
-                            .map((courseAssignment: any) => (
-                              <SelectItem key={courseAssignment.courseId?._id} value={courseAssignment.courseId?._id}>
-                                {courseAssignment.courseId?.name} ({courseAssignment.courseId?.code})
-                              </SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    {selectedStudent.courses?.length === 0 || !selectedStudent.courses ? (
-                      <p className="text-sm text-muted-foreground italic">No courses enrolled yet</p>
-                    ) : (
-                      selectedStudent.courses?.map((course: any, idx: number) => (
-                        <div key={idx} className="flex items-center justify-between p-3 border rounded-lg bg-background">
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <BookOpen className="w-4 h-4 text-primary" />
-                              <span className="text-sm font-medium">{course.courseId?.name || 'Unknown Course'}</span>
-                            </div>
-                            <p className="text-xs text-muted-foreground ml-6">Books: {course.booksIncluded ? 'Yes' : 'No'}</p>
-                          </div>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                            onClick={async () => {
-                              try {
-                                const res = await fetch(`/api/users/${selectedStudent._id}/courses/${course.courseId?._id || course.courseId}`, {
-                                  method: 'DELETE'
-                                })
-                                if (res.ok) {
-                                  toast.success('Course removed')
-                                  fetchStudents()
-                                  const updated = await res.json()
-                                  setSelectedStudent(updated)
-                                } else {
-                                  toast.error('Failed to remove course')
-                                }
-                              } catch (error) {
-                                toast.error('Failed to remove course')
-                              }
-                            }}
-                          >
-                            Remove
-                          </Button>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              </div>
-              <div className="flex justify-end gap-3 pt-4 border-t">
-                <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
-                <Button type="submit">Update Student</Button>
-              </div>
-            </form>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

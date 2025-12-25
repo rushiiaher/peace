@@ -36,20 +36,20 @@ export async function POST(req: Request) {
   try {
     await connectDB()
     const { courseId, instituteId, title, date, startTime, totalQuestions, selectedQBIds, forceNextDay, forceNextSection } = await req.json()
-    
+
     const institute = await Institute.findById(instituteId)
     if (!institute) return NextResponse.json({ error: 'Institute not found' }, { status: 404 })
-    
-    const { openingTime = '09:00', closingTime = '18:00', sectionDuration = 180, breakBetweenSections = 30, workingDays = [1,2,3,4,5,6] } = institute.examTimings || {}
-    
+
+    const { openingTime = '09:00', closingTime = '18:00', sectionDuration = 180, breakBetweenSections = 30, workingDays = [1, 2, 3, 4, 5, 6] } = institute.examTimings || {}
+
     const students = await User.find({ instituteId, role: 'student', 'courses.courseId': courseId })
     const availableSystems = institute.systems?.filter((s: any) => s.status === 'Available') || []
-    
+
     if (availableSystems.length === 0) return NextResponse.json({ error: 'No systems available' }, { status: 400 })
-    
+
     let examDate = new Date(date)
     let currentStartTime = startTime || openingTime
-    
+
     if (forceNextDay) {
       examDate = getNextWorkingDay(examDate, workingDays)
       currentStartTime = openingTime
@@ -62,27 +62,27 @@ export async function POST(req: Request) {
         currentStartTime = nextStart
       }
     }
-    
+
     const sections: any[] = []
     let remainingStudents = [...students]
     let sectionNumber = 1
-    
+
     while (remainingStudents.length > 0) {
       const sectionStudents = remainingStudents.splice(0, availableSystems.length)
       const sectionEndTime = addMinutes(currentStartTime, sectionDuration)
-      
+
       if (parseTime(sectionEndTime) > parseTime(closingTime)) {
         examDate = getNextWorkingDay(examDate, workingDays)
         currentStartTime = openingTime
       }
-      
+
       const systemAssignments = sectionStudents.map((student, i) => ({
         studentId: student._id,
         systemName: availableSystems[i].name,
         attended: false,
         sectionNumber
       }))
-      
+
       sections.push({
         sectionNumber,
         date: new Date(examDate),
@@ -90,7 +90,7 @@ export async function POST(req: Request) {
         endTime: addMinutes(currentStartTime, sectionDuration),
         systemAssignments
       })
-      
+
       currentStartTime = addMinutes(currentStartTime, sectionDuration + breakBetweenSections)
       if (parseTime(currentStartTime) + sectionDuration > parseTime(closingTime)) {
         examDate = getNextWorkingDay(examDate, workingDays)
@@ -98,11 +98,11 @@ export async function POST(req: Request) {
       }
       sectionNumber++
     }
-    
+
     const qbs = await QuestionBank.find(selectedQBIds?.length ? { _id: { $in: selectedQBIds } } : { courseId })
     const totalAvailable = qbs.reduce((sum: number, qb: any) => sum + qb.questions.length, 0)
     const questionsToSelect = Math.min(totalQuestions, totalAvailable)
-    
+
     const questionPool: any[] = []
     let remaining = questionsToSelect
     qbs.forEach((qb: any, i: number) => {
@@ -112,7 +112,7 @@ export async function POST(req: Request) {
       questionPool.push(...shuffled.slice(0, Math.min(count, qb.questions.length)))
       remaining -= count
     })
-    
+
     const exam = await Exam.create({
       courseId,
       instituteId,
@@ -122,14 +122,14 @@ export async function POST(req: Request) {
       startTime: sections[0].startTime,
       endTime: sections[sections.length - 1].endTime,
       duration: sectionDuration,
-      totalMarks: questionsToSelect,
+      totalMarks: questionsToSelect * 2,
       questions: questionPool,
       multiSection: sections.length > 1,
       sections,
       systemAssignments: sections.flatMap(s => s.systemAssignments),
       status: 'Scheduled'
     })
-    
+
     const course = await Course.findById(courseId)
     for (const section of sections) {
       for (let i = 0; i < section.systemAssignments.length; i++) {
@@ -151,7 +151,7 @@ export async function POST(req: Request) {
         })
       }
     }
-    
+
     return NextResponse.json({ exam, sections: sections.length, message: sections.length > 1 ? `Exam scheduled in ${sections.length} sections` : 'Exam scheduled' }, { status: 201 })
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 })

@@ -239,38 +239,41 @@ export default function InstituteAdminSupportPage() {
       </div>
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Create Support Ticket</DialogTitle>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader className="border-b pb-4 mb-4">
+            <DialogTitle className="text-xl">Create Support Ticket</DialogTitle>
             <DialogDescription>Describe your issue in detail for faster resolution.</DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleCreate} className="space-y-4 pt-4">
-            <div className="space-y-2">
-              <Label htmlFor="subject">Subject</Label>
-              <Input id="subject" name="subject" required placeholder="e.g. Payment Issue, Bug Report" />
+          <form onSubmit={handleCreate} className="space-y-6">
+            <div className="grid grid-cols-1 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="subject">Subject</Label>
+                <Input id="subject" name="subject" required placeholder="e.g. Payment Issue, Bug Report" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="priority">Priority</Label>
+                <Select name="priority" defaultValue="Normal">
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Low">Low</SelectItem>
+                    <SelectItem value="Normal">Normal</SelectItem>
+                    <SelectItem value="High">High</SelectItem>
+                    <SelectItem value="Urgent">Urgent</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea id="description" name="description" required rows={5} placeholder="Please provide detailed steps to reproduce the issue..." />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="priority">Priority</Label>
-              <Select name="priority" defaultValue="Normal">
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Low">Low</SelectItem>
-                  <SelectItem value="Normal">Normal</SelectItem>
-                  <SelectItem value="High">High</SelectItem>
-                  <SelectItem value="Urgent">Urgent</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea id="description" name="description" required rows={5} placeholder="Please provide detailed steps to reproduce the issue..." />
-            </div>
-            <DialogFooter>
+
+            <div className="flex justify-end gap-3 pt-4 border-t mt-6">
               <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
               <Button type="submit">Submit Ticket</Button>
-            </DialogFooter>
+            </div>
           </form>
         </DialogContent>
       </Dialog>

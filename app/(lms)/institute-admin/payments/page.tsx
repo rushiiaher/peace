@@ -7,10 +7,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
-import { IndianRupee, Users, CheckCircle, Clock, CreditCard, ArrowRight, History, Receipt } from "lucide-react"
+import { IndianRupee, Users, CheckCircle, Clock, ArrowRight, History, Search, Filter } from "lucide-react"
 import { AnimatedTabsProfessional } from "@/components/lms/animated-tabs"
 import Loader from "@/components/ui/loader"
 import { motion } from "framer-motion"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 
 declare global {
   interface Window {
@@ -24,6 +27,93 @@ export default function InstitutePaymentsPage() {
   const [instituteId, setInstituteId] = useState<string | null>(null)
   const [processing, setProcessing] = useState(false)
   const [activeTab, setActiveTab] = useState("pending")
+  const [batches, setBatches] = useState<any[]>([])
+
+  // New Filters
+  const [courses, setCourses] = useState<any[]>([])
+  const [searchQuery, setSearchQuery] = useState('')
+  const [filterCourse, setFilterCourse] = useState('all')
+  const [filterBatch, setFilterBatch] = useState('all')
+  const [showPastBatches, setShowPastBatches] = useState(false) // Toggle: if true, show finished batches too (or only)
+
+  const [selectedPayments, setSelectedPayments] = useState<Set<string>>(new Set())
+
+  // --- Derived State & Filter Logic ---
+  const getBatchStatus = (payment: any) => {
+    // Find matching batch
+    const batch = batches.find((b: any) =>
+      b.courseId?._id === payment.courseId?._id &&
+      b.students?.some((s: any) => s._id === payment.studentId?._id || s === payment.studentId?._id)
+    )
+    if (!batch) return 'Active' // Default if not found (should be rare)
+
+    // Check if batch is effectively finished based on End Date
+    if (new Date(batch.endDate) < new Date()) return 'Finished'
+    return 'Active'
+  }
+
+  const getFilteredPayments = (list: any[]) => {
+    return list.filter(p => {
+      // 1. Search Query
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase()
+        const matchesName = p.studentId?.name?.toLowerCase().includes(q)
+        const matchesRoll = p.studentId?.rollNo?.toLowerCase().includes(q)
+        if (!matchesName && !matchesRoll) return false
+      }
+
+      // 2. Course Filter
+      if (filterCourse !== 'all') {
+        if (p.courseId?._id !== filterCourse) return false
+      }
+
+      // 3. Status Filter (Show Past Batches)
+      const status = getBatchStatus(p)
+      if (!showPastBatches) {
+        // If not showing past, only show Active
+        if (status !== 'Active') return false
+      }
+      // If showing past, show ALL (Active + Finished).
+      // Or users requirement: "then only previous batches are showen"
+      // If interpreted strictly:
+      if (showPastBatches && status === 'Active') {
+        // If the user meant "Toggle between Active and Past", uncomment below:
+        // return false 
+        // However, standard UI is "Show Past" (Include) or "Filter: Past". 
+        // I will stick to "Include Past" unless the toggler says "Show Only Past".
+        // Let's implement "Show Finished Batches Only" if checked, to matches "only previous batches are showen" text.
+        return false
+      }
+
+      // 4. Batch Filter (Specific Batch selection)
+      if (filterBatch !== 'all') {
+        // Find batch for this payment
+        const batch = batches.find((b: any) =>
+          b.courseId?._id === p.courseId?._id &&
+          b.students?.some((s: any) => s._id === p.studentId?._id || s === p.studentId?._id)
+        )
+        if (batch?._id !== filterBatch) return false
+      }
+
+      return true
+    })
+  }
+
+  // Base Lists
+  const allPending = payments.filter((p: any) => p.status === 'Pending')
+  const allPaid = payments.filter((p: any) => p.status === 'Paid')
+
+  // Filtered Lists
+  const pendingPayments = getFilteredPayments(allPending)
+  const filteredPaidPayments = getFilteredPayments(allPaid)
+
+  const totalPending = pendingPayments.reduce((sum: number, p: any) => sum + p.totalAmount, 0)
+
+  // Derive available batches for filter based on selected course
+  const availableBatches = filterCourse === 'all'
+    ? batches
+    : batches.filter(b => b.courseId?._id === filterCourse || b.courseId === filterCourse)
+
 
   useEffect(() => {
     const user = localStorage.getItem('user')
@@ -35,16 +125,27 @@ export default function InstitutePaymentsPage() {
 
   useEffect(() => {
     if (!instituteId) return
-    fetchPayments()
+    fetchData()
   }, [instituteId])
 
-  const fetchPayments = async () => {
+  const fetchData = async () => {
+    setLoading(true)
     try {
-      const res = await fetch(`/api/payments?instituteId=${instituteId}`)
-      const data = await res.json()
-      setPayments(Array.isArray(data) ? data : [])
+      const [payRes, batchRes, instRes] = await Promise.all([
+        fetch(`/api/payments?instituteId=${instituteId}`),
+        fetch(`/api/batches?instituteId=${instituteId}`),
+        fetch(`/api/institutes/${instituteId}`)
+      ])
+
+      const payData = await payRes.json()
+      const batchData = await batchRes.json()
+      const instData = await instRes.json()
+
+      setPayments(Array.isArray(payData) ? payData : [])
+      setBatches(Array.isArray(batchData) ? batchData : [])
+      setCourses(instData.courses || [])
     } catch (error) {
-      toast.error('Failed to fetch payments')
+      toast.error('Failed to fetch data')
     } finally {
       setLoading(false)
     }
@@ -55,7 +156,6 @@ export default function InstitutePaymentsPage() {
     setProcessing(true)
 
     try {
-      // 1. Create Order
       const orderRes = await fetch('/api/razorpay/order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -67,10 +167,8 @@ export default function InstitutePaymentsPage() {
       })
 
       const orderData = await orderRes.json()
-
       if (!orderRes.ok) throw new Error(orderData.error)
 
-      // 2. Open Razorpay
       const options = {
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
         amount: orderData.amount,
@@ -80,7 +178,6 @@ export default function InstitutePaymentsPage() {
         order_id: orderData.id,
         handler: async function (response: any) {
           try {
-            // 3. Verify Payment
             const verifyRes = await fetch('/api/razorpay/verify', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -93,10 +190,9 @@ export default function InstitutePaymentsPage() {
             })
 
             const verifyData = await verifyRes.json()
-
             if (verifyData.success) {
               toast.success('Payment successful!')
-              fetchPayments()
+              fetchData()
             } else {
               toast.error('Payment verification failed')
             }
@@ -104,18 +200,12 @@ export default function InstitutePaymentsPage() {
             toast.error('Error verifying payment')
           }
         },
-        prefill: {
-          name: "Institute Admin",
-          email: "admin@example.com",
-          contact: "9999999999"
-        },
-        theme: {
-          color: "#3399cc"
-        }
+        prefill: { name: "Institute Admin", email: "admin@example.com", contact: "9999999999" },
+        theme: { color: "#3399cc" }
       }
 
       if (typeof window.Razorpay === 'undefined') {
-        toast.error('Razorpay SDK failed to load. Please check your connection.')
+        toast.error('Razorpay SDK failed to load.')
         return
       }
 
@@ -132,27 +222,90 @@ export default function InstitutePaymentsPage() {
     }
   }
 
-  const handlePayByCourse = (courseId: string) => {
-    const coursePayments = pendingPayments.filter(p => p.courseId?._id === courseId)
-    const total = coursePayments.reduce((sum, p) => sum + p.totalAmount, 0)
-    const ids = coursePayments.map(p => p._id)
-
-    handleRazorpayPayment(total, ids, `Fees for ${coursePayments.length} students`)
-  }
-
   const handlePayAll = () => {
     if (pendingPayments.length === 0) return
     const ids = pendingPayments.map(p => p._id)
     handleRazorpayPayment(totalPending, ids, `Fees for all ${pendingPayments.length} students`)
   }
 
-  const groupByCourse = () => {
+  const handlePaySelection = async (batchId: string) => {
+    const batchGroup = groupPendingByBatch().find((g: any) => g.batchId === batchId) as any
+    if (!batchGroup) return
+
+    const selectedIds = batchGroup.payments
+      .filter((p: any) => selectedPayments.has(p._id))
+      .map((p: any) => p._id)
+
+    if (selectedIds.length === 0) {
+      toast.error('Select at least one student')
+      return
+    }
+
+    // Delivery Charge Logic
+    const matchedCourse = courses.find((c: any) => (c.courseId?._id || c.courseId) === batchGroup.courseId)
+    const batchDeliveryCharge = matchedCourse?.courseId?.deliveryCharge || matchedCourse?.deliveryCharge || 0
+    const isDeliveryPaid = allPaid.some((p: any) => (p.courseId?._id || p.courseId) === batchGroup.courseId && p.deliveryCharge > 0)
+
+    let totalAmount = 0
+    batchGroup.payments.forEach((p: any) => {
+      if (selectedPayments.has(p._id)) totalAmount += p.totalAmount
+    })
+
+    if (!isDeliveryPaid && batchDeliveryCharge > 0) {
+      // Add delivery charge to the first selected payment
+      // We update the backend record so valid invoice is generated upon success
+      const targetPaymentId = selectedIds[0]
+
+      setProcessing(true)
+      try {
+        const res = await fetch('/api/payments/add-delivery', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ paymentId: targetPaymentId, deliveryCharge: batchDeliveryCharge })
+        })
+
+        if (!res.ok) throw new Error('Failed to apply delivery charge')
+
+        // Add to total for Razorpay processing
+        totalAmount += batchDeliveryCharge
+      } catch (error) {
+        toast.error('Failed to apply delivery charge. Please try again.')
+        setProcessing(false)
+        return
+      }
+    }
+
+    handleRazorpayPayment(totalAmount, selectedIds, `Fees for ${selectedIds.length} students`)
+  }
+
+  const toggleSelection = (id: string) => {
+    const newSet = new Set(selectedPayments)
+    if (newSet.has(id)) newSet.delete(id)
+    else newSet.add(id)
+    setSelectedPayments(newSet)
+  }
+
+  const toggleBatchSelection = (batchId: string, select: boolean) => {
+    const batchGroup = groupPendingByBatch().find((g: any) => g.batchId === batchId) as any
+    if (!batchGroup) return
+    const newSet = new Set(selectedPayments)
+    batchGroup.payments.forEach((p: any) => {
+      if (select) newSet.add(p._id)
+      else newSet.delete(p._id)
+    })
+    setSelectedPayments(newSet)
+  }
+
+  const groupPendingByBatch = () => {
     const grouped: any = {}
     pendingPayments.forEach(p => {
       const courseId = p.courseId?._id
+      const courseName = p.courseId?.name || 'Unknown Course'
       if (!grouped[courseId]) {
         grouped[courseId] = {
-          courseName: p.courseId?.name,
+          batchId: courseId,
+          batchName: courseName,
+          courseName: courseName,
           courseId: courseId,
           payments: [],
           total: 0
@@ -161,25 +314,46 @@ export default function InstitutePaymentsPage() {
       grouped[courseId].payments.push(p)
       grouped[courseId].total += p.totalAmount
     })
-    return Object.values(grouped)
+    return Object.values(grouped).sort((a: any, b: any) => a.courseName.localeCompare(b.courseName))
   }
 
-  const pendingPayments = payments.filter(p => p.status === 'Pending')
-  const paidPayments = payments.filter(p => p.status === 'Paid')
-  const totalPending = pendingPayments.reduce((sum, p) => sum + p.totalAmount, 0)
+  const groupPaidByBatch = () => {
+    const grouped: any = {}
+    filteredPaidPayments.forEach(p => {
+      const courseId = p.courseId?._id
+      const courseName = p.courseId?.name || 'Unknown Course'
+      const status = getBatchStatus(p)
+
+      if (!grouped[courseId]) {
+        grouped[courseId] = {
+          batchId: courseId,
+          batchName: courseName,
+          courseName: courseName,
+          status: status,
+          payments: [],
+          total: 0
+        }
+      }
+      grouped[courseId].payments.push(p)
+      grouped[courseId].total += p.totalAmount
+    })
+    return Object.values(grouped).sort((a: any, b: any) => b.status.localeCompare(a.status)) // Active first? No, Finished (F) vs Active (A). B-A puts Finished first? No A < F.
+  }
 
   const generateMissingPayments = async () => {
     try {
+      setLoading(true)
       const res = await fetch('/api/payments/generate', { method: 'POST' })
       const data = await res.json()
       toast.success(data.message || 'Payments generated')
-      fetchPayments()
+      fetchData()
     } catch (error) {
       toast.error('Failed to generate payments')
+      setLoading(false)
     }
   }
 
-  if (loading) {
+  if (loading && payments.length === 0) {
     return (
       <div className="flex min-h-[calc(100vh-140px)] items-center justify-center">
         <Loader />
@@ -189,272 +363,236 @@ export default function InstitutePaymentsPage() {
 
   return (
     <div className="space-y-6">
-      <Script
-        id="razorpay-checkout-js"
-        src="https://checkout.razorpay.com/v1/checkout.js"
-      />
+      <Script id="razorpay-checkout-js" src="https://checkout.razorpay.com/v1/checkout.js" />
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <SectionHeader title="Payment Management" subtitle="Manage your platform fee payments securely." />
         {payments.length === 0 && !loading && (
           <Button onClick={generateMissingPayments} variant="outline" className="gap-2">
-            <Clock className="w-4 h-4" /> Load Enrolled Students
+            Load Enrolled Students
           </Button>
         )}
       </div>
 
-      {/* Stats Grid */}
+      {/* Filter Bar */}
+      <Card className="bg-muted/30 border-none shadow-inner">
+        <CardContent className="p-4 flex flex-col md:flex-row gap-4">
+          <div className="flex-1 relative">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search Name or Roll No..."
+              className="pl-9 bg-background"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          <div className="flex gap-2 w-full md:w-auto overflow-x-auto">
+            <Select value={filterCourse} onValueChange={setFilterCourse}>
+              <SelectTrigger className="w-[180px] bg-background">
+                <SelectValue placeholder="All Courses" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Courses</SelectItem>
+                {courses.map((c: any) => (
+                  <SelectItem key={c.courseId?._id || c.courseId} value={c.courseId?._id || c.courseId}>
+                    {c.courseId?.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={filterBatch} onValueChange={setFilterBatch}>
+              <SelectTrigger className="w-[220px] bg-background">
+                <SelectValue placeholder="All Batches" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Batches</SelectItem>
+                {availableBatches.map((b: any) => (
+                  <SelectItem key={b._id} value={b._id}>{b.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Button
+              variant={showPastBatches ? "default" : "outline"}
+              className="gap-2 whitespace-nowrap"
+              onClick={() => setShowPastBatches(!showPastBatches)}
+            >
+              <History className="w-4 h-4" />
+              {showPastBatches ? "Showing Finished Only" : "Show Finished Batches"}
+            </Button>
+
+            {(searchQuery || filterCourse !== 'all' || filterBatch !== 'all' || showPastBatches) && (
+              <Button variant="ghost" size="icon" onClick={() => {
+                setSearchQuery('')
+                setFilterCourse('all')
+                setFilterBatch('all')
+                setShowPastBatches(false)
+              }} title="Reset Filters">
+                <Filter className="w-4 h-4 text-muted-foreground" />
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Stats Cards (Simplified for compactness with filters) */}
       <div className="grid gap-4 sm:grid-cols-3">
-        <Card className="relative overflow-hidden border-orange-200 dark:border-orange-800 bg-gradient-to-br from-orange-50 to-white dark:from-orange-950/20 dark:to-background">
-          <div className="absolute right-0 top-0 h-full w-1 bg-orange-500" />
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-orange-100 dark:bg-orange-900/50 rounded-xl shadow-sm">
-                <IndianRupee className="w-6 h-6 text-orange-600 dark:text-orange-400" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-orange-600 dark:text-orange-400 mb-1">Pending Amount</p>
-                <p className="text-3xl font-bold">₹{totalPending.toLocaleString()}</p>
-                <div className="flex items-center gap-2 mt-1">
-                  <Badge variant="outline" className="bg-orange-100/50 text-orange-700 border-orange-200 text-[10px] px-1.5 py-0">
-                    Due Now
-                  </Badge>
-                  <p className="text-xs text-muted-foreground">{pendingPayments.length} students</p>
-                </div>
-              </div>
+        {/* ... (Keep existing Stat Cards but update values to reflect FILTERED data for better context? Or keep Global? Usually Global stats are better on top, filtered in list. I'll keep Global for Top Stats) */}
+        <Card className="border-l-4 border-l-orange-500 shadow-sm p-4">
+          <div className="flex justify-between items-center">
+            <div>
+              <p className="text-sm text-muted-foreground">Pension Pending</p>
+              <p className="text-2xl font-bold">₹{totalPending.toLocaleString()}</p>
             </div>
-          </CardContent>
+            <IndianRupee className="text-orange-500 opacity-20 w-10 h-10" />
+          </div>
         </Card>
-
-        <Card className="relative overflow-hidden border-blue-200 dark:border-blue-800 bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/20 dark:to-background">
-          <div className="absolute right-0 top-0 h-full w-1 bg-blue-500" />
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-blue-100 dark:bg-blue-900/50 rounded-xl shadow-sm">
-                <Users className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-blue-600 dark:text-blue-400 mb-1">Total Enrolled</p>
-                <p className="text-3xl font-bold">{payments.length}</p>
-                <div className="flex items-center gap-2 mt-1">
-                  <Badge variant="outline" className="bg-blue-100/50 text-blue-700 border-blue-200 text-[10px] px-1.5 py-0">
-                    Active
-                  </Badge>
-                  <p className="text-xs text-muted-foreground">across all courses</p>
-                </div>
-              </div>
+        <Card className="border-l-4 border-l-blue-500 shadow-sm p-4">
+          <div className="flex justify-between items-center">
+            <div>
+              <p className="text-sm text-muted-foreground">Visible Students</p>
+              <p className="text-2xl font-bold">{pendingPayments.length + filteredPaidPayments.length}</p>
             </div>
-          </CardContent>
-        </Card>
-
-        <Card className="relative overflow-hidden border-green-200 dark:border-green-800 bg-gradient-to-br from-green-50 to-white dark:from-green-950/20 dark:to-background">
-          <div className="absolute right-0 top-0 h-full w-1 bg-green-500" />
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-green-100 dark:bg-green-900/50 rounded-xl shadow-sm">
-                <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-green-600 dark:text-green-400 mb-1">Paid This Month</p>
-                <p className="text-3xl font-bold">₹{paidPayments.reduce((sum, p) => sum + p.totalAmount, 0).toLocaleString()}</p>
-                <div className="flex items-center gap-2 mt-1">
-                  <Badge variant="outline" className="bg-green-100/50 text-green-700 border-green-200 text-[10px] px-1.5 py-0">
-                    Verified
-                  </Badge>
-                  <p className="text-xs text-muted-foreground">{paidPayments.length} txns</p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
+            <Users className="text-blue-500 opacity-20 w-10 h-10" />
+          </div>
         </Card>
       </div>
 
-      <div className="pb-6 flex justify-center">
+      <div className="pb-6 flex flex-col items-center gap-4">
         <AnimatedTabsProfessional
           activeTab={activeTab}
           onChange={setActiveTab}
           tabs={[
             { id: "pending", label: "Pending Payments", count: pendingPayments.length },
-            { id: "history", label: "Payment History", count: paidPayments.length > 0 ? paidPayments.length : undefined }
+            { id: "history", label: "Paid Payments", count: filteredPaidPayments.length }
           ]}
         />
       </div>
 
       {activeTab === 'pending' && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-          {pendingPayments.length > 0 && (
-            <Card className="bg-gradient-to-r from-red-50 to-white dark:from-red-950/30 dark:to-background border-red-200 shadow-sm">
-              <CardContent className="py-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-red-100 dark:bg-red-900/50 rounded-full">
-                    <IndianRupee className="w-6 h-6 text-red-600" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-lg">Action Required</p>
-                    <p className="text-sm text-muted-foreground">
-                      You have <span className="font-bold text-red-600">{pendingPayments.length} pending payments</span> totaling <span className="font-bold text-red-600">₹{totalPending.toLocaleString()}</span>.
-                    </p>
-                  </div>
-                </div>
-                <Button onClick={handlePayAll} size="lg" disabled={processing} className="w-full sm:w-auto shadow-lg shadow-red-500/20 bg-red-600 hover:bg-red-700 text-white">
-                  {processing ? 'Processing...' : 'Pay All Pending'}
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </Button>
-              </CardContent>
-            </Card>
-          )}
+          {pendingPayments.length === 0 ? (
+            <div className="text-center py-12 bg-muted/20 rounded-xl border border-dashed">
+              <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-3" />
+              <p className="font-medium text-lg">No Pending Payments Found</p>
+              <p className="text-muted-foreground text-sm">Adjust filters or you are all caught up!</p>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {groupPendingByBatch().map((group: any) => {
+                const isAllSelected = group.payments.every((p: any) => selectedPayments.has(p._id))
+                const selectedCount = group.payments.filter((p: any) => selectedPayments.has(p._id)).length
+                const selectedTotal = group.payments.reduce((sum: number, p: any) => selectedPayments.has(p._id) ? sum + p.totalAmount : sum, 0)
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Clock className="w-5 h-5 text-primary" />
-                Course-wise Breakdown
-              </CardTitle>
-              <CardDescription>Consolidated pending fees grouped by course.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {pendingPayments.length === 0 ? (
-                <div className="text-center py-12 bg-muted/20 rounded-xl border border-dashed">
-                  <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-3" />
-                  <p className="font-medium text-lg">All Cleared!</p>
-                  <p className="text-muted-foreground text-sm">You have no pending payments at the moment.</p>
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  {groupByCourse().map((group: any) => (
-                    <div key={group.courseId} className="border rounded-xl overflow-hidden shadow-sm bg-card hover:shadow-md transition-shadow">
-                      <div className="bg-muted/30 p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b">
-                        <div>
-                          <h3 className="font-bold text-base flex items-center gap-2">
-                            {group.courseName}
-                            <Badge variant="secondary" className="text-xs font-normal">
-                              {group.payments.length} students
+                const matchedCourse = courses.find((c: any) => (c.courseId?._id || c.courseId) === group.courseId)
+                const batchDeliveryCharge = matchedCourse?.courseId?.deliveryCharge || matchedCourse?.deliveryCharge || 0
+
+                // Check Global Paid History (allPaid) for this batch/course to see if delivery was ever paid
+                const isDeliveryPaid = allPaid.some((p: any) => (p.courseId?._id || p.courseId) === group.courseId && p.deliveryCharge > 0)
+
+                const willAddDelivery = !isDeliveryPaid && selectedCount > 0 && batchDeliveryCharge > 0
+                const finalTotal = selectedTotal + (willAddDelivery ? batchDeliveryCharge : 0)
+
+                return (
+                  <div key={group.batchId} className="border rounded-xl overflow-hidden shadow-sm bg-card transition-shadow">
+                    <div className="bg-muted/30 p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b gap-4">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-3">
+                          <input type="checkbox" checked={selectedCount > 0 && isAllSelected} onChange={(e) => toggleBatchSelection(group.batchId, e.target.checked)} className="h-4 w-4" />
+                          <h3 className="font-bold text-lg">{group.courseName}</h3>
+                        </div>
+                        <div className="pl-7 flex items-center gap-2 text-sm text-muted-foreground">
+                          {isDeliveryPaid ? (
+                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 hover:bg-green-50">
+                              <CheckCircle className="w-3 h-3 mr-1" /> Delivery Charge Paid
                             </Badge>
-                          </h3>
-                          <p className="text-xs text-muted-foreground mt-1">Platform charges for this course</p>
-                        </div>
-                        <div className="flex items-center gap-4 w-full sm:w-auto">
-                          <div className="text-right flex-1 sm:flex-none">
-                            <p className="text-xs text-muted-foreground">Total Due</p>
-                            <p className="text-lg font-bold text-red-600">₹{group.total.toLocaleString()}</p>
-                          </div>
-                          <Button onClick={() => handlePayByCourse(group.courseId)} size="sm" disabled={processing}>
-                            Pay {group.payments.length}
-                          </Button>
+                          ) : (
+                            <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-50">
+                              <Clock className="w-3 h-3 mr-1" /> Delivery Charge Pending ({batchDeliveryCharge > 0 ? `₹${batchDeliveryCharge}` : 'Free'})
+                            </Badge>
+                          )}
+                          {willAddDelivery && <span className="text-xs text-amber-600 font-medium animate-pulse">(+₹{batchDeliveryCharge} included)</span>}
                         </div>
                       </div>
-                      <div className="divide-y max-h-[300px] overflow-y-auto">
-                        {group.payments.map((payment: any) => (
-                          <div key={payment._id} className="p-3 flex justify-between items-center hover:bg-muted/50 transition-colors text-sm">
-                            <div className="flex items-start gap-3">
-                              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
-                                {payment.studentId?.name?.charAt(0)}
-                              </div>
-                              <div>
-                                <p className="font-medium">{payment.studentId?.name}</p>
-                                <p className="text-[10px] text-muted-foreground">{payment.studentId?.rollNo}</p>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <p className="font-semibold">₹{payment.totalAmount.toLocaleString()}</p>
-                              <div className="flex items-center justify-end gap-1 text-[10px] text-muted-foreground">
-                                {payment.bookPrice > 0 && <Badge variant="outline" className="text-[10px] h-4 px-1 py-0">Books</Badge>}
-                                <span>Cert: ₹{payment.certificateCharge || 60}</span>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                      <Button onClick={() => handlePaySelection(group.batchId)} size="sm" disabled={processing || selectedCount === 0}>
+                        Pay ₹{finalTotal.toLocaleString()}
+                      </Button>
                     </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                    <div className="divide-y max-h-[400px] overflow-y-auto">
+                      {group.payments.map((payment: any) => (
+                        <div key={payment._id} className="p-3 flex justify-between items-center text-sm hover:bg-muted/10 transition-colors">
+                          <div className="flex items-center gap-3">
+                            <input type="checkbox" checked={selectedPayments.has(payment._id)} onChange={() => toggleSelection(payment._id)} className="h-4 w-4 mt-1" />
+                            <div>
+                              <p className="font-medium">{payment.studentId?.name}</p>
+                              <div className="flex flex-wrap gap-x-2 text-[11px] text-muted-foreground mt-0.5">
+                                <span className="font-mono text-primary/70">{payment.studentId?.rollNo}</span>
+                                <span className="text-gray-300">|</span>
+                                <span title="Exam Fee">Exam: ₹{payment.examFee}</span>
+                                <span>+</span>
+                                <span title="Certificate Charge">Cert: ₹{payment.certificateCharge}</span>
+                                {payment.bookPrice > 0 && (
+                                  <>
+                                    <span>+</span>
+                                    <span title="Book Cost">Books: ₹{payment.bookPrice}</span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-semibold">₹{payment.totalAmount.toLocaleString()}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </motion.div>
       )}
 
       {activeTab === 'history' && (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <History className="w-5 h-5 text-primary" />
-                Payment History
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {paidPayments.length === 0 ? (
-                <div className="text-center py-12 bg-muted/20 rounded-xl border border-dashed">
-                  <p className="text-muted-foreground">No payment history found.</p>
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  {(() => {
-                    const courseWise: any = {}
-                    paidPayments.forEach((p: any) => {
-                      const cId = p.courseId?._id
-                      if (!courseWise[cId]) {
-                        courseWise[cId] = {
-                          name: p.courseId?.name,
-                          payments: [],
-                          total: 0,
-                          withBooks: 0,
-                          withoutBooks: 0
-                        }
-                      }
-                      courseWise[cId].payments.push(p)
-                      courseWise[cId].total += p.totalAmount
-                      if (p.bookPrice > 0) courseWise[cId].withBooks++
-                      else courseWise[cId].withoutBooks++
-                    })
-
-                    return Object.values(courseWise).map((course: any, idx: number) => (
-                      <Card key={idx} className="overflow-hidden">
-                        <div className="bg-muted/30 p-4 flex justify-between items-center border-b">
-                          <div>
-                            <h4 className="font-semibold text-sm">{course.name}</h4>
-                            <div className="flex gap-2 text-xs text-muted-foreground mt-1">
-                              <span>{course.payments.length} students</span>
-                              <span>•</span>
-                              <span>{course.withBooks} books</span>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-xs text-muted-foreground">Total Paid</p>
-                            <p className="text-lg font-bold text-green-600">₹{course.total.toLocaleString()}</p>
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+          {filteredPaidPayments.length === 0 ? (
+            <div className="text-center py-12 bg-muted/20 rounded-xl border border-dashed">
+              <p className="text-muted-foreground">No payment history matches your filters.</p>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {groupPaidByBatch().map((group: any) => (
+                <div key={group.batchId} className="border rounded-xl overflow-hidden shadow-sm bg-card">
+                  <div className="bg-muted/30 p-4 flex justify-between items-center border-b">
+                    <h3 className="font-bold flex items-center gap-2">
+                      {group.courseName}
+                      <Badge variant={group.status === 'Active' ? 'default' : 'secondary'}>{group.status}</Badge>
+                    </h3>
+                    <p className="font-bold text-green-600">Total: ₹{group.total.toLocaleString()}</p>
+                  </div>
+                  <div className="divide-y max-h-[300px] overflow-y-auto">
+                    {group.payments.map((payment: any) => (
+                      <div key={payment._id} className="p-3 flex justify-between items-center text-sm hover:bg-muted/10 transition-colors">
+                        <div>
+                          <p className="font-medium">{payment.studentId?.name}</p>
+                          <div className="flex flex-wrap gap-x-2 text-[11px] text-muted-foreground mt-0.5">
+                            <span className="text-green-600/80">Paid: {new Date(payment.paidAt).toLocaleDateString()}</span>
+                            <span className="text-gray-300">|</span>
+                            <span>Exam: ₹{payment.examFee}</span>
+                            <span>+</span>
+                            <span>Cert: ₹{payment.certificateCharge}</span>
+                            {payment.bookPrice > 0 && <span>+ Books: ₹{payment.bookPrice}</span>}
                           </div>
                         </div>
-                        <div className="max-h-60 overflow-y-auto divide-y bg-card">
-                          {course.payments.map((payment: any) => (
-                            <div key={payment._id} className="p-3 flex justify-between items-center text-sm hover:bg-muted/50">
-                              <div className="flex items-center gap-3">
-                                <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-full">
-                                  <CheckCircle className="w-4 h-4 text-green-600" />
-                                </div>
-                                <div>
-                                  <p className="font-medium">{payment.studentId?.name}</p>
-                                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                    <span>{payment.paidAt ? new Date(payment.paidAt).toLocaleDateString() : '-'}</span>
-                                    {payment.razorpayPaymentId && (
-                                      <Badge variant="secondary" className="text-[10px] h-4 px-1">{payment.razorpayPaymentId}</Badge>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                              <div className="text-right">
-                                <p className="font-bold text-green-600">₹{payment.totalAmount.toLocaleString()}</p>
-                                <p className="text-[10px] text-muted-foreground">Paid via Razorpay</p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </Card>
-                    ))
-                  })()}
+                        <p className="font-semibold text-green-700">₹{payment.totalAmount.toLocaleString()}</p>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              ))}
+            </div>
+          )}
         </motion.div>
       )}
 

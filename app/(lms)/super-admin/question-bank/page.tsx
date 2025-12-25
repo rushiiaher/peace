@@ -2,19 +2,12 @@
 
 import { useState, useEffect } from 'react'
 import { SectionHeader } from "@/components/lms/section"
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { toast } from "sonner"
-import { FileQuestion, Plus, Trash2, Search, BookOpen, Clock, ChevronLeft, LayoutGrid, MoreVertical } from "lucide-react"
+import { FileQuestion, Plus, Search, ChevronLeft } from "lucide-react"
 import Link from 'next/link'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+import { QBCourseCard, QuestionBankCard } from "@/components/lms/qb-cards"
 
 export default function QuestionBankPage() {
   const [view, setView] = useState<'courses' | 'qbs'>('courses')
@@ -164,26 +157,7 @@ export default function QuestionBankPage() {
                 </div>
               ) : (
                 filteredCourses.map(course => (
-                  <Card
-                    key={course._id}
-                    className="group cursor-pointer hover:shadow-lg hover:border-primary/50 transition-all duration-300"
-                    onClick={() => handleCourseClick(course)}
-                  >
-                    <CardHeader>
-                      <div className="space-y-1">
-                        <Badge variant="outline" className="w-fit mb-2">{course.code}</Badge>
-                        <CardTitle className="text-xl group-hover:text-primary transition-colors">
-                          {course.name}
-                        </CardTitle>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <FileQuestion className="w-4 h-4" />
-                        <span>Click to view Question Banks</span>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <QBCourseCard key={course._id} course={course} onClick={() => handleCourseClick(course)} />
                 ))
               )}
             </div>
@@ -209,52 +183,12 @@ export default function QuestionBankPage() {
                 </div>
               ) : (
                 qbs.map((qb) => (
-                  <Card key={qb._id} className="group hover:shadow-lg transition-all duration-300 border-border/60 hover:border-primary/40 overflow-hidden flex flex-col">
-                    <div className="h-1.5 w-full bg-gradient-to-r from-blue-500 to-indigo-500 opacity-80 group-hover:opacity-100 transition-opacity" />
-                    <CardHeader className="pb-3 space-y-3">
-                      <div className="flex justify-between items-start">
-                        <Badge variant="secondary" className="text-xs">
-                          {qb.questions?.length || 0} Questions
-                        </Badge>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2 text-muted-foreground hover:text-foreground">
-                              <MoreVertical className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem asChild>
-                              <Link href={`/super-admin/question-bank/${qb._id}`} className="cursor-pointer">
-                                Manage Questions
-                              </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="text-destructive focus:text-destructive cursor-pointer bg-destructive/10 focus:bg-destructive/20 mt-1"
-                              onClick={(e) => handleDeleteQB(qb._id, e)}
-                            >
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-lg leading-tight group-hover:text-primary transition-colors line-clamp-2">
-                          {qb.topic}
-                        </h3>
-                        <p className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1.5">
-                          <Clock className="w-3 h-3" />
-                          {new Date(qb.createdAt).toLocaleDateString()}
-                        </p>
-                      </div>
-                    </CardHeader>
-                    <CardFooter className="pt-2 border-t bg-muted/10 mt-auto">
-                      <Button asChild size="sm" className="w-full bg-white dark:bg-slate-800 text-foreground border hover:bg-secondary/80">
-                        <Link href={`/super-admin/question-bank/${qb._id}`}>
-                          View Details
-                        </Link>
-                      </Button>
-                    </CardFooter>
-                  </Card>
+                  <QuestionBankCard
+                    key={qb._id}
+                    qb={qb}
+                    role="super-admin"
+                    onDelete={handleDeleteQB}
+                  />
                 ))
               )}
             </div>

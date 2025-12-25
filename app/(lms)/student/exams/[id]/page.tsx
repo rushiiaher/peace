@@ -340,6 +340,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
                 <h3 className="text-lg font-semibold flex items-center gap-2">
                   <FileText className="w-5 h-5 text-blue-600" />
                   Question {currentQuestion + 1} of {exam.questions?.length}
+                  <Badge variant="secondary" className="ml-2 bg-blue-100 text-blue-700 hover:bg-blue-100 border-blue-200">2 Marks</Badge>
                 </h3>
                 <Button
                   size="sm"
@@ -433,22 +434,22 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
               <h3 className="font-semibold mb-4">Question Palette</h3>
 
               <div className="space-y-4 mb-4">
-                <div className="flex items-center gap-2 text-sm">
-                  <div className="w-8 h-8 rounded bg-green-500 flex items-center justify-center text-white font-medium">{answeredCount}</div>
+                <div className="flex items-center gap-2 text-xs">
+                  <div className="w-6 h-6 rounded bg-green-500 flex items-center justify-center text-white font-medium">{answeredCount}</div>
                   <span>Answered</span>
                 </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <div className="w-8 h-8 rounded bg-red-500 flex items-center justify-center text-white font-medium">{exam.questions?.length - answeredCount}</div>
+                <div className="flex items-center gap-2 text-xs">
+                  <div className="w-6 h-6 rounded bg-red-500 flex items-center justify-center text-white font-medium">{exam.questions?.length - answeredCount}</div>
                   <span>Not Answered</span>
                 </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <div className="w-8 h-8 rounded bg-purple-500 flex items-center justify-center text-white font-medium">{markedCount}</div>
+                <div className="flex items-center gap-2 text-xs">
+                  <div className="w-6 h-6 rounded bg-purple-500 flex items-center justify-center text-white font-medium">{markedCount}</div>
                   <span>Marked for Review</span>
                 </div>
               </div>
 
               <div className="border-t pt-4">
-                <div className="grid grid-cols-5 gap-2">
+                <div className="flex flex-wrap gap-1">
                   {exam.questions?.map((_: any, i: number) => {
                     const isAnswered = answers[i] !== -1
                     const isMarked = markedForReview[i]
@@ -458,7 +459,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
                       <button
                         key={i}
                         onClick={() => setCurrentQuestion(i)}
-                        className={`w-10 h-10 rounded font-medium text-sm transition-all ${isCurrent ? 'ring-2 ring-blue-500 ring-offset-2' : ''
+                        className={`w-8 h-8 rounded-sm font-medium text-xs transition-all flex items-center justify-center ${isCurrent ? 'ring-2 ring-blue-500 ring-offset-1' : ''
                           } ${isAnswered && isMarked ? 'bg-purple-500 text-white hover:bg-purple-600' :
                             isAnswered ? 'bg-green-500 text-white hover:bg-green-600' :
                               isMarked ? 'bg-orange-500 text-white hover:bg-orange-600' :

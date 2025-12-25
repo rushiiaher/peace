@@ -31,9 +31,20 @@ export default function RoleShell({
   React.useEffect(() => {
     const userData = localStorage.getItem('user')
     if (userData) {
-      setUser(JSON.parse(userData))
+      const parsed = JSON.parse(userData)
+      setUser(parsed)
+
+      // Fetch fresh data for photo
+      const userId = parsed.id || parsed._id
+      if (userId) {
+        fetch(`/api/users/${userId}`).then(res => res.json()).then(data => {
+          if (data && !data.error) {
+            setUser(data)
+          }
+        }).catch(err => console.error("Failed to fetch fresh user data", err))
+      }
     }
-  }, [])
+  }, [role])
 
   const [loading, setLoading] = React.useState(false)
   const [progress, setProgress] = React.useState(0)
@@ -78,6 +89,8 @@ export default function RoleShell({
     }
   }
 
+  const isExamPage = pathname?.startsWith('/student/exams/') && pathname.split('/').length > 3
+
   return (
     <div className="h-screen flex flex-col bg-background text-foreground overflow-hidden relative">
       {/* Top Loading Bar */}
@@ -90,73 +103,81 @@ export default function RoleShell({
         </div>
       )}
 
-      <header className="flex-none z-40 border-b border-border bg-primary shadow-sm">
-        <div className="mx-auto flex max-w-screen-2xl items-center justify-between px-6 py-3.5">
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="md:hidden"
-              onClick={() => setOpen(true)}
-            >
-              <Menu className="h-5 w-5" />
-            </Button>
+      {!isExamPage && (
+        <header className="flex-none z-40 border-b border-border bg-primary shadow-sm">
+          <div className="mx-auto flex max-w-screen-2xl items-center justify-between px-6 py-3.5">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-white p-1">
-                <img
-                  src="/Peacexperts_LOGO.png"
-                  alt="Peacexperts Logo"
-                  className="h-full w-full object-contain rounded-full"
-                />
-              </div>
-              <div>
-                <h1 className="text-lg font-bold text-primary-foreground">{title}</h1>
-                <p className="text-xs text-primary-foreground/80 hidden sm:block">Welcome back!</p>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="md:hidden"
+                onClick={() => setOpen(true)}
+              >
+                <Menu className="h-5 w-5" />
+              </Button>
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-white p-1">
+                  <img
+                    src="/Peacexperts_LOGO.png"
+                    alt="Peacexperts Logo"
+                    className="h-full w-full object-contain rounded-full"
+                  />
+                </div>
+                <div>
+                  <h1 className="text-lg font-bold text-primary-foreground">{title}</h1>
+                  <p className="text-xs text-primary-foreground/80 hidden sm:block">Welcome back!</p>
+                </div>
               </div>
             </div>
-          </div>
-          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3">
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="flex items-center gap-3 hover:bg-primary-foreground/10 px-3">
-                  <div className="h-9 w-9 rounded-full flex items-center justify-center bg-primary-foreground">
-                    <User className="h-5 w-5 text-primary" />
-                  </div>
-                  <div className="hidden sm:block text-left">
-                    <p className="text-sm font-semibold text-primary-foreground">{user?.name || 'User'}</p>
-                    <p className="text-xs text-primary-foreground/80 capitalize">{role.replace('-', ' ')}</p>
-                  </div>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>
-                  <User className="mr-2 h-4 w-4" />
-                  Profile
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout} className="text-red-600">
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Logout
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="flex items-center gap-3 hover:bg-primary-foreground/10 px-3">
+                    <div className="h-9 w-9 rounded-full flex items-center justify-center bg-primary-foreground overflow-hidden border border-primary-foreground/20">
+                      {user?.documents?.photo ? (
+                        <img src={user.documents.photo} alt={user.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <User className="h-5 w-5 text-primary" />
+                      )}
+                    </div>
+                    <div className="hidden sm:block text-left">
+                      <p className="text-sm font-semibold text-primary-foreground">{user?.name || 'User'}</p>
+                      <p className="text-xs text-primary-foreground/80 capitalize">{role.replace('-', ' ')}</p>
+                    </div>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem>
+                    <User className="mr-2 h-4 w-4" />
+                    Profile
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout} className="text-red-600">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Logout
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
+      )}
 
       <div className="flex-1 flex overflow-hidden">
         {/* Sidebar for desktop */}
-        <div className="hidden md:block flex-none">
-          <RoleSidebar
-            role={role}
-            collapsed={sidebarCollapsed}
-            onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
-            onNavigateStart={() => setLoading(true)}
-          />
-        </div>
+        {!isExamPage && (
+          <div className="hidden md:block flex-none">
+            <RoleSidebar
+              role={role}
+              collapsed={sidebarCollapsed}
+              onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+              onNavigateStart={() => setLoading(true)}
+            />
+          </div>
+        )}
 
         {/* Content */}
         <main className="flex-1 overflow-y-auto px-4 py-6 relative">
