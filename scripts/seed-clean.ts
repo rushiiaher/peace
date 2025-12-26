@@ -4,10 +4,11 @@ import dotenv from 'dotenv'
 import path from 'path'
 
 // Load environment variables
-dotenv.config({ path: path.resolve(process.cwd(), '.env.local') })
+dotenv.config() // Load .env
+dotenv.config({ path: path.resolve(process.cwd(), '.env.local') }) // Load .env.local
 
 if (!process.env.MONGODB_URI) {
-    console.error('MONGODB_URI is not defined in .env.local')
+    console.error('MONGODB_URI is not defined. Please check .env or .env.local, or set the environment variable.')
     process.exit(1)
 }
 
