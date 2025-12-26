@@ -171,8 +171,7 @@ export default function FinalResultsPage() {
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <Users className="w-4 h-4" />
-                                        <span>Total Students Enrolled</span>
-                                        {/* Ideally we show count, but simple display is fine for now */}
+                                        <span>Total Students Enrolled: <span className="font-semibold text-foreground">{batch.students?.length || 0}</span></span>
                                     </div>
                                 </div>
 

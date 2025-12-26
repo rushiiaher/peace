@@ -99,12 +99,13 @@ export default function DeliveryStatusPage() {
             const res = await fetch(url)
             const data = await res.json()
 
-            // Client-side filter for now to only show those Dispatched (pending receive or received)
-            const dispatchedOnly = (Array.isArray(data) ? data : []).filter((s: any) => {
+            // Filter for students who have booksIncluded
+            // Show ALL statuses (Pending Dispatch, Dispatched, Received)
+            const validStudents = (Array.isArray(data) ? data : []).filter((s: any) => {
                 const enroll = s.courses?.find((c: any) => (c.courseId?._id || c.courseId) === selectedCourse)
-                return enroll?.booksDispatched
+                return enroll?.booksIncluded
             })
-            setStudents(dispatchedOnly)
+            setStudents(validStudents)
         } finally {
             setLoading(false)
         }
@@ -118,8 +119,8 @@ export default function DeliveryStatusPage() {
 
             const res = await fetch(url)
             const data = await res.json()
-            const dispatchedOnly = (Array.isArray(data) ? data : []).filter((r: any) => r.certificateDispatched)
-            setResults(dispatchedOnly)
+            // Show ALL results
+            setResults(Array.isArray(data) ? data : [])
         } finally {
             setLoading(false)
         }
@@ -263,14 +264,17 @@ export default function DeliveryStatusPage() {
                             {filteredStudents.length === 0 ? (
                                 <div className="py-16 text-center text-muted-foreground bg-muted/20 border-dashed m-2 rounded-lg border">
                                     <Package className="w-12 h-12 mx-auto mb-3 opacity-20" />
-                                    <p className="text-lg font-medium text-foreground">No pending deliveries found</p>
-                                    <p className="text-sm">Select a Course to view incoming shipments</p>
+                                    <p className="text-lg font-medium text-foreground">No deliveries found</p>
+                                    <p className="text-sm">Select a Course to view shipment status</p>
                                 </div>
                             ) : (
                                 <Table>
                                     <TableHeader className="bg-muted/40">
                                         <TableRow>
-                                            <TableHead className="w-12 pl-4"><Checkbox onCheckedChange={() => selectAll(filteredStudents.map(s => s._id))} checked={selectedIds.length === filteredStudents.length && filteredStudents.length > 0} /></TableHead>
+                                            <TableHead className="w-12 pl-4"><Checkbox onCheckedChange={() => selectAll(filteredStudents.filter(s => {
+                                                const e = getEnrollment(s)
+                                                return !e?.booksReceived && e?.booksDispatched
+                                            }).map(s => s._id))} checked={selectedIds.length > 0 && selectedIds.length === filteredStudents.filter(s => getEnrollment(s)?.booksDispatched && !getEnrollment(s)?.booksReceived).length} /></TableHead>
                                             <TableHead>Student</TableHead>
                                             <TableHead>Roll No</TableHead>
                                             <TableHead>Contact</TableHead>
@@ -282,9 +286,16 @@ export default function DeliveryStatusPage() {
                                         {filteredStudents.map(student => {
                                             const enroll = getEnrollment(student)
                                             const isReceived = enroll?.booksReceived
+                                            const isDispatched = enroll?.booksDispatched
                                             return (
                                                 <TableRow key={student._id} className="group hover:bg-muted/30 transition-colors">
-                                                    <TableCell className="pl-4"><Checkbox checked={selectedIds.includes(student._id)} onCheckedChange={() => toggleSelection(student._id)} disabled={isReceived} /></TableCell>
+                                                    <TableCell className="pl-4">
+                                                        <Checkbox
+                                                            checked={selectedIds.includes(student._id)}
+                                                            onCheckedChange={() => toggleSelection(student._id)}
+                                                            disabled={isReceived || !isDispatched}
+                                                        />
+                                                    </TableCell>
                                                     <TableCell>
                                                         <div className="flex items-center gap-3">
                                                             <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shadow-sm ring-2 ring-background">
@@ -316,11 +327,13 @@ export default function DeliveryStatusPage() {
                                                     <TableCell>
                                                         {isReceived ?
                                                             <Badge className="bg-green-500 hover:bg-green-600">Received</Badge> :
-                                                            <Badge variant="outline" className="text-orange-600 bg-orange-50 border-orange-200">In Transit</Badge>
+                                                            isDispatched ?
+                                                                <Badge variant="outline" className="text-orange-600 bg-orange-50 border-orange-200">In Transit</Badge> :
+                                                                <Badge variant="secondary" className="text-muted-foreground bg-muted">Pending Dispatch</Badge>
                                                         }
                                                     </TableCell>
                                                     <TableCell className="text-muted-foreground text-xs italic">
-                                                        Sent by Super Admin
+                                                        {isDispatched ? 'Sent by Super Admin' : 'Waiting for Super Admin'}
                                                     </TableCell>
                                                 </TableRow>
                                             )
@@ -349,14 +362,14 @@ export default function DeliveryStatusPage() {
                             {filteredResults.length === 0 ? (
                                 <div className="py-16 text-center text-muted-foreground bg-muted/20 border-dashed m-2 rounded-lg border">
                                     <ScrollText className="w-12 h-12 mx-auto mb-3 opacity-20" />
-                                    <p className="text-lg font-medium text-foreground">No pending certificates found</p>
+                                    <p className="text-lg font-medium text-foreground">No deliveries found</p>
                                     <p className="text-sm">Select a Course to view incoming certificates</p>
                                 </div>
                             ) : (
                                 <Table>
                                     <TableHeader className="bg-muted/40">
                                         <TableRow>
-                                            <TableHead className="w-12 pl-4"><Checkbox onCheckedChange={() => selectAll(filteredResults.map(r => r._id))} checked={selectedIds.length === filteredResults.length && filteredResults.length > 0} /></TableHead>
+                                            <TableHead className="w-12 pl-4"><Checkbox onCheckedChange={() => selectAll(filteredResults.filter(r => r.certificateDispatched && !r.certificateReceived).map(r => r._id))} checked={selectedIds.length > 0 && selectedIds.length === filteredResults.filter(r => r.certificateDispatched && !r.certificateReceived).length} /></TableHead>
                                             <TableHead>Student</TableHead>
                                             <TableHead>Mother's Name</TableHead>
                                             <TableHead>Result Info</TableHead>
@@ -366,7 +379,13 @@ export default function DeliveryStatusPage() {
                                     <TableBody>
                                         {filteredResults.map(res => (
                                             <TableRow key={res._id} className="group hover:bg-muted/30 transition-colors">
-                                                <TableCell className="pl-4"><Checkbox checked={selectedIds.includes(res._id)} onCheckedChange={() => toggleSelection(res._id)} disabled={res.certificateReceived} /></TableCell>
+                                                <TableCell className="pl-4">
+                                                    <Checkbox
+                                                        checked={selectedIds.includes(res._id)}
+                                                        onCheckedChange={() => toggleSelection(res._id)}
+                                                        disabled={res.certificateReceived || !res.certificateDispatched}
+                                                    />
+                                                </TableCell>
                                                 <TableCell className="font-medium">
                                                     <div className="flex items-center gap-3">
                                                         <div className="w-9 h-9 rounded-full bg-purple-100 flex items-center justify-center text-purple-700 font-bold text-sm shadow-sm ring-2 ring-background">
@@ -382,7 +401,9 @@ export default function DeliveryStatusPage() {
                                                 <TableCell>
                                                     {res.certificateReceived ?
                                                         <Badge className="bg-green-500 hover:bg-green-600">Received</Badge> :
-                                                        <Badge variant="outline" className="text-orange-600 bg-orange-50 border-orange-200">In Transit</Badge>
+                                                        res.certificateDispatched ?
+                                                            <Badge variant="outline" className="text-orange-600 bg-orange-50 border-orange-200">In Transit</Badge> :
+                                                            <Badge variant="secondary" className="text-muted-foreground bg-muted">Pending Dispatch</Badge>
                                                     }
                                                 </TableCell>
                                             </TableRow>

@@ -9,6 +9,12 @@ const CourseSchema = new mongoose.Schema({
   description: { type: String },
   duration: { type: String },
   finalExamCount: { type: Number, default: 1 },
+  examConfigurations: [{
+    examNumber: { type: Number, required: true },
+    duration: { type: Number, required: true }, // minutes
+    totalQuestions: { type: Number, required: true },
+    questionBanks: [{ type: mongoose.Schema.Types.ObjectId, ref: 'QuestionBank' }]
+  }],
   baseFee: { type: Number, default: 0 },
   examFee: { type: Number, default: 0 },
   bookPrice: { type: Number, default: 0 },

@@ -467,21 +467,7 @@ export default function SuperAdminExamsPage() {
                           </div>
                         </div>
 
-                        {/* Attendance Status */}
-                        <div className="space-y-1">
-                          <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider mb-1">Attendance</p>
-                          {exam.attendanceEnabled ? (
-                            <div className="flex items-center gap-2 text-green-600 bg-green-50 px-3 py-2 rounded-md border border-green-100 w-fit">
-                              <CheckCircle className="w-4 h-4" />
-                              <span className="text-sm font-semibold">Active</span>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-2 text-muted-foreground bg-gray-50 px-3 py-2 rounded-md border border-gray-100 w-fit">
-                              <XCircle className="w-4 h-4" />
-                              <span className="text-sm font-medium">Disabled</span>
-                            </div>
-                          )}
-                        </div>
+
                       </div>
 
                       {/* Footer Actions */}
@@ -702,46 +688,25 @@ export default function SuperAdminExamsPage() {
                     )}
 
                     <div className="p-3 bg-muted/10 border-t flex flex-wrap justify-end gap-2">
-                      <Button
-                        size="sm"
-                        variant={exam.attendanceEnabled ? 'outline' : 'default'}
-                        className={`${exam.attendanceEnabled ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100' : 'bg-green-600 hover:bg-green-700 text-white'}`}
-                        onClick={async () => {
-                          try {
-                            const res = await fetch(`/api/exams/${exam._id}`, {
-                              method: 'PUT',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ attendanceEnabled: !exam.attendanceEnabled })
-                            })
-                            if (res.ok) {
-                              const updated = await res.json()
-                              toast.success(updated.attendanceEnabled ? '✅ Attendance Enabled' : 'Attendance Disabled')
-                              await fetchExams()
-                            } else {
-                              toast.error('Failed to update')
-                            }
-                          } catch (error) {
-                            toast.error('Failed to update')
-                          }
-                        }}
-                      >
-                        {exam.attendanceEnabled ? <CheckCircle className="w-3.5 h-3.5 mr-1.5" /> : null}
-                        {exam.attendanceEnabled ? 'Attendance Enabled' : 'Enable Attendance'}
-                      </Button>
+
 
                       <div className="flex justify-center">
                         {!exams.some((e: any) => e.title === `${exam.title} (Rescheduled)`) ? (
-                          (exam.systemAssignments?.length > 0) ? (
-                            <Button
-                              size="sm"
-                              variant="secondary"
-                              onClick={() => window.location.href = `/super-admin/exams/reschedule?examId=${exam._id}`}
-                            >
-                              <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
-                              Reschedule
-                            </Button>
+                          exam.status !== 'Completed' ? (
+                            <span className="text-xs text-muted-foreground self-center px-2 py-1 bg-muted rounded border opacity-70 cursor-not-allowed">Finish Exam First</span>
                           ) : (
-                            <span className="text-xs text-muted-foreground self-center px-2 py-1 bg-muted rounded">No students</span>
+                            (exam.systemAssignments?.length > 0) ? (
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => window.location.href = `/super-admin/exams/reschedule?examId=${exam._id}`}
+                              >
+                                <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+                                Reschedule
+                              </Button>
+                            ) : (
+                              <span className="text-xs text-muted-foreground self-center px-2 py-1 bg-muted rounded">No students</span>
+                            )
                           )
                         ) : (
                           <span className="text-xs text-muted-foreground self-center px-2 py-1 bg-yellow-50 text-yellow-700 border border-yellow-200 rounded">Already rescheduled</span>

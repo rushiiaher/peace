@@ -18,7 +18,7 @@ export async function GET(req: Request) {
 
     const payments = await Payment.find(query)
       .populate('instituteId', 'name status')
-      .populate('studentId', 'name rollNo')
+      .populate('studentId', 'name rollNo email phone documents')
       .populate('courseId', 'name code deliveryCharge')
       .lean()
       .sort({ createdAt: -1 })

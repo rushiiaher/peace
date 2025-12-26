@@ -32,6 +32,7 @@ export default function FeesPage() {
   const [instituteId, setInstituteId] = useState<string | null>(null)
   const [institute, setInstitute] = useState<any>(null)
   const [activeTab, setActiveTab] = useState("pending")
+  const [amountInput, setAmountInput] = useState('')
 
   // Search/Filter State
   const [searchQuery, setSearchQuery] = useState('')
@@ -309,7 +310,10 @@ export default function FeesPage() {
       installments: installments,
       courseName: courseAssignment?.courseId?.name || 'Course',
       courseDuration: courseAssignment?.courseId?.duration || 'N/A',
-      instituteName: institute?.name || "Tech Institute"
+      instituteName: institute?.name || "Tech Institute",
+      instituteAddress: institute?.address || institute?.location,
+      institutePhone: institute?.phone,
+      instituteEmail: institute?.email
     }
 
     const html = generateReceiptHtml(data)
@@ -555,6 +559,7 @@ export default function FeesPage() {
                                     <Button size="sm" className="h-8 text-xs bg-green-600 hover:bg-green-700 px-3" onClick={() => {
                                       setSelectedStudent(student)
                                       setSelectedCourse(enrollment)
+                                      setAmountInput('')
                                       setCollectOpen(true)
                                     }}>
                                       Collect <ArrowRight className="w-3 h-3 ml-1" />
@@ -797,51 +802,91 @@ export default function FeesPage() {
                 if (!feeDetails) return null
 
                 return (
-                  <form onSubmit={handleCollectFee} className="space-y-6 h-full flex flex-col justify-center">
-                    <div className="space-y-4">
-                      <Label className="text-base">Payment Amount</Label>
-                      <div className="relative">
-                        <IndianRupee className="absolute left-3 top-3.5 h-5 w-5 text-muted-foreground" />
-                        <Input
-                          name="amount"
-                          type="number"
-                          className="pl-10 h-12 text-lg"
-                          placeholder="Enter amount"
-                          required
-                          max={feeDetails.dueAmount}
-                          min="1"
-                        />
+                  <form onSubmit={handleCollectFee} className="space-y-6 h-full flex flex-col pt-6 px-2">
+                    <div className="space-y-6">
+
+                      {/* Amount Section */}
+                      <div className="space-y-3">
+                        <Label className="text-base font-semibold flex justify-between items-center">
+                          Payment Amount
+                          <Badge
+                            variant="secondary"
+                            className="cursor-pointer hover:bg-secondary/80 transition-colors"
+                            onClick={() => setAmountInput(feeDetails.dueAmount.toString())}
+                            title="Click to set full amount"
+                          >
+                            Max: ₹{feeDetails.dueAmount.toLocaleString()}
+                          </Badge>
+                        </Label>
+                        <div className="relative group">
+                          <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none transition-colors group-focus-within:text-primary">
+                            <span className="text-xl font-bold text-muted-foreground group-focus-within:text-primary">₹</span>
+                          </div>
+                          <Input
+                            name="amount"
+                            type="number"
+                            className="pl-10 h-14 text-2xl font-bold tracking-tight bg-muted/30 border-2 focus-visible:ring-0 focus-visible:border-primary transition-all"
+                            placeholder="0"
+                            required
+                            value={amountInput}
+                            onChange={(e) => {
+                              const value = e.target.value
+                              if (value === '') {
+                                setAmountInput('')
+                                return
+                              }
+
+                              const numVal = Number(value)
+
+                              if (numVal > feeDetails.dueAmount) {
+                                setAmountInput(feeDetails.dueAmount.toString())
+                                toast.warning(`Amount limited to outstanding due: ₹${feeDetails.dueAmount.toLocaleString()}`)
+                              } else if (numVal < 0) {
+                                setAmountInput('0')
+                              } else {
+                                setAmountInput(value)
+                              }
+                            }}
+                            max={feeDetails.dueAmount}
+                            min="1"
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground pl-1">
+                          Enter the amount to be collected. Click 'Max' to fill balance.
+                        </p>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-4">
                         <div className="space-y-2">
-                          <Label>Payment Mode</Label>
+                          <Label className="text-sm font-medium">Payment Mode</Label>
                           <Select name="paymentMode" required defaultValue="Cash">
-                            <SelectTrigger className="h-10">
+                            <SelectTrigger className="h-11 bg-background">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="Cash">Cash</SelectItem>
                               <SelectItem value="UPI">UPI</SelectItem>
-                              <SelectItem value="Card">Card</SelectItem>
+                              <SelectItem value="Card">Credit/Debit Card</SelectItem>
                               <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
                               <SelectItem value="Cheque">Cheque</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
+
                         <div className="space-y-2">
-                          <Label>Remarks</Label>
-                          <Input name="remarks" placeholder="Optional notes" className="h-10" />
+                          <Label className="text-sm font-medium">Remarks / Reference No.</Label>
+                          <Input name="remarks" placeholder="Optional notes (e.g. Transaction ID)" className="h-11 bg-background" />
                         </div>
                       </div>
                     </div>
 
-                    <div className="pt-4 mt-auto">
-                      <Button type="submit" className="w-full h-12 text-lg bg-green-600 hover:bg-green-700 shadow-lg shadow-green-900/20">
+                    <div className="mt-auto pt-4 border-t">
+                      <Button type="submit" className="w-full h-12 text-lg font-semibold bg-green-600 hover:bg-green-700 shadow-md transition-all active:scale-[0.98]">
                         Process Payment
+                        <CheckCircle2 className="w-5 h-5 ml-2" />
                       </Button>
-                      <p className="text-center text-xs text-muted-foreground mt-3">
-                        Receipt will be generated automatically.
+                      <p className="text-center text-xs text-muted-foreground mt-3 flex items-center justify-center gap-1.5">
+                        <Banknote className="w-3.5 h-3.5" /> Receipt will be generated automatically.
                       </p>
                     </div>
                   </form>

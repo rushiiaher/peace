@@ -30,6 +30,62 @@ export default function InstituteExamsPage() {
   const [students, setStudents] = useState<any[]>([])
   const [courses, setCourses] = useState<any[]>([])
 
+  // Scheduling State
+  const [selectedCourseId, setSelectedCourseId] = useState<string>('')
+  const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([])
+  const [selectedExamNumber, setSelectedExamNumber] = useState<string>('1')
+  const [scheduleDate, setScheduleDate] = useState('')
+  const [startTime, setStartTime] = useState('10:00')
+  const [scheduleTitle, setScheduleTitle] = useState('')
+  const [scheduling, setScheduling] = useState(false)
+
+  // New State for Batch-wise Scheduling
+  const [batches, setBatches] = useState<any[]>([])
+  const [selectedBatchId, setSelectedBatchId] = useState<string>('')
+  const [batchStudents, setBatchStudents] = useState<any[]>([])
+
+  // ... existing effects ...
+
+  // Helper to check exam status
+  const getStudentExamStatus = (studentId: string, examNum: number) => {
+    // Check if Admit Card exists for this exam number.
+    // Ideally we should filter by courseId too. Since we don't assume AdmitCard has courseId directly populated,
+    // we rely on the fact that we are contextually scheduling for 'selectedCourseId'.
+    // However, if a student is in multiple courses, this might be ambiguous if examNumbers are just 1, 2.
+    // IMPROVEMENT: AdmitCard has `examTitle` or `courseName`. 
+    // Best effort: Check if any admit card for this student matches the examNumber.
+    // Realistically, examNumber is unique within a course. 
+    // If we want to be strict, we'd look up the examId -> courseId. 
+    // For now, let's assume filtering by `examNumber` is sufficient given the context.
+    return admitCards.some((c: any) =>
+      (c.studentId?._id === studentId || c.studentId === studentId) &&
+      c.examNumber === examNum
+    )
+  }
+
+  // Filter eligible students
+  const eligibleStudents = batchStudents.filter(student => {
+    const examNum = parseInt(selectedExamNumber)
+    const hasTakenCurrent = getStudentExamStatus(student._id, examNum)
+    const hasTakenPrevious = examNum === 1 ? true : getStudentExamStatus(student._id, examNum - 1)
+
+    // strict sequence: Must have taken previous, must not have taken current
+    return hasTakenPrevious && !hasTakenCurrent
+  })
+
+  // ...
+
+
+
+  // ...
+
+  const currentCourse = courses.find((c: any) => c._id === selectedCourseId)
+  const examConfigs = currentCourse?.examConfigurations || []
+
+  // ...
+
+
+
   const [activeTab, setActiveTab] = useState("schedule")
 
   // Filters for Exam Lists
@@ -51,12 +107,59 @@ export default function InstituteExamsPage() {
   const [attendanceFilterExam, setAttendanceFilterExam] = useState('all')
   const [attendanceSearchQuery, setAttendanceSearchQuery] = useState('')
 
-  // Scheduling State
-  const [selectedCourseId, setSelectedCourseId] = useState<string>('')
-  const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([])
-  const [scheduleDate, setScheduleDate] = useState('')
-  const [scheduleTitle, setScheduleTitle] = useState('')
-  const [scheduling, setScheduling] = useState(false)
+  // ... existing effects ...
+
+  // Fetch batches when course changes
+  useEffect(() => {
+    if (selectedCourseId && instituteId) {
+      fetchBatchesForCourse()
+      setSelectedBatchId('')
+      setBatchStudents([])
+      setSelectedStudentIds([])
+    }
+  }, [selectedCourseId, instituteId])
+
+  // Fetch students when batch changes
+  useEffect(() => {
+    if (selectedBatchId && instituteId) {
+      fetchStudentsForBatch()
+    } else {
+      setBatchStudents([])
+    }
+  }, [selectedBatchId, instituteId])
+
+  const fetchBatchesForCourse = async () => {
+    try {
+      const res = await fetch(`/api/batches?instituteId=${instituteId}&courseId=${selectedCourseId}`)
+      const data = await res.json()
+      // Filter for Active batches only
+      setBatches(Array.isArray(data) ? data.filter((b: any) => b.status === 'Active') : [])
+    } catch (e) {
+      console.error("Failed to fetch batches")
+    }
+  }
+
+  const fetchStudentsForBatch = async () => {
+    // setLoading(true) // Don't block whole page, maybe local loading state?
+    try {
+      // Fetch Royalty Paid students only for this batch
+      const res = await fetch(`/api/users?instituteId=${instituteId}&role=student&courseId=${selectedCourseId}&batchId=${selectedBatchId}&royaltyPaid=true`)
+      const data = await res.json()
+      setBatchStudents(Array.isArray(data) ? data : [])
+      // Auto-select all? No, let user select.
+      setSelectedStudentIds([])
+    } finally {
+      // setLoading(false)
+    }
+  }
+
+  const toggleSelectAll = () => {
+    if (selectedStudentIds.length === batchStudents.length && batchStudents.length > 0) {
+      setSelectedStudentIds([])
+    } else {
+      setSelectedStudentIds(batchStudents.map(s => s._id))
+    }
+  }
 
   useEffect(() => {
     const user = localStorage.getItem('user')
@@ -95,7 +198,7 @@ export default function InstituteExamsPage() {
         systemName: card.systemName,
         rollNo: card.rollNo,
         studentName: card.studentName,
-        motherName: card.studentId?.motherName || '__________',
+        motherName: (card.studentId?.motherName || '').trim().split(' ')[0] || '__________',
         aadhaarCard: card.studentId?.aadhaarCardNo || '__________',
         examCentreCode: 'DLC-IT' + (card.rollNo?.substring(0, 4) || '1081'),
         batch: batchName,
@@ -205,8 +308,8 @@ export default function InstituteExamsPage() {
   }
 
   const handleScheduleExam = async () => {
-    if (!selectedCourseId || selectedStudentIds.length === 0 || !scheduleDate) {
-      toast.error('Please select course, students, and date')
+    if (!selectedCourseId || selectedStudentIds.length === 0 || !scheduleDate || !startTime) {
+      toast.error('Please select course, students, date, and time')
       return
     }
 
@@ -219,18 +322,21 @@ export default function InstituteExamsPage() {
           instituteId,
           courseId: selectedCourseId,
           studentIds: selectedStudentIds,
-          proposedDate: scheduleDate,
-          title: scheduleTitle
+          date: scheduleDate,
+          startTime,
+          title: scheduleTitle,
+          batchId: selectedBatchId,
+          examNumber: parseInt(selectedExamNumber)
         })
       })
 
       const data = await res.json()
       if (res.ok) {
-        toast.success(`Exam Scheduled! ${data.sectionsCount} sections created.`)
-        setExams([...exams, data.exam]) // Optimistic update
+        toast.success(`Exam Scheduled Successfully`)
+        setExams([...exams, data.exam ? data.exam : data])
         setSelectedStudentIds([])
         setScheduleTitle('')
-        setActiveTab('final') // Switch view to final exams
+        setActiveTab('final')
         fetchAdmitCards()
       } else {
         toast.error(data.error || 'Failed to schedule')
@@ -266,11 +372,6 @@ export default function InstituteExamsPage() {
     examDateTime.setHours(parseInt(hours), parseInt(minutes))
     return new Date() >= examDateTime
   }
-
-  // Filter students for schedule table
-  const studentsForCourse = students.filter(s =>
-    s.courses?.some((c: any) => (c.courseId?._id === selectedCourseId || c.courseId === selectedCourseId))
-  )
 
   const toggleStudentSelection = (studentId: string) => {
     if (selectedStudentIds.includes(studentId)) {
@@ -336,9 +437,53 @@ export default function InstituteExamsPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Proposed Date</label>
-                  <Input type="date" value={scheduleDate} onChange={(e) => setScheduleDate(e.target.value)} min={new Date(Date.now() + 6 * 86400000).toISOString().split('T')[0]} />
-                  <p className="text-xs text-muted-foreground">Must be at least 6 days from today.</p>
+                  <label className="text-sm font-medium">Select Batch</label>
+                  <Select value={selectedBatchId} onValueChange={setSelectedBatchId} disabled={!selectedCourseId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder={!selectedCourseId ? "Select Course First" : "Choose active batch..."} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {batches.length === 0 ? (
+                        <SelectItem value="none" disabled>No active batches</SelectItem>
+                      ) : (
+                        batches.map((b: any) => (
+                          <SelectItem key={b._id} value={b._id}>{b.name}</SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[10px] text-muted-foreground">Only Active batches are shown.</p>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Select Exam</label>
+                  <Select value={selectedExamNumber} onValueChange={setSelectedExamNumber} disabled={!selectedCourseId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose exam..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {examConfigs.length === 0 ? (
+                        <SelectItem value="1">Default Final Exam</SelectItem>
+                      ) : (
+                        examConfigs.map((config: any) => (
+                          <SelectItem key={config.examNumber} value={config.examNumber.toString()}>
+                            Exam {config.examNumber} ({config.duration} mins, {config.totalQuestions} Qs)
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Date</label>
+                    <Input type="date" value={scheduleDate} onChange={(e) => setScheduleDate(e.target.value)} min={new Date(Date.now() + 86400000).toISOString().split('T')[0]} />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Start Time</label>
+                    <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+                  </div>
                 </div>
 
                 <div className="space-y-2">
@@ -352,77 +497,97 @@ export default function InstituteExamsPage() {
                     <span className="font-bold">{selectedStudentIds.length}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Estimated Sections:</span>
-                    <span className="font-bold">{selectedStudentIds.length > 0 ? Math.ceil(selectedStudentIds.length / 10) : 0}</span>
+                    {/* Show estimated marks if possible, checking selected exam config */}
+                    <span className="text-muted-foreground">Est. Total Marks:</span>
+                    <span className="font-bold">
+                      {(() => {
+                        const config = examConfigs.find((c: any) => c.examNumber.toString() === selectedExamNumber)
+                        return config ? config.totalQuestions * 2 : 'N/A'
+                      })()}
+                    </span>
                   </div>
                 </div>
 
-                <Button className="w-full" onClick={handleScheduleExam} disabled={scheduling || selectedStudentIds.length === 0}>
+                <Button className="w-full bg-primary hover:bg-primary/90" onClick={handleScheduleExam} disabled={scheduling || selectedStudentIds.length === 0}>
                   {scheduling ? 'Scheduling...' : 'Schedule Exam'}
                 </Button>
               </CardContent>
             </Card>
 
-            <Card className="lg:col-span-2 shadow-sm">
-              <CardHeader>
-                <CardTitle>Select Students</CardTitle>
-                <CardDescription>Only students with Royalty Paid are eligible.</CardDescription>
+            <Card className="lg:col-span-2 shadow-sm border-t-4 border-t-muted">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Select Students</CardTitle>
+                  <CardDescription>Only students eligible for Exam {selectedExamNumber} (Royalty Paid + Sequential Order)</CardDescription>
+                </div>
+                {eligibleStudents.length > 0 && (
+                  <div className="text-xs text-right">
+                    <span className="font-medium">{eligibleStudents.length}</span> eligible students found
+                  </div>
+                )}
               </CardHeader>
               <CardContent>
-                {!selectedCourseId ? (
-                  <div className="text-center py-10 text-muted-foreground">Please select a course first</div>
-                ) : (studentsForCourse.length === 0 ? (
-                  <div className="text-center py-10 text-muted-foreground">No students found for this course</div>
+                {!selectedBatchId ? (
+                  <div className="flex flex-col items-center justify-center py-16 text-muted-foreground bg-muted/10 border-2 border-dashed rounded-xl">
+                    <Users className="w-10 h-10 mb-3 opacity-20" />
+                    <p>Please select a Course and Batch first</p>
+                  </div>
+                ) : (eligibleStudents.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-16 text-muted-foreground bg-muted/10 border-2 border-dashed rounded-xl">
+                    <AlertCircle className="w-10 h-10 mb-3 opacity-20" />
+                    <p>No eligible students found for Exam {selectedExamNumber}</p>
+                    <p className="text-xs mt-2">Check royalty status or previous exam completion.</p>
+                  </div>
                 ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-[50px]"><Checkbox disabled checked={false} /></TableHead>
-                        <TableHead>Student Name</TableHead>
-                        <TableHead>Royalty Status</TableHead>
-                        <TableHead className="text-right">Action</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {studentsForCourse.map((student: any) => {
-                        // Find course enrollment
-                        const courseData = student.courses.find((c: any) => (c.courseId?._id || c.courseId) === selectedCourseId)
-                        const isRoyaltyPaid = courseData?.royaltyPaid
-
-                        return (
-                          <TableRow key={student._id}>
-                            <TableCell>
+                  <div className="border rounded-md overflow-hidden">
+                    <Table>
+                      <TableHeader className="bg-muted/50">
+                        <TableRow>
+                          <TableHead className="w-[50px] text-center">
+                            <Checkbox
+                              checked={eligibleStudents.length > 0 && selectedStudentIds.length === eligibleStudents.length}
+                              onCheckedChange={() => {
+                                if (selectedStudentIds.length === eligibleStudents.length) setSelectedStudentIds([])
+                                else setSelectedStudentIds(eligibleStudents.map(s => s._id))
+                              }}
+                            />
+                          </TableHead>
+                          <TableHead>Student Name</TableHead>
+                          <TableHead>Roll No</TableHead>
+                          <TableHead>Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {eligibleStudents.map((student: any) => (
+                          <TableRow key={student._id} className="hover:bg-muted/30">
+                            <TableCell className="text-center">
                               <Checkbox
                                 checked={selectedStudentIds.includes(student._id)}
                                 onCheckedChange={() => toggleStudentSelection(student._id)}
-                                disabled={!isRoyaltyPaid}
                               />
                             </TableCell>
                             <TableCell>
-                              <div>
-                                <div className="font-medium">{student.name}</div>
-                                <div className="text-xs text-muted-foreground">{student.rollNo || 'No ID'}</div>
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
+                                  {student.name.charAt(0).toUpperCase()}
+                                </div>
+                                <span className="font-medium">{student.name}</span>
                               </div>
                             </TableCell>
-                            <TableCell>
-                              {isRoyaltyPaid ? (
-                                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Paid to Super Admin</Badge>
-                              ) : (
-                                <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">Pending</Badge>
-                              )}
+                            <TableCell className="text-muted-foreground font-mono text-xs">
+                              {student.rollNo || 'N/A'}
                             </TableCell>
-                            <TableCell className="text-right">
-                              {!isRoyaltyPaid && (
-                                <Button size="sm" variant="outline" className="h-7 text-xs border-green-200 text-green-700 hover:bg-green-50" onClick={() => handlePayRoyalty(student._id, selectedCourseId)}>
-                                  <DollarSign className="w-3 h-3 mr-1" /> Pay Royalty
-                                </Button>
-                              )}
+                            <TableCell>
+                              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 gap-1">
+                                <CheckCircle className="w-3 h-3" /> Eligible
+                              </Badge>
                             </TableCell>
                           </TableRow>
                         )
-                      })}
-                    </TableBody>
-                  </Table>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
                 ))}
               </CardContent>
             </Card>
@@ -577,7 +742,16 @@ export default function InstituteExamsPage() {
                   <SelectContent>
                     <SelectItem value="all">All Exams</SelectItem>
                     {exams
-                      .filter(e => e.type === 'Final' && e.attendanceEnabled)
+                      .filter(e => {
+                        if (e.type !== 'Final') return false
+                        // Show if we are past the "attendance start" time (Exam Start - 30 mins)
+                        if (!e.date || !e.startTime) return false
+                        const examDate = new Date(e.date)
+                        const [hours, minutes] = e.startTime.split(':')
+                        examDate.setHours(parseInt(hours), parseInt(minutes))
+                        const attendanceStart = new Date(examDate.getTime() - 30 * 60000)
+                        return new Date() >= attendanceStart
+                      })
                       .filter(e => {
                         if (attendanceFilterCourse === 'all') return true
                         return (e.courseId?._id || e.courseId) === attendanceFilterCourse
@@ -603,7 +777,16 @@ export default function InstituteExamsPage() {
 
             {(() => {
               const filteredExams = exams.filter(e => {
-                if (e.type !== 'Final' || !e.attendanceEnabled) return false
+                if (e.type !== 'Final') return false
+
+                // Time Check: Show only if attendance window has opened (Start - 30mins)
+                if (!e.date || !e.startTime) return false
+                const examDate = new Date(e.date)
+                const [hours, minutes] = e.startTime.split(':')
+                examDate.setHours(parseInt(hours), parseInt(minutes))
+                const attendanceStart = new Date(examDate.getTime() - 30 * 60000) // 30 mins before
+
+                if (new Date() < attendanceStart) return false
 
                 // Course Filter
                 if (attendanceFilterCourse !== 'all') {
@@ -637,6 +820,12 @@ export default function InstituteExamsPage() {
               return (
                 <div className="space-y-8">
                   {filteredExams.map((exam: any) => {
+                    // Check if marking is still allowed (Now < StartTime)
+                    const examDate = new Date(exam.date)
+                    const [hours, minutes] = exam.startTime.split(':')
+                    examDate.setHours(parseInt(hours), parseInt(minutes))
+                    const isAttendanceOpen = new Date() < examDate
+
                     let displayedAssignments = exam.systemAssignments || []
                     if (attendanceSearchQuery) {
                       const query = attendanceSearchQuery.toLowerCase()
@@ -722,7 +911,7 @@ export default function InstituteExamsPage() {
                                     )}
                                   </TableCell>
                                   <TableCell className="text-right pr-6">
-                                    {!sa.attended && exam.status !== 'Completed' && (
+                                    {!sa.attended && exam.status !== 'Completed' && isAttendanceOpen && (
                                       <Button
                                         size="sm"
                                         variant="outline"

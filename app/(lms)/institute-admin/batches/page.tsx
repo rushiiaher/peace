@@ -10,19 +10,20 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "sonner"
-import { Plus, Users, Calendar, Trash2, Package, Check, BookOpen, Clock, UserPlus, Filter, Search } from "lucide-react"
+import { Plus, Users, Calendar, Trash2, Package, Check, BookOpen, Clock, UserPlus, Filter, Search, Edit } from "lucide-react"
 import Loader from "@/components/ui/loader"
 
 export default function BatchesPage() {
   const [batches, setBatches] = useState<any[]>([])
   const [allStudents, setAllStudents] = useState<any[]>([])
-  const [globalCourses, setGlobalCourses] = useState<any[]>([]) // For creating new batch
+  const [availableCourses, setAvailableCourses] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [instituteId, setInstituteId] = useState<string | null>(null)
 
   // Dialog States
   const [createOpen, setCreateOpen] = useState(false)
   const [manageOpen, setManageOpen] = useState(false)
+  const [updateOpen, setUpdateOpen] = useState(false)
   const [selectedBatch, setSelectedBatch] = useState<any>(null)
 
   // Create Form State
@@ -30,7 +31,6 @@ export default function BatchesPage() {
   const [newBatchName, setNewBatchName] = useState("")
   const [newBatchStart, setNewBatchStart] = useState("")
   const [newBatchEnd, setNewBatchEnd] = useState("")
-  const [newBatchPrice, setNewBatchPrice] = useState("")
 
   // Manage Student State
   const [selectedStudentId, setSelectedStudentId] = useState("")
@@ -56,7 +56,7 @@ export default function BatchesPage() {
       const [batchesRes, usersRes, coursesRes] = await Promise.all([
         fetch(`/api/batches?instituteId=${instituteId}`),
         fetch('/api/users'),
-        fetch('/api/courses')
+        fetch(`/api/institutes/${instituteId}/courses`)
       ])
 
       const batchesData = await batchesRes.json()
@@ -65,7 +65,18 @@ export default function BatchesPage() {
 
       setBatches(Array.isArray(batchesData) ? batchesData : [])
       setAllStudents(usersData.filter((u: any) => u.role === 'student' && u.instituteId === instituteId))
-      setGlobalCourses(coursesData || [])
+
+      // Map correctly to get the Course object from the Institute's course list
+      // Map correctly to get the Course object from the Institute's course list
+      const formattedCourses = Array.isArray(coursesData)
+        ? coursesData.map((alloc: any) => alloc.courseId).filter(Boolean)
+        : []
+
+      // Deduplicate courses to prevent key errors if multiple assignments exist
+      const uniqueCourses = Array.from(new Map(formattedCourses.map((item: any) => [item._id, item])).values())
+
+      setAvailableCourses(uniqueCourses)
+
     } catch (error) {
       toast.error('Failed to fetch data')
     } finally {
@@ -75,9 +86,17 @@ export default function BatchesPage() {
 
   const handleCreateBatch = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!newBatchCourse || !newBatchName || !newBatchStart || !newBatchEnd || !newBatchPrice) {
+    if (!newBatchCourse || !newBatchName || !newBatchStart || !newBatchEnd) {
       toast.error('All fields are required')
       return
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const startDate = new Date(newBatchStart);
+    if (startDate < today) {
+      toast.error('Start Date cannot be in the past');
+      return;
     }
 
     try {
@@ -89,8 +108,7 @@ export default function BatchesPage() {
           courseId: newBatchCourse,
           name: newBatchName,
           startDate: newBatchStart,
-          endDate: newBatchEnd,
-          institutePrice: Number(newBatchPrice)
+          endDate: newBatchEnd
         })
       })
 
@@ -103,7 +121,6 @@ export default function BatchesPage() {
         setNewBatchName("")
         setNewBatchStart("")
         setNewBatchEnd("")
-        setNewBatchPrice("")
       } else {
         toast.error('Failed to create batch')
       }
@@ -112,37 +129,77 @@ export default function BatchesPage() {
     }
   }
 
+  const handleUpdateBatch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedBatch || !newBatchName || !newBatchEnd) return;
+
+    try {
+      const res = await fetch(`/api/batches/${selectedBatch._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newBatchName,
+          endDate: newBatchEnd
+        })
+      });
+
+      if (res.ok) {
+        toast.success('Batch updated successfully');
+        setUpdateOpen(false);
+        fetchData();
+      } else {
+        toast.error('Failed to update batch');
+      }
+    } catch (error) {
+      toast.error('Error updating batch');
+    }
+  }
+
+  const handleDeleteBatch = async (batchId: string) => {
+    if (!confirm('Are you sure you want to delete this batch? This will deallocate all students from this course!')) return;
+
+    try {
+      const res = await fetch(`/api/batches/${batchId}`, {
+        method: 'DELETE'
+      });
+
+      if (res.ok) {
+        toast.success('Batch deleted successfully');
+        fetchData();
+      } else {
+        toast.error('Failed to delete batch');
+      }
+    } catch (error) {
+      toast.error('Error deleting batch');
+    }
+  }
+
   // Pre-fill batch name based on course
   useEffect(() => {
     if (newBatchCourse && newBatchStart) {
-      const course = globalCourses.find(c => c._id === newBatchCourse)
+      const course = availableCourses.find((c: any) => c._id === newBatchCourse)
       const year = new Date(newBatchStart).getFullYear()
       if (course) {
         setNewBatchName(`${course.code} - ${year} Batch`)
-        // Auto-fill price if available?
-        setNewBatchPrice((course.baseFee + course.examFee + 60 + (course.bookPrice || 0) + (course.deliveryCharge || 0) + 2000).toString()) // Default suggested price
       }
     }
-  }, [newBatchCourse, newBatchStart, globalCourses])
+  }, [newBatchCourse, newBatchStart, availableCourses])
 
   const getEnrolledStudents = (batch: any) => {
-    if (!batch) return []
-    // Match students who have the same Course ID as the batch
-    return allStudents.filter(s =>
-      s.courses?.some((c: any) =>
-        (c.courseId?._id || c.courseId) === (batch.courseId?._id || batch.courseId)
-      )
-    )
+    if (!batch || !batch.students) return []
+    // Use the actual students array populated from the backend
+    return batch.students
   }
 
   const handleAddStudent = async () => {
     if (!selectedStudentId || !selectedBatch) return
     try {
-      const res = await fetch(`/api/users/${selectedStudentId}/courses`, {
+      // UPDATED: Use the Batch API to ensure Payment record creation and Batch linking
+      const res = await fetch(`/api/batches/${selectedBatch._id}/students`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          courseId: selectedBatch.courseId._id || selectedBatch.courseId,
+          studentId: selectedStudentId,
           booksIncluded: includeBooks === 'true'
         })
       })
@@ -161,8 +218,11 @@ export default function BatchesPage() {
   const handleRemoveStudent = async (studentId: string) => {
     if (!selectedBatch || !confirm("Remove student from this batch?")) return
     try {
-      const res = await fetch(`/api/users/${studentId}/courses/${selectedBatch.courseId._id || selectedBatch.courseId}`, {
-        method: 'DELETE'
+      // UPDATED: Use Batch API to consistently remove student from Batch and User course list
+      const res = await fetch(`/api/batches/${selectedBatch._id}/students`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentId })
       })
       if (res.ok) {
         toast.success('Student removed')
@@ -187,6 +247,9 @@ export default function BatchesPage() {
 
     return matchesSearch && matchesStatus
   })
+
+  // DERIVED STATE: Always get the fresh batch object from the main list using the ID
+  const managedBatch = selectedBatch ? batches.find(b => b._id === selectedBatch._id) : null
 
   return (
     <div className="space-y-6 p-6 pb-20">
@@ -331,12 +394,25 @@ export default function BatchesPage() {
                         <p className="font-bold">{enrolledCount}</p>
                       </div>
                     </div>
-                    <Button variant="ghost" size="sm" onClick={() => {
-                      setSelectedBatch(batch)
-                      setManageOpen(true)
-                    }}>
-                      Manage <UserPlus className="w-3.5 h-3.5 ml-1.5" />
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" onClick={() => {
+                        setSelectedBatch(batch);
+                        setNewBatchName(batch.name);
+                        setNewBatchEnd(new Date(batch.endDate).toISOString().split('T')[0]);
+                        setUpdateOpen(true);
+                      }}>
+                        <Edit className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button variant="outline" size="sm" className="text-destructive hover:bg-destructive/10 border-destructive/20" onClick={() => handleDeleteBatch(batch._id)}>
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => {
+                        setSelectedBatch(batch)
+                        setManageOpen(true)
+                      }}>
+                        Manage <UserPlus className="w-3.5 h-3.5 ml-1.5" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -360,8 +436,8 @@ export default function BatchesPage() {
                   <SelectValue placeholder="Choose a course..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {globalCourses.map(c => (
-                    <SelectItem key={c._id} value={c._id}>{c.name} ({c.code})</SelectItem>
+                  {availableCourses.map((c: any) => (
+                    <SelectItem key={c._id} value={c._id}>{c.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -383,12 +459,6 @@ export default function BatchesPage() {
               <Input value={newBatchName} onChange={e => setNewBatchName(e.target.value)} placeholder="e.g. FSWD - 2026 Batch" required />
             </div>
 
-            <div className="space-y-2">
-              <Label>Institute Fee (₹)</Label>
-              <Input type="number" value={newBatchPrice} onChange={e => setNewBatchPrice(e.target.value)} placeholder="Total course fee" required />
-              <p className="text-[10px] text-muted-foreground">Suggested base price automatically calculated.</p>
-            </div>
-
             <DialogFooter className="pt-4">
               <Button type="submit" className="w-full">Create Batch</Button>
             </DialogFooter>
@@ -396,79 +466,181 @@ export default function BatchesPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Update Batch Dialog */}
+      <Dialog open={updateOpen} onOpenChange={setUpdateOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Edit Batch</DialogTitle>
+            <DialogDescription>Update batch details.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleUpdateBatch} className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Batch Name</Label>
+              <Input value={newBatchName} onChange={e => setNewBatchName(e.target.value)} required />
+            </div>
+            <div className="space-y-2">
+              <Label>End Date</Label>
+              <Input type="date" value={newBatchEnd} onChange={e => setNewBatchEnd(e.target.value)} required />
+            </div>
+            <DialogFooter className="pt-4">
+              <Button type="submit" className="w-full">Update Batch</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       {/* Manage Students Dialog */}
       <Dialog open={manageOpen} onOpenChange={setManageOpen}>
-        <DialogContent className="sm:max-w-3xl h-[80vh] flex flex-col p-0 gap-0">
-          <DialogHeader className="px-6 py-4 border-b">
-            <DialogTitle>Manage Enrollment</DialogTitle>
-            <DialogDescription>{selectedBatch?.name}</DialogDescription>
+        <DialogContent className="sm:max-w-4xl h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
+          <DialogHeader className="px-6 py-4 border-b bg-muted/5">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <Users className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <DialogTitle>Manage Enrollment</DialogTitle>
+                <DialogDescription className="mt-1 flex items-center gap-2">
+                  <span className="font-medium text-foreground">{managedBatch?.name}</span>
+                  <span className="text-muted-foreground">•</span>
+                  <span className="text-xs bg-muted px-2 py-0.5 rounded-full border">{getEnrolledStudents(managedBatch).length} Students Enrolled</span>
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
 
-          <div className="flex flex-1 min-h-0">
-            {/* Enrolled List */}
-            <div className="flex-1 border-r flex flex-col">
-              <div className="p-3 bg-muted/20 border-b font-medium text-xs uppercase text-muted-foreground flex justify-between">
-                <span>Enrolled Students ({getEnrolledStudents(selectedBatch).length})</span>
+          <div className="flex flex-1 min-h-0 divide-x">
+            {/* Enrolled List - Left Side (Wider) */}
+            <div className="flex-1 flex flex-col bg-background">
+              {/* Header Row */}
+              {/* Header Row */}
+              <div className="grid grid-cols-12 gap-4 p-3 bg-muted/40 border-b text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                <div className="col-span-5 pl-2">Student Details</div>
+                <div className="col-span-5">Contact Info</div>
+                <div className="col-span-2 text-center">Action</div>
               </div>
-              <div className="flex-1 overflow-y-auto p-2 space-y-2">
-                {getEnrolledStudents(selectedBatch).length === 0 && (
-                  <div className="text-center py-10 text-muted-foreground text-sm">No students enrolled</div>
-                )}
-                {getEnrolledStudents(selectedBatch).map(student => (
-                  <div key={student._id} className="flex justify-between items-center p-2 rounded border bg-card/50">
-                    <div>
-                      <p className="font-medium text-sm">{student.name}</p>
-                      <p className="text-xs text-muted-foreground">{student.rollNo}</p>
+
+              {/* Scrollable List */}
+              <div className="flex-1 overflow-y-auto p-0">
+                {getEnrolledStudents(managedBatch).length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-8 gap-3">
+                    <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center">
+                      <Users className="w-8 h-8 opacity-20" />
                     </div>
-                    <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive hover:bg-destructive/10" onClick={() => handleRemoveStudent(student._id)}>
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </Button>
+                    <p className="text-sm">No students currently enrolled in this batch.</p>
                   </div>
-                ))}
+                ) : (
+                  <div className="divide-y">
+                    {getEnrolledStudents(managedBatch).map((student: any) => (
+                      <div key={student._id} className="grid grid-cols-12 gap-4 p-3 items-center hover:bg-muted/30 transition-colors group">
+                        {/* Student Details */}
+                        <div className="col-span-5 flex items-center gap-3 pl-2">
+                          <div className="h-10 w-10 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 border flex items-center justify-center overflow-hidden shrink-0">
+                            {student.documents?.photo ? (
+                              <img src={student.documents.photo} alt={student.name} className="h-full w-full object-cover" />
+                            ) : (
+                              <span className="font-bold text-gray-500 text-xs">{student.name?.substring(0, 2).toUpperCase()}</span>
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-medium text-sm truncate text-foreground">{student.name}</p>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <Badge variant="outline" className="text-[10px] h-5 px-1.5 font-normal text-muted-foreground bg-white">
+                                {student.rollNo || 'No Roll #'}
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Contact Info */}
+                        <div className="col-span-5 min-w-0 flex flex-col justify-center text-sm">
+                          <div className="flex items-center gap-1.5 truncate text-muted-foreground" title={student.email}>
+                            <span className="truncate">{student.email}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 truncate text-muted-foreground mt-0.5">
+                            <span className="text-xs">{student.phone || 'No Phone'}</span>
+                          </div>
+                        </div>
+
+                        {/* Action */}
+                        <div className="col-span-2 flex justify-center">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 opacity-70 group-hover:opacity-100 transition-all"
+                            onClick={() => handleRemoveStudent(student._id)}
+                            title="Remove from Batch"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Add Student Form */}
-            <div className="w-[300px] bg-muted/5 p-4 flex flex-col gap-4">
-              <div className="space-y-1">
-                <h4 className="font-semibold text-sm">Add Student</h4>
-                <p className="text-xs text-muted-foreground">Enroll an existing student into this batch.</p>
+            {/* Add Student Form - Right Side (Narrower) */}
+            <div className="w-[320px] bg-muted/5 flex flex-col border-l shadow-inner z-10">
+              <div className="p-5 space-y-6">
+                <div>
+                  <h4 className="font-semibold text-sm flex items-center gap-2">
+                    <UserPlus className="w-4 h-4 text-primary" /> Add New Student
+                  </h4>
+                  <p className="text-xs text-muted-foreground mt-1">Enroll a student into this batch.</p>
+                </div>
+
+                <div className="space-y-4 bg-background p-4 rounded-lg border shadow-sm">
+                  <div className="space-y-2">
+                    <Label className="text-xs font-semibold text-foreground">Select Student</Label>
+                    <Select value={selectedStudentId} onValueChange={setSelectedStudentId}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Search by name or roll no..." />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-[250px] w-[280px]">
+                        {allStudents
+                          .filter(s => !(s.courses || []).some((c: any) => (c.courseId?._id || c.courseId) === (managedBatch?.courseId?._id || managedBatch?.courseId)))
+                          .map(s => (
+                            <SelectItem key={s._id} value={s._id} className="py-2">
+                              <div className="flex items-center gap-2">
+                                <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center shrink-0 text-[10px] font-bold">
+                                  {s.name?.substring(0, 1)}
+                                </div>
+                                <div className="flex flex-col text-left">
+                                  <span className="text-xs font-medium truncate max-w-[180px]">{s.name}</span>
+                                  <span className="text-[10px] text-muted-foreground">{s.rollNo}</span>
+                                </div>
+                              </div>
+                            </SelectItem>
+                          ))
+                        }
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-xs font-semibold text-foreground">Enrollment Options</Label>
+                    <Select value={includeBooks} onValueChange={setIncludeBooks}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="false">Tuition Only</SelectItem>
+                        <SelectItem value="true">Include Books & Materials</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <Button onClick={handleAddStudent} disabled={!selectedStudentId} className="w-full mt-2">
+                    <Plus className="w-4 h-4 mr-2" /> Enroll Student
+                  </Button>
+                </div>
               </div>
 
-              <div className="space-y-3">
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Select Student</Label>
-                  <Select value={selectedStudentId} onValueChange={setSelectedStudentId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Search student..." />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-[200px]">
-                      {allStudents
-                        .filter(s => !(s.courses || []).some((c: any) => (c.courseId?._id || c.courseId) === (selectedBatch?.courseId?._id || selectedBatch?.courseId)))
-                        .map(s => (
-                          <SelectItem key={s._id} value={s._id}>{s.name}</SelectItem>
-                        ))
-                      }
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Options</Label>
-                  <Select value={includeBooks} onValueChange={setIncludeBooks}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="false">Tuition Only</SelectItem>
-                      <SelectItem value="true">Include Books</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <Button onClick={handleAddStudent} disabled={!selectedStudentId} className="w-full">
-                  <Plus className="w-4 h-4 mr-2" /> Enroll
-                </Button>
+              <div className="mt-auto p-4 border-t bg-muted/10">
+                <p className="text-[10px] text-muted-foreground text-center">
+                  Adding a student will automatically generate a pending fee record.
+                </p>
               </div>
             </div>
           </div>

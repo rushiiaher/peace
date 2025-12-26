@@ -3,6 +3,7 @@ import crypto from 'crypto'
 import connectDB from '@/lib/mongodb'
 import Payment from '@/lib/models/Payment'
 import Transaction from '@/lib/models/Transaction'
+import User from '@/lib/models/User'
 
 export async function POST(req: Request) {
     try {
@@ -55,6 +56,25 @@ export async function POST(req: Request) {
             if (transactions.length > 0) {
                 await Transaction.insertMany(transactions)
             }
+
+            // CRITICAL FIX: Update Student Course Status (Royalty Paid)
+            // This enables Delivery workflow and Result generation visibility
+            const updatePromises = verifiedPayments.map((p: any) =>
+                User.updateOne(
+                    {
+                        _id: p.studentId,
+                        'courses.courseId': p.courseId
+                    },
+                    {
+                        $set: {
+                            'courses.$.royaltyPaid': true,
+                            'courses.$.royaltyPaidAt': new Date(),
+                            'courses.$.royaltyAmount': p.totalAmount
+                        }
+                    }
+                )
+            )
+            await Promise.all(updatePromises)
 
             return NextResponse.json({ success: true, message: 'Payment verified successfully' })
         } else {

@@ -12,25 +12,54 @@ import { Badge } from "@/components/ui/badge"
 interface StudentFormProps {
     initialData?: any
     courses: any[]
+    batches?: any[]
     onSubmit: (data: any) => Promise<void>
     isEdit?: boolean
     loading?: boolean
-    onCourseAdd?: (courseId: string) => Promise<any> // For edit mode direct actions
-    onCourseRemove?: (courseId: string) => Promise<any> // For edit mode direct actions
+    onCourseAdd?: (courseId: string, batchId?: string, booksIncluded?: boolean) => Promise<any>
+    onCourseRemove?: (courseId: string) => Promise<any>
 }
 
 export function StudentForm({
     initialData,
     courses,
+    batches = [],
     onSubmit,
     isEdit = false,
     loading = false,
     onCourseAdd,
     onCourseRemove
 }: StudentFormProps) {
+    // Deduplicate courses to prevent key collisions
+    const uniqueCourses = Array.from(new Map(courses.map((item: any) => [item.courseId?._id, item])).values()).filter((c: any) => c.courseId?._id)
+
     const [localCourses, setLocalCourses] = useState<any[]>(initialData?.courses || [])
     const [photoPreview, setPhotoPreview] = useState<string | null>(initialData?.documents?.photo || null)
     const [newPhotoData, setNewPhotoData] = useState<string | null>(null)
+    const [selectedCourseId, setSelectedCourseId] = useState<string>('')
+
+    // Edit Mode State
+    const [editModeCourseId, setEditModeCourseId] = useState<string>('')
+    const [editModeBatchId, setEditModeBatchId] = useState<string>('')
+    const [editModeBooksIncluded, setEditModeBooksIncluded] = useState<string>('false')
+    const [enrollLoading, setEnrollLoading] = useState(false)
+
+    const handleEditModeAdd = async () => {
+        if (editModeCourseId && editModeBatchId && onCourseAdd) {
+            setEnrollLoading(true)
+            try {
+                const updatedUser = await onCourseAdd(editModeCourseId, editModeBatchId, editModeBooksIncluded === 'true')
+                if (updatedUser) {
+                    setLocalCourses(updatedUser.courses)
+                    setEditModeCourseId('')
+                    setEditModeBatchId('')
+                    setEditModeBooksIncluded('false')
+                }
+            } finally {
+                setEnrollLoading(false)
+            }
+        }
+    }
 
     const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
@@ -61,8 +90,8 @@ export function StudentForm({
             phone: formData.get('phone'),
             dateOfBirth: formData.get('dateOfBirth'),
             bloodGroup: formData.get('bloodGroup'),
-            motherName: formData.get('motherName'), // NEW
-            aadhaarCardNo: formData.get('aadhaarCardNo'), // NEW
+            motherName: formData.get('motherName'),
+            aadhaarCardNo: formData.get('aadhaarCardNo'),
             guardianName: formData.get('guardianName'),
             guardianPhone: formData.get('guardianPhone'),
             address: formData.get('address'),
@@ -80,12 +109,11 @@ export function StudentForm({
         const password = formData.get('password')
         if (password) data.password = password
 
-        // For Add Mode: Include initial course selection
+        // For Add Mode: Include initial course and BATCH selection
         if (!isEdit) {
-            data.courses = [{
-                courseId: formData.get('courseId'),
-                booksIncluded: formData.get('booksIncluded') === 'true'
-            }]
+            data.courseId = formData.get('courseId')
+            data.batchId = formData.get('batchId') // NEW
+            data.booksIncluded = formData.get('booksIncluded') === 'true'
         }
 
         onSubmit(data)
@@ -105,6 +133,8 @@ export function StudentForm({
             if (updatedUser) setLocalCourses(updatedUser.courses)
         }
     }
+
+    // ... (Use existing render for Account & Personal Info) ...
 
     return (
         <form onSubmit={handleSubmit} className="space-y-8">
@@ -139,16 +169,17 @@ export function StudentForm({
 
                     <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
-                            <Label htmlFor="rollNo">Roll Number <span className="text-destructive">*</span></Label>
+                            <Label htmlFor="rollNo">Roll Number</Label>
                             <Input
                                 id="rollNo"
                                 name="rollNo"
                                 defaultValue={initialData?.rollNo}
-                                disabled={isEdit} // Roll No usually immutable
-                                className={isEdit ? "bg-muted" : ""}
-                                placeholder="ST-2024-001"
-                                required
+                                disabled={isEdit && !!initialData?.rollNo}
+                                readOnly={!isEdit}
+                                className={isEdit && !initialData?.rollNo ? "bg-background border-primary/50" : "bg-muted"}
+                                placeholder={initialData?.rollNo || "Auto-generated on creation"}
                             />
+                            {(!initialData?.rollNo) && <p className="text-[10px] text-muted-foreground">System will assign a unique Roll No if left blank.</p>}
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="email">Email Address <span className="text-destructive">*</span></Label>
@@ -160,6 +191,10 @@ export function StudentForm({
                                 placeholder="student@example.com"
                                 required
                             />
+                            <p className="text-[11px] text-muted-foreground flex items-center gap-1">
+                                <span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-500" />
+                                This email will be used as the login username.
+                            </p>
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="password">{isEdit ? "Password (New)" : "Password"} <span className={!isEdit ? "text-destructive" : "hidden"}>*</span></Label>
@@ -168,8 +203,9 @@ export function StudentForm({
                                 name="password"
                                 type="password"
                                 required={!isEdit}
-                                placeholder={isEdit ? "Leave blank to keep current" : ""}
+                                placeholder={isEdit ? "Leave blank to keep current" : "Set login password"}
                             />
+                            <p className="text-[11px] text-muted-foreground">These credentials will be used for student portal login.</p>
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="status">Status</Label>
@@ -210,7 +246,16 @@ export function StudentForm({
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="aadhaarCardNo">Aadhaar Card No</Label>
-                        <Input id="aadhaarCardNo" name="aadhaarCardNo" defaultValue={initialData?.aadhaarCardNo} placeholder="XXXX-XXXX-XXXX" />
+                        <Input
+                            id="aadhaarCardNo"
+                            name="aadhaarCardNo"
+                            defaultValue={initialData?.aadhaarCardNo}
+                            placeholder="12 Digit Aadhaar Number"
+                            minLength={12}
+                            maxLength={12}
+                            pattern="\d{12}"
+                            title="Aadhaar number must be exactly 12 digits"
+                        />
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="phone">Phone Number</Label>
@@ -265,25 +310,59 @@ export function StudentForm({
                 </div>
 
                 {isEdit ? (
-                    /* EDIT MODE: Course Management List */
                     <div className="space-y-4">
-                        <div className="flex gap-2 p-4 bg-muted/40 rounded-lg border border-dashed">
-                            <div className="flex-1">
-                                <Label className="text-xs mb-1.5 block font-medium">Add New Course</Label>
-                                <Select onValueChange={handleLocalCourseAdd}>
-                                    <SelectTrigger className="w-full bg-background">
-                                        <SelectValue placeholder="Select course to enroll" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {courses
-                                            .filter((ca: any) => !localCourses.some((c: any) => (c.courseId?._id || c.courseId) === ca.courseId?._id))
-                                            .map((courseAssignment: any) => (
-                                                <SelectItem key={courseAssignment.courseId?._id} value={courseAssignment.courseId?._id}>
-                                                    {courseAssignment.courseId?.name} ({courseAssignment.courseId?.code})
-                                                </SelectItem>
-                                            ))}
-                                    </SelectContent>
-                                </Select>
+                        <div className="p-4 bg-muted/20 rounded-lg border border-dashed space-y-4">
+                            <h4 className="text-sm font-medium">Enroll in New Course</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                                <div className="space-y-1.5">
+                                    <Label className="text-xs">Select Course</Label>
+                                    <Select value={editModeCourseId} onValueChange={setEditModeCourseId}>
+                                        <SelectTrigger className="bg-background">
+                                            <SelectValue placeholder="Choose Course" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {uniqueCourses
+                                                .filter((ca: any) => !localCourses.some((c: any) => (c.courseId?._id || c.courseId) === ca.courseId?._id))
+                                                .map((courseAssignment: any) => (
+                                                    <SelectItem key={courseAssignment.courseId?._id} value={courseAssignment.courseId?._id}>
+                                                        {courseAssignment.courseId?.name} ({courseAssignment.courseId?.code})
+                                                    </SelectItem>
+                                                ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <Label className="text-xs">Select Batch</Label>
+                                    <Select value={editModeBatchId} onValueChange={setEditModeBatchId} disabled={!editModeCourseId}>
+                                        <SelectTrigger className="bg-background">
+                                            <SelectValue placeholder="Choose Batch" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {batches
+                                                .filter((b: any) => (b.courseId?._id === editModeCourseId || b.courseId === editModeCourseId) && b.status === 'Active')
+                                                .map((batch: any) => (
+                                                    <SelectItem key={batch._id} value={batch._id}>
+                                                        {batch.name}
+                                                    </SelectItem>
+                                                ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <Label className="text-xs">Books</Label>
+                                    <Select value={editModeBooksIncluded} onValueChange={setEditModeBooksIncluded} disabled={!editModeCourseId}>
+                                        <SelectTrigger className="bg-background">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="false">Course Only</SelectItem>
+                                            <SelectItem value="true">Include Books</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <Button type="button" onClick={handleEditModeAdd} disabled={!editModeCourseId || !editModeBatchId || enrollLoading}>
+                                    {enrollLoading ? "Enrolling..." : "Enroll"}
+                                </Button>
                             </div>
                         </div>
 
@@ -315,28 +394,53 @@ export function StudentForm({
                         </div>
                     </div>
                 ) : (
-                    /* ADD MODE: Single Course Selection */
+                    /* ADD MODE: Course & Batch Selection (REPLACED) */
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
                             <Label htmlFor="courseId">Assign Course <span className="text-destructive">*</span></Label>
                             <div className="space-y-1">
-                                <Select name="courseId" defaultValue={initialData?.courseId} required>
+                                <Select
+                                    name="courseId"
+                                    required
+                                    onValueChange={(val) => setSelectedCourseId(val)}
+                                >
                                     <SelectTrigger>
-                                        <SelectValue placeholder="Select course" />
+                                        <SelectValue placeholder="Select course first" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {courses.map((courseAssignment: any) => (
+                                        {uniqueCourses.map((courseAssignment: any) => (
                                             <SelectItem key={courseAssignment.courseId?._id} value={courseAssignment.courseId?._id}>
                                                 {courseAssignment.courseId?.name} ({courseAssignment.courseId?.code})
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
-                                {initialData?.courseInterested && (
-                                    <p className="text-xs text-muted-foreground">Original Interest: {initialData.courseInterested}</p>
-                                )}
                             </div>
                         </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="batchId">Select Batch <span className="text-destructive">*</span></Label>
+                            <Select name="batchId" required disabled={!selectedCourseId}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder={!selectedCourseId ? "Select a course first" : "Select Active Batch"} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {batches
+                                        .filter((b: any) =>
+                                            // Filter by Course AND Active Status
+                                            (b.courseId?._id === selectedCourseId || b.courseId === selectedCourseId) &&
+                                            b.status === 'Active'
+                                        )
+                                        .map((batch: any) => (
+                                            <SelectItem key={batch._id} value={batch._id}>
+                                                {batch.name} ({new Date(batch.startDate).toLocaleDateString()})
+                                            </SelectItem>
+                                        ))}
+                                </SelectContent>
+                            </Select>
+                            {!selectedCourseId && <p className="text-[10px] text-muted-foreground">Batches will appear after course selection.</p>}
+                        </div>
+
                         <div className="space-y-2">
                             <Label htmlFor="booksIncluded">Include Books</Label>
                             <Select name="booksIncluded" defaultValue="false">
@@ -359,6 +463,6 @@ export function StudentForm({
                     {isEdit ? "Save Changes" : "Create Student"}
                 </Button>
             </div>
-        </form>
+        </form >
     )
 }

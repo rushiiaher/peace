@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button'
 export default function AddStudentPage() {
     const router = useRouter()
     const [courses, setCourses] = useState<any[]>([])
+    const [batches, setBatches] = useState<any[]>([])
     const [loading, setLoading] = useState(false)
     const [instituteId, setInstituteId] = useState<string | null>(null)
 
@@ -20,6 +21,7 @@ export default function AddStudentPage() {
         if (user.instituteId) {
             setInstituteId(user.instituteId)
             fetchCourses(user.instituteId)
+            fetchBatches(user.instituteId)
         }
     }, [])
 
@@ -33,13 +35,33 @@ export default function AddStudentPage() {
         }
     }
 
+    const fetchBatches = async (instId: string) => {
+        try {
+            const res = await fetch(`/api/batches?instituteId=${instId}`)
+            const data = await res.json()
+            setBatches(data)
+        } catch (error) {
+            toast.error('Failed to fetch batches')
+        }
+    }
+
     const handleCreate = async (data: any) => {
         try {
+            if (!instituteId) {
+                toast.error('Session error: Institute ID missing. Please login again.')
+                return
+            }
+
             setLoading(true)
+
+            const { batchId, booksIncluded, ...studentData } = data
+
+            // 1. Create Student
             const payload = {
-                ...data,
+                ...studentData,
                 instituteId,
-                role: 'student'
+                role: 'student',
+                courses: []
             }
 
             const res = await fetch('/api/users', {
@@ -48,16 +70,38 @@ export default function AddStudentPage() {
                 body: JSON.stringify(payload)
             })
 
-            if (res.ok) {
-                toast.success('Student added successfully')
-                router.push('/institute-admin/students')
-                router.refresh()
-            } else {
+            if (!res.ok) {
                 const error = await res.json()
-                toast.error(error.error || 'Failed to add student')
+                throw new Error(error.error || 'Failed to add student')
             }
-        } catch (error) {
-            toast.error('Failed to add student')
+
+            const newStudent = await res.json()
+
+            // 2. Add to Batch
+            if (batchId) {
+                const batchRes = await fetch(`/api/batches/${batchId}/students`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        studentId: newStudent._id,
+                        booksIncluded: booksIncluded
+                    })
+                })
+
+                if (!batchRes.ok) {
+                    toast.error('Student created but batch enrollment failed')
+                } else {
+                    toast.success('Student added and enrolled in batch')
+                }
+            } else {
+                toast.success('Student added (not enrolled)')
+            }
+
+            router.push('/institute-admin/students')
+            router.refresh()
+
+        } catch (error: any) {
+            toast.error(error.message || 'Failed to add student')
         } finally {
             setLoading(false)
         }
@@ -74,11 +118,16 @@ export default function AddStudentPage() {
 
             <Card>
                 <CardContent className="p-6">
-                    <StudentForm
-                        courses={courses}
-                        onSubmit={handleCreate}
-                        loading={loading}
-                    />
+                    <Card>
+                        <CardContent className="p-6">
+                            <StudentForm
+                                courses={courses}
+                                batches={batches}
+                                onSubmit={handleCreate}
+                                loading={loading}
+                            />
+                        </CardContent>
+                    </Card>
                 </CardContent>
             </Card>
         </div>

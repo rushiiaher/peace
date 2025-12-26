@@ -32,30 +32,50 @@ export async function GET(req: Request) {
             details: `Receipt: ${p.receiptNumber}`
         }))
 
-        // 2. Fetch Expenses: Royalty Payments
-        // We find students, then map over their courses
+        // 2. Fetch Expenses & Pending Dues: Royalty Payments
+        // We find all students to calculate both paid and pending royalties
         const students = await User.find({
             instituteId,
-            'courses.royaltyPaid': true
-        }).populate('courses.courseId', 'name').select('name courses').lean()
+            'courses': { $exists: true, $ne: [] }
+        }).populate('courses.courseId', 'name baseFee examFee certificateCharge bookPrice deliveryCharge').select('name courses').lean()
 
         const royaltyTransactions: any[] = []
+        let pendingRoyalty = 0
+        let pendingCourseFees = 0
+        let pendingBookFees = 0
+
         students.forEach((s: any) => {
             if (s.courses && Array.isArray(s.courses)) {
                 s.courses.forEach((c: any) => {
-                    if (c.royaltyPaid && c.royaltyAmount > 0) {
-                        const rDate = c.royaltyPaidAt ? new Date(c.royaltyPaidAt) : new Date()
-                        royaltyTransactions.push({
-                            id: `ROY-${s._id}-${c.courseId?._id}`,
-                            rawDate: rDate, // for sorting
-                            type: 'Expense',
-                            category: 'Royalty Payment',
-                            amount: c.royaltyAmount,
-                            party: 'Super Admin',
-                            mode: 'System', // Automated
-                            date: rDate.toLocaleDateString(),
-                            details: `Royalty for ${s.name} - ${c.courseId?.name}`
-                        })
+                    const course = c.courseId
+                    if (!course) return
+
+                    // Check if Paid
+                    if (c.royaltyPaid) {
+                        if (c.royaltyAmount > 0) {
+                            const rDate = c.royaltyPaidAt ? new Date(c.royaltyPaidAt) : new Date()
+                            royaltyTransactions.push({
+                                id: `ROY-${s._id}-${course._id}`,
+                                rawDate: rDate,
+                                type: 'Expense',
+                                category: 'Royalty Payment',
+                                amount: c.royaltyAmount,
+                                party: 'Super Admin',
+                                mode: 'System',
+                                date: rDate.toLocaleDateString(),
+                                details: `Royalty for ${s.name} - ${course.name}`
+                            })
+                        }
+                    } else if (c.status === 'Active') { // Only active enrollments accrue pending royalty
+                        // Calculate Pending Royalty
+                        const rBase = (course.examFee || 0) + (course.certificateCharge || 0)
+                        const rBooks = c.booksIncluded ? (course.bookPrice || 0) : 0
+                        const rDelivery = c.booksIncluded ? (course.deliveryCharge || 0) : 0
+
+                        const totalDue = rBase + rBooks + rDelivery
+                        pendingRoyalty += totalDue
+                        pendingCourseFees += rBase
+                        pendingBookFees += (rBooks + rDelivery)
                     }
                 })
             }
@@ -69,13 +89,8 @@ export async function GET(req: Request) {
 
         staffMembers.forEach((staff: any) => {
             if (!staff.salary || staff.salary <= 0) return
-            // Start from creation date or a default "start of fiscal year" if simplistic
-            // Using createdAt is safest for "History".
             let cursor = new Date(staff.createdAt || new Date())
 
-            // Move cursor to "End of Month" for payment? Or "1st of Next Month"?
-            // Let's say Salary Paid on 1st of every month AFTER joining.
-            // Adjust cursor to next month start
             if (cursor.getDate() > 1) {
                 cursor.setMonth(cursor.getMonth() + 1)
                 cursor.setDate(1) // 1st of next month
@@ -89,12 +104,11 @@ export async function GET(req: Request) {
                     category: 'Salary',
                     amount: staff.salary,
                     party: staff.name,
-                    mode: 'Bank Transfer', // Default assumption
+                    mode: 'Bank Transfer',
                     date: cursor.toLocaleDateString(),
                     details: `Monthly Salary (${cursor.toLocaleString('default', { month: 'long', year: 'numeric' })})`
                 })
 
-                // Advance 1 month
                 cursor.setMonth(cursor.getMonth() + 1)
             }
         })
@@ -104,7 +118,7 @@ export async function GET(req: Request) {
         const formattedManualTxns = manualTxns.map((m: any) => ({
             id: m._id.toString(),
             rawDate: new Date(m.date),
-            type: m.type, // Income or Expense
+            type: m.type,
             category: m.category,
             amount: m.amount,
             party: m.description,
@@ -119,7 +133,7 @@ export async function GET(req: Request) {
             ...royaltyTransactions,
             ...salaryTransactions,
             ...formattedManualTxns
-        ].sort((a, b) => b.rawDate.getTime() - a.rawDate.getTime()) // Newest first
+        ].sort((a, b) => b.rawDate.getTime() - a.rawDate.getTime())
 
         // Calculate Totals
         const allExpenses = [
@@ -145,7 +159,10 @@ export async function GET(req: Request) {
                 totalIncome: stats.totalIncome,
                 totalExpense: stats.totalExpense,
                 netProfit: stats.totalIncome - stats.totalExpense,
-                cashInHand: stats.totalIncome - stats.totalExpense // Simply Net Profit for now, barring other cash flows
+                cashInHand: stats.totalIncome - stats.totalExpense,
+                pendingRoyalty,
+                pendingCourseFees,
+                pendingBookFees
             }
         })
 

@@ -17,6 +17,18 @@ export async function POST(req: Request) {
 
         await connectDB()
 
+        // Single Session Enforcement: Check if session token matches
+        // Super Admins bypass this check
+        if (decoded.role !== 'super-admin') {
+            const user = await User.findById(decoded.userId).select('sessionToken')
+            // If user has a sessionToken in DB but it doesn't match ours, we are stale.
+            // If user has NO sessionToken in DB (legacy/first time), we might be lenient or strict.
+            // Given "Force Login" intent, typically DB always has the latest.
+            if (!user || (user.sessionToken && user.sessionToken !== decoded.sessionToken)) {
+                return NextResponse.json({ error: 'Session expired. You are logged in on another device.' }, { status: 401 })
+            }
+        }
+
         // Update lastActiveAt
         await User.findByIdAndUpdate(decoded.userId, { lastActiveAt: new Date() })
 

@@ -39,14 +39,15 @@ export const generateAdmitCardHtml = (data: AdmitCardData) => {
         
         .photo-box {
             position: absolute;
-            top: 0;
-            right: 0;
-            width: 120px;
-            height: 140px;
+            top: 10px;
+            right: 20px;
+            width: 130px;
+            height: 150px;
             border: 1px solid #000;
             overflow: hidden;
+            background-color: #fff;
         }
-        .photo-box img { width: 100%; height: 100%; object-fit: cover; }
+        .photo-box img { width: 100%; height: 100%; object-fit: cover; object-position: top center; }
         
         .candidate-name { text-align: center; font-size: 14px; margin-bottom: 20px; }
 
@@ -68,10 +69,7 @@ export const generateAdmitCardHtml = (data: AdmitCardData) => {
 <body>
     <div class="container">
         <div class="header">
-            <!-- Logo -->
-            <!-- Logo -->
             <img src="/Peacexperts_LOGO.png" alt="PEACE Logo" style="height: 80px; margin-bottom: 15px; display: block; margin-left: auto; margin-right: auto;" />
-            <!-- <div style="margin-bottom: 10px; font-size: 40px; font-weight: bold; color: #333;">PEACE</div> --> 
             <h1>${data.instituteName}</h1>
             <h3>Reg. Under Ministry of Corporate Affairs (Govt. of India)</h3>
             <h3>PEACEXPERTS ACADEMY-MH2022PTC376485 & An ISO:9001:2015 Certified</h3>
@@ -101,7 +99,7 @@ export const generateAdmitCardHtml = (data: AdmitCardData) => {
             <tr>
                 <td class="label">Mother's Name</td>
                 <td class="value">${data.motherName}</td>
-                <td class="label">Addhar Card</td>
+                <td class="label">Aadhaar Card</td>
                 <td class="value">${data.aadhaarCard}</td>
             </tr>
             <tr>

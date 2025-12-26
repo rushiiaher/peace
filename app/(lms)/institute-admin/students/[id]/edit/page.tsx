@@ -17,6 +17,7 @@ export default function EditStudentPage() {
 
     const [student, setStudent] = useState<any>(null)
     const [courses, setCourses] = useState<any[]>([])
+    const [batches, setBatches] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
     const [submitting, setSubmitting] = useState(false)
 
@@ -29,9 +30,10 @@ export default function EditStudentPage() {
             const user = JSON.parse(localStorage.getItem('user') || '{}')
             if (!user.instituteId) return
 
-            const [userRes, coursesRes] = await Promise.all([
+            const [userRes, coursesRes, batchesRes] = await Promise.all([
                 fetch(`/api/users/${id}`),
-                fetch(`/api/institutes/${user.instituteId}/courses`)
+                fetch(`/api/institutes/${user.instituteId}/courses`),
+                fetch(`/api/batches?instituteId=${user.instituteId}`)
             ])
 
             if (userRes.ok) {
@@ -41,6 +43,7 @@ export default function EditStudentPage() {
                 router.push('/institute-admin/students')
             }
             if (coursesRes.ok) setCourses(await coursesRes.json())
+            if (batchesRes.ok) setBatches(await batchesRes.json())
         } catch (error) {
             toast.error('Failed to load data')
             router.push('/institute-admin/students')
@@ -72,22 +75,50 @@ export default function EditStudentPage() {
         }
     }
 
-    const handleCourseAdd = async (courseId: string) => {
+    const handleCourseAdd = async (courseId: string, batchId?: string, booksIncluded?: boolean) => {
         try {
-            const res = await fetch(`/api/users/${id}/courses`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ courseId, booksIncluded: false })
-            })
-            if (res.ok) {
-                toast.success('Course added')
-                const updated = await res.json()
-                setStudent(updated)
-                return updated
+            // If batchId is provided, enroll via Batch API (preferred)
+            if (batchId) {
+                const res = await fetch(`/api/batches/${batchId}/students`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        studentId: id,
+                        booksIncluded: booksIncluded || false
+                    })
+                })
+
+                if (res.ok) {
+                    toast.success('Enrolled in batch successfully')
+                    // Refetch student to get updated courses list
+                    const userRes = await fetch(`/api/users/${id}`)
+                    if (userRes.ok) {
+                        const updated = await userRes.json()
+                        setStudent(updated)
+                        return updated
+                    }
+                } else {
+                    const err = await res.json()
+                    toast.error(err.error || 'Failed to enroll in batch')
+                }
             } else {
-                toast.error('Failed to add course')
+                // Fallback: Just add course (legacy)
+                const res = await fetch(`/api/users/${id}/courses`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ courseId, booksIncluded: booksIncluded || false })
+                })
+                if (res.ok) {
+                    toast.success('Course added')
+                    const updated = await res.json()
+                    setStudent(updated)
+                    return updated
+                } else {
+                    toast.error('Failed to add course')
+                }
             }
         } catch (error) {
+            console.error(error)
             toast.error('Failed to add course')
         }
     }
@@ -126,6 +157,7 @@ export default function EditStudentPage() {
                     <StudentForm
                         initialData={student}
                         courses={courses}
+                        batches={batches}
                         onSubmit={handleUpdate}
                         loading={submitting}
                         isEdit={true}

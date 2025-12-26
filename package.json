@@ -11,7 +11,8 @@
     "seed": "tsx scripts/seed.ts",
     "seed-data": "tsx scripts/seed-data.ts",
     "seed-feedback": "tsx scripts/seed-feedback.ts",
-    "seed-demo": "tsx scripts/seed-demo-data.ts"
+    "seed-demo": "tsx scripts/seed-demo-data.ts",
+    "seed-clean": "tsx scripts/seed-clean.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -75,6 +76,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/string-similarity": "^4.0.2",
+    "dotenv": "^17.2.3",
     "postcss": "^8.5",
     "tailwindcss": "^4.1.9",
     "tsx": "^4.20.6",

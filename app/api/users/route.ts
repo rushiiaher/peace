@@ -4,6 +4,7 @@ import User from '@/lib/models/User'
 import bcrypt from 'bcryptjs'
 import '@/lib/models/Course' // Ensure Course model is registered
 import Batch from '@/lib/models/Batch'
+import Institute from '@/lib/models/Institute'
 
 export async function GET(req: Request) {
   try {
@@ -115,6 +116,37 @@ export async function POST(req: Request) {
       const parts = [data.firstName, data.middleName, data.lastName].filter(Boolean)
       if (parts.length > 0) {
         data.name = parts.join(' ')
+      }
+    }
+
+    // Auto-generate Roll No for Students
+    if (data.role === 'student' && data.instituteId && !data.rollNo) {
+      const institute = await Institute.findById(data.instituteId).lean()
+      if (institute && institute.code) {
+        // Logic: [INST_CODE][SEQUENCE_NUMBER] (e.g. VIS0001)
+        const prefix = institute.code
+
+        // Find last student created for this institute with this prefix
+        const lastStudent = await User.findOne({
+          instituteId: data.instituteId,
+          role: 'student',
+          rollNo: { $regex: new RegExp(`^${prefix}`, 'i') }
+        }).sort({ createdAt: -1 }).select('rollNo').lean()
+
+        let nextSeq = 1
+        if (lastStudent && lastStudent.rollNo) {
+          const rollNoStr = lastStudent.rollNo.toString()
+          const numericPart = rollNoStr.replace(new RegExp(`^${prefix}`, 'i'), '')
+          const lastSeq = parseInt(numericPart, 10)
+          if (!isNaN(lastSeq)) {
+            nextSeq = lastSeq + 1
+          }
+        }
+
+        data.rollNo = `${prefix}${nextSeq.toString().padStart(4, '0')}`
+      } else {
+        // Fallback
+        if (!data.rollNo) data.rollNo = `ST-${Date.now().toString().slice(-6)}`
       }
     }
 

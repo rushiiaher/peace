@@ -356,329 +356,165 @@ export default function UsersPage() {
           />
         </div>
 
-        {activeTab === "all" && (
-          <div className="space-y-4">
-            {users.map((user: any) => (
-              <Card key={user._id} className="hover:shadow-md transition-shadow">
-                <CardHeader className="pb-3 border-b">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-3">
-                      <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-                        {user.role === 'institute-admin' ? <UserCog className="w-5 h-5 text-blue-600 dark:text-blue-400" /> :
-                          user.role === 'student' ? <GraduationCap className="w-5 h-5 text-blue-600 dark:text-blue-400" /> :
-                            <Users className="w-5 h-5 text-blue-600 dark:text-blue-400" />}
-                      </div>
-                      <div>
-                        <CardTitle className="text-base">{user.name}</CardTitle>
-                        <p className="text-sm text-muted-foreground">{user.email}</p>
-                      </div>
-                    </div>
-                    <Badge variant={user.status === 'Active' ? 'default' : 'secondary'}>
-                      {user.status}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3 pt-4">
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div className="flex items-center gap-2">
-                      <Shield className="w-4 h-4 text-muted-foreground" />
-                      <div>
-                        <p className="text-xs text-muted-foreground">Role</p>
-                        <p className="font-medium capitalize">{user.role.replace('-', ' ')}</p>
-                      </div>
-                    </div>
-                    {user.role === 'student' && user.rollNo && (
-                      <div className="flex items-center gap-2">
-                        <GraduationCap className="w-4 h-4 text-muted-foreground" />
-                        <div>
-                          <p className="text-xs text-muted-foreground">Roll Number</p>
-                          <p className="font-medium">{user.rollNo}</p>
-                        </div>
-                      </div>
-                    )}
-                    <div className="flex items-center gap-2">
-                      <Building2 className="w-4 h-4 text-muted-foreground" />
-                      <div>
-                        <p className="text-xs text-muted-foreground">Institute</p>
-                        <p className="font-medium">{user.instituteId ? getInstituteById(user.instituteId)?.name || 'N/A' : 'N/A'}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-muted-foreground" />
-                      <div>
-                        <p className="text-xs text-muted-foreground">Created</p>
-                        <p className="font-medium">{new Date(user.createdAt).toLocaleDateString()}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-muted-foreground" />
-                      <div>
-                        <p className="text-xs text-muted-foreground">Last Login</p>
-                        <p className="font-medium">{user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'}</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex gap-2 border-t pt-3">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="gap-2"
-                      onClick={() => {
-                        setSelectedUser(user)
-                        setEditOpen(true)
-                      }}
-                    >
-                      <Edit className="w-3 h-3" />
-                      Edit
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="gap-2"
-                      onClick={() => toggleStatus(user)}
-                    >
-                      <Shield className="w-3 h-3" />
-                      {user.status === 'Active' ? 'Deactivate' : 'Activate'}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      className="gap-2"
-                      onClick={() => handleDelete(user._id)}
-                    >
-                      <Trash2 className="w-3 h-3" />
-                      Delete
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+        {(activeTab === 'all' ? users : filterByRole(activeTab)).map((user: any) => (
+          <Card key={user._id} className="overflow-hidden border-border/50 shadow-sm hover:shadow-md transition-all">
+            <div className="p-6 md:flex items-start justify-between border-b border-border/50 bg-muted/5">
+              <div className="flex items-center gap-4">
+                <div className={`h-12 w-12 rounded-xl flex items-center justify-center shadow-inner ${user.role === 'super-admin' ? 'bg-purple-100 text-purple-600' :
+                  user.role === 'institute-admin' ? 'bg-blue-100 text-blue-600' :
+                    user.role === 'faculty' ? 'bg-orange-100 text-orange-600' :
+                      'bg-emerald-100 text-emerald-600'
+                  }`}>
+                  {user.role === 'institute-admin' ? <Building2 className="h-6 w-6" /> :
+                    user.role === 'faculty' ? <UserCog className="h-6 w-6" /> :
+                      user.role === 'student' ? <GraduationCap className="h-6 w-6" /> :
+                        <Users className="h-6 w-6" />}
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-foreground">{user.name}</h3>
+                  <p className="text-sm text-muted-foreground">{user.email}</p>
+                </div>
+              </div>
+              <Badge className={`mt-4 md:mt-0 px-3 py-1 text-sm ${user.status === 'Active'
+                ? 'bg-emerald-500 hover:bg-emerald-600 text-white border-transparent'
+                : 'bg-destructive/10 text-destructive border-destructive/20'
+                }`}>
+                {user.status}
+              </Badge>
+            </div>
 
-        {activeTab === "institute-admin" && (
-          <div className="space-y-4">
-            {filterByRole('institute-admin').map((user: any) => (
-              <Card key={user._id}>
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <CardTitle className="text-base">{user.name}</CardTitle>
-                      <p className="text-sm text-muted-foreground">{user.email}</p>
-                    </div>
-                    <Badge variant={user.status === 'Active' ? 'default' : 'secondary'}>
-                      {user.status}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="text-sm">
-                    <p className="text-muted-foreground">Institute</p>
-                    <p className="font-medium">{user.instituteId ? getInstituteById(user.instituteId)?.name || 'N/A' : 'N/A'}</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        setSelectedUser(user)
-                        setEditOpen(true)
-                      }}
-                    >
-                      Edit
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => toggleStatus(user)}
-                    >
-                      {user.status === 'Active' ? 'Deactivate' : 'Activate'}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => handleDelete(user._id)}
-                    >
-                      Delete
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+            <div className="p-6 grid grid-cols-2 md:grid-cols-4 gap-6">
+              {/* Role */}
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                  <Shield className="h-3.5 w-3.5" />
+                  <span>Role</span>
+                </div>
+                <p className="font-semibold capitalize text-sm">{user.role.replace('-', ' ')}</p>
+              </div>
 
-        {activeTab === "faculty" && (
-          <div className="space-y-4">
-            {filterByRole('faculty').map((user: any) => (
-              <Card key={user._id}>
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <CardTitle className="text-base">{user.name}</CardTitle>
-                      <p className="text-sm text-muted-foreground">{user.email}</p>
-                    </div>
-                    <Badge variant={user.status === 'Active' ? 'default' : 'secondary'}>
-                      {user.status}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="text-sm">
-                    <p className="text-muted-foreground">Institute</p>
-                    <p className="font-medium">{user.instituteId ? getInstituteById(user.instituteId)?.name || 'N/A' : 'N/A'}</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        setSelectedUser(user)
-                        setEditOpen(true)
-                      }}
-                    >
-                      Edit
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => toggleStatus(user)}
-                    >
-                      {user.status === 'Active' ? 'Deactivate' : 'Activate'}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => handleDelete(user._id)}
-                    >
-                      Delete
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+              {/* Institute */}
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                  <Building2 className="h-3.5 w-3.5" />
+                  <span>Institute</span>
+                </div>
+                <p className="font-semibold text-sm">{user.instituteId ? getInstituteById(user.instituteId)?.name || 'N/A' : 'N/A'}</p>
+              </div>
 
-        {activeTab === "student" && (
-          <div className="space-y-4">
-            {filterByRole('student').map((user: any) => (
-              <Card key={user._id}>
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <CardTitle className="text-base">{user.name}</CardTitle>
-                      <p className="text-sm text-muted-foreground">{user.email}</p>
-                    </div>
-                    <Badge variant={user.status === 'Active' ? 'default' : 'secondary'}>
-                      {user.status}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="text-sm">
-                    <p className="text-muted-foreground">Institute</p>
-                    <p className="font-medium">{user.instituteId ? getInstituteById(user.instituteId)?.name || 'N/A' : 'N/A'}</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        setSelectedUser(user)
-                        setEditOpen(true)
-                      }}
-                    >
-                      Edit
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => toggleStatus(user)}
-                    >
-                      {user.status === 'Active' ? 'Deactivate' : 'Activate'}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => handleDelete(user._id)}
-                    >
-                      Delete
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+              {/* Created */}
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                  <Calendar className="h-3.5 w-3.5" />
+                  <span>Created</span>
+                </div>
+                <p className="font-semibold text-sm">{new Date(user.createdAt).toLocaleDateString()}</p>
+              </div>
+
+              {/* Last Login */}
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                  <Calendar className="h-3.5 w-3.5" />
+                  <span>Last Login</span>
+                </div>
+                <p className="font-semibold text-sm">{user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'}</p>
+              </div>
+            </div>
+
+            <div className="px-6 py-4 bg-muted/30 border-t border-border/50 flex flex-wrap gap-3">
+              <Button variant="outline" size="sm" onClick={() => { setSelectedUser(user); setEditOpen(true); }} className="h-9 px-4 hover:bg-background shadow-sm">
+                <Edit className="w-4 h-4 mr-2" /> Edit
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => toggleStatus(user)}
+                disabled={user.role === 'super-admin'}
+                className="h-9 px-4 hover:bg-background shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                <Shield className="w-4 h-4 mr-2" /> {user.status === 'Active' ? 'Deactivate' : 'Activate'}
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => handleDelete(user._id)}
+                disabled={user.role === 'super-admin'}
+                className="h-9 px-4 bg-red-600 hover:bg-red-700 text-white shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                <Trash2 className="w-4 h-4 mr-2" /> Delete
+              </Button>
+            </div>
+          </Card>
+        ))}
       </div>
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader className="border-b pb-4 mb-4">
-            <DialogTitle className="text-xl">Edit User Details</DialogTitle>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0 gap-0">
+          <DialogHeader className="px-6 py-4 border-b">
+            <DialogTitle className="text-xl font-bold">Edit User Details</DialogTitle>
           </DialogHeader>
-          {selectedUser && (
-            <form onSubmit={handleEdit} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-name">Full Name</Label>
-                  <Input id="edit-name" name="name" defaultValue={selectedUser.name} required />
+          <div className="p-6">
+            {selectedUser && (
+              <form onSubmit={handleEdit} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-name" className="font-semibold">Full Name</Label>
+                    <Input id="edit-name" name="name" defaultValue={selectedUser.name} required className="h-10" disabled={selectedUser.role === 'super-admin'} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-email" className="font-semibold">Email</Label>
+                    <Input id="edit-email" name="email" type="email" defaultValue={selectedUser.email} required className="h-10" disabled={selectedUser.role === 'super-admin'} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-password" selection-start="0" className="font-semibold">Password (New)</Label>
+                    <Input id="edit-password" name="password" type="password" placeholder="Leave blank to keep current" className="h-10" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-role" className="font-semibold">Role</Label>
+                    <Select name="role" defaultValue={selectedUser.role} disabled={selectedUser.role === 'super-admin'}>
+                      <SelectTrigger className="h-10">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="institute-admin">Institute Admin</SelectItem>
+                        <SelectItem value="faculty">Faculty</SelectItem>
+                        <SelectItem value="student">Student</SelectItem>
+                        {selectedUser.role === 'super-admin' && <SelectItem value="super-admin">Super Admin</SelectItem>}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-instituteId" className="font-semibold">Institute</Label>
+                    <Select name="instituteId" defaultValue={selectedUser.instituteId} disabled={selectedUser.role === 'super-admin'}>
+                      <SelectTrigger className="h-10">
+                        <SelectValue placeholder="Select institute" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {institutes.map((inst: any) => (
+                          <SelectItem key={inst._id} value={inst._id}>{inst.name} ({inst.code})</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-status" className="font-semibold">Status</Label>
+                    <Select name="status" defaultValue={selectedUser.status} disabled={selectedUser.role === 'super-admin'}>
+                      <SelectTrigger className="h-10">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Active">Active</SelectItem>
+                        <SelectItem value="Inactive">Inactive</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-email">Email</Label>
-                  <Input id="edit-email" name="email" type="email" defaultValue={selectedUser.email} required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-password">Password (New)</Label>
-                  <Input id="edit-password" name="password" type="password" placeholder="Leave blank to keep current" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-role">Role</Label>
-                  <Select name="role" defaultValue={selectedUser.role}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="institute-admin">Institute Admin</SelectItem>
-                      <SelectItem value="faculty">Faculty</SelectItem>
-                      <SelectItem value="student">Student</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-instituteId">Institute</Label>
-                  <Select name="instituteId" defaultValue={selectedUser.instituteId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select institute" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {institutes.map((inst: any) => (
-                        <SelectItem key={inst._id} value={inst._id}>{inst.name} ({inst.code})</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-status">Status</Label>
-                  <Select name="status" defaultValue={selectedUser.status}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Active">Active</SelectItem>
-                      <SelectItem value="Inactive">Inactive</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t mt-6">
-                <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
-                <Button type="submit">Update User</Button>
-              </div>
-            </form>
-          )}
+                <div className="flex justify-end gap-3 pt-6 mt-2">
+                  <Button type="button" variant="outline" onClick={() => setEditOpen(false)} className="h-10 px-6">Cancel</Button>
+                  <Button type="submit" className="h-10 px-6 bg-emerald-600 hover:bg-emerald-700 text-white">Update User</Button>
+                </div>
+              </form>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

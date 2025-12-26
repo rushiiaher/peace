@@ -28,6 +28,7 @@ export default function InstitutePaymentsPage() {
   const [processing, setProcessing] = useState(false)
   const [activeTab, setActiveTab] = useState("pending")
   const [batches, setBatches] = useState<any[]>([])
+  const [instituteName, setInstituteName] = useState('')
 
   // New Filters
   const [courses, setCourses] = useState<any[]>([])
@@ -52,7 +53,7 @@ export default function InstitutePaymentsPage() {
     return 'Active'
   }
 
-  const getFilteredPayments = (list: any[]) => {
+  const getFilteredPayments = (list: any[], ignoreBatchStatus = false) => {
     return list.filter(p => {
       // 1. Search Query
       if (searchQuery) {
@@ -67,32 +68,23 @@ export default function InstitutePaymentsPage() {
         if (p.courseId?._id !== filterCourse) return false
       }
 
-      // 3. Status Filter (Show Past Batches)
-      const status = getBatchStatus(p)
-      if (!showPastBatches) {
-        // If not showing past, only show Active
-        if (status !== 'Active') return false
-      }
-      // If showing past, show ALL (Active + Finished).
-      // Or users requirement: "then only previous batches are showen"
-      // If interpreted strictly:
-      if (showPastBatches && status === 'Active') {
-        // If the user meant "Toggle between Active and Past", uncomment below:
-        // return false 
-        // However, standard UI is "Show Past" (Include) or "Filter: Past". 
-        // I will stick to "Include Past" unless the toggler says "Show Only Past".
-        // Let's implement "Show Finished Batches Only" if checked, to matches "only previous batches are showen" text.
-        return false
-      }
+      // 3. Batch Filter (Specific Batch) - Check this FIRST or override status
+      const batch = batches.find((b: any) =>
+        b.courseId?._id === p.courseId?._id &&
+        b.students?.some((s: any) => s._id === p.studentId?._id || s === p.studentId?._id)
+      )
 
-      // 4. Batch Filter (Specific Batch selection)
       if (filterBatch !== 'all') {
-        // Find batch for this payment
-        const batch = batches.find((b: any) =>
-          b.courseId?._id === p.courseId?._id &&
-          b.students?.some((s: any) => s._id === p.studentId?._id || s === p.studentId?._id)
-        )
         if (batch?._id !== filterBatch) return false
+        // If specific batch matched, we keep it. We do NOT check "Active/Finished" status
+        // because the user explicitly asked for this batch.
+      } else {
+        // 4. Status Filter (Global Toggle)
+        // Only apply if we are NOT ignoring it (History tab) AND no specific batch selected
+        if (!ignoreBatchStatus) {
+          const status = getBatchStatus(p)
+          if (!showPastBatches && status !== 'Active') return false
+        }
       }
 
       return true
@@ -104,8 +96,8 @@ export default function InstitutePaymentsPage() {
   const allPaid = payments.filter((p: any) => p.status === 'Paid')
 
   // Filtered Lists
-  const pendingPayments = getFilteredPayments(allPending)
-  const filteredPaidPayments = getFilteredPayments(allPaid)
+  const pendingPayments = getFilteredPayments(allPending, false)
+  const filteredPaidPayments = getFilteredPayments(allPaid, true)
 
   const totalPending = pendingPayments.reduce((sum: number, p: any) => sum + p.totalAmount, 0)
 
@@ -131,10 +123,14 @@ export default function InstitutePaymentsPage() {
   const fetchData = async () => {
     setLoading(true)
     try {
+      // Prevent caching with timestamp and headers
+      const headers = { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
+      const ts = Date.now()
+
       const [payRes, batchRes, instRes] = await Promise.all([
-        fetch(`/api/payments?instituteId=${instituteId}`),
-        fetch(`/api/batches?instituteId=${instituteId}`),
-        fetch(`/api/institutes/${instituteId}`)
+        fetch(`/api/payments?instituteId=${instituteId}&t=${ts}`, { headers }),
+        fetch(`/api/batches?instituteId=${instituteId}&t=${ts}`, { headers }),
+        fetch(`/api/institutes/${instituteId}?t=${ts}`, { headers })
       ])
 
       const payData = await payRes.json()
@@ -144,6 +140,7 @@ export default function InstitutePaymentsPage() {
       setPayments(Array.isArray(payData) ? payData : [])
       setBatches(Array.isArray(batchData) ? batchData : [])
       setCourses(instData.courses || [])
+      setInstituteName(instData.name || '')
     } catch (error) {
       toast.error('Failed to fetch data')
     } finally {
@@ -191,8 +188,9 @@ export default function InstitutePaymentsPage() {
 
             const verifyData = await verifyRes.json()
             if (verifyData.success) {
-              toast.success('Payment successful!')
-              fetchData()
+              toast.success('Payment successful! refreshing...')
+              // Force reload to ensure fresh data
+              window.location.reload()
             } else {
               toast.error('Payment verification failed')
             }
@@ -299,45 +297,65 @@ export default function InstitutePaymentsPage() {
   const groupPendingByBatch = () => {
     const grouped: any = {}
     pendingPayments.forEach(p => {
-      const courseId = p.courseId?._id
+      // Find Batch
+      let batchName = 'Unassigned Batch'
+      let batchId = 'unassigned'
+      const courseId = p.courseId?._id || p.courseId
       const courseName = p.courseId?.name || 'Unknown Course'
-      if (!grouped[courseId]) {
-        grouped[courseId] = {
-          batchId: courseId,
-          batchName: courseName,
+
+      const batch = batches.find(b => (b.courseId?._id || b.courseId) === courseId && b.students?.some((s: any) => (s._id || s) === p.studentId?._id))
+      if (batch) {
+        batchName = batch.name
+        batchId = batch._id
+      }
+
+      if (!grouped[batchId]) {
+        grouped[batchId] = {
+          batchId: batchId,
+          batchName: batchName,
           courseName: courseName,
           courseId: courseId,
           payments: [],
           total: 0
         }
       }
-      grouped[courseId].payments.push(p)
-      grouped[courseId].total += p.totalAmount
+      grouped[batchId].payments.push(p)
+      grouped[batchId].total += p.totalAmount
     })
-    return Object.values(grouped).sort((a: any, b: any) => a.courseName.localeCompare(b.courseName))
+    return Object.values(grouped).sort((a: any, b: any) => a.batchName.localeCompare(b.batchName))
   }
 
   const groupPaidByBatch = () => {
     const grouped: any = {}
     filteredPaidPayments.forEach(p => {
-      const courseId = p.courseId?._id
+      // Find Batch
+      let batchName = 'Unassigned Batch'
+      let batchId = 'unassigned'
+      let status = 'Active'
+      const courseId = p.courseId?._id || p.courseId
       const courseName = p.courseId?.name || 'Unknown Course'
-      const status = getBatchStatus(p)
 
-      if (!grouped[courseId]) {
-        grouped[courseId] = {
-          batchId: courseId,
-          batchName: courseName,
+      const batch = batches.find(b => (b.courseId?._id || b.courseId) === courseId && b.students?.some((s: any) => (s._id || s) === p.studentId?._id))
+      if (batch) {
+        batchName = batch.name
+        batchId = batch._id
+        status = getBatchStatus(p)
+      }
+
+      if (!grouped[batchId]) {
+        grouped[batchId] = {
+          batchId: batchId,
+          batchName: batchName,
           courseName: courseName,
           status: status,
           payments: [],
           total: 0
         }
       }
-      grouped[courseId].payments.push(p)
-      grouped[courseId].total += p.totalAmount
+      grouped[batchId].payments.push(p)
+      grouped[batchId].total += p.totalAmount
     })
-    return Object.values(grouped).sort((a: any, b: any) => b.status.localeCompare(a.status)) // Active first? No, Finished (F) vs Active (A). B-A puts Finished first? No A < F.
+    return Object.values(grouped).sort((a: any, b: any) => a.batchName.localeCompare(b.batchName))
   }
 
   const generateMissingPayments = async () => {
@@ -375,8 +393,21 @@ export default function InstitutePaymentsPage() {
 
       {/* Filter Bar */}
       <Card className="bg-muted/30 border-none shadow-inner">
-        <CardContent className="p-4 flex flex-col md:flex-row gap-4">
-          <div className="flex-1 relative">
+        <CardContent className="p-4 flex flex-col md:flex-row gap-4 items-center">
+
+          <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-background border rounded-lg shadow-sm">
+            <div className="p-1.5 rounded-full bg-primary/10">
+              <Users className="w-4 h-4 text-primary" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[10px] uppercase font-bold text-muted-foreground leading-none">Institute</span>
+              <span className="text-sm font-semibold truncate max-w-[200px]" title={instituteName}>
+                {instituteName || 'Loading...'}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex-1 relative w-full">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search Name or Roll No..."
@@ -413,12 +444,12 @@ export default function InstitutePaymentsPage() {
             </Select>
 
             <Button
-              variant={showPastBatches ? "default" : "outline"}
+              variant={showPastBatches ? "secondary" : "outline"}
               className="gap-2 whitespace-nowrap"
               onClick={() => setShowPastBatches(!showPastBatches)}
             >
               <History className="w-4 h-4" />
-              {showPastBatches ? "Showing Finished Only" : "Show Finished Batches"}
+              {showPastBatches ? "Including Finished" : "Include Finished Batches"}
             </Button>
 
             {(searchQuery || filterCourse !== 'all' || filterBatch !== 'all' || showPastBatches) && (
@@ -499,7 +530,10 @@ export default function InstitutePaymentsPage() {
                       <div className="space-y-1">
                         <div className="flex items-center gap-3">
                           <input type="checkbox" checked={selectedCount > 0 && isAllSelected} onChange={(e) => toggleBatchSelection(group.batchId, e.target.checked)} className="h-4 w-4" />
-                          <h3 className="font-bold text-lg">{group.courseName}</h3>
+                          <div className="flex flex-col">
+                            <h3 className="font-bold text-lg">{group.batchName}</h3>
+                            <span className="text-xs text-muted-foreground">{group.courseName}</span>
+                          </div>
                         </div>
                         <div className="pl-7 flex items-center gap-2 text-sm text-muted-foreground">
                           {isDeliveryPaid ? (
@@ -523,25 +557,34 @@ export default function InstitutePaymentsPage() {
                         <div key={payment._id} className="p-3 flex justify-between items-center text-sm hover:bg-muted/10 transition-colors">
                           <div className="flex items-center gap-3">
                             <input type="checkbox" checked={selectedPayments.has(payment._id)} onChange={() => toggleSelection(payment._id)} className="h-4 w-4 mt-1" />
-                            <div>
-                              <p className="font-medium">{payment.studentId?.name}</p>
-                              <div className="flex flex-wrap gap-x-2 text-[11px] text-muted-foreground mt-0.5">
-                                <span className="font-mono text-primary/70">{payment.studentId?.rollNo}</span>
-                                <span className="text-gray-300">|</span>
-                                <span title="Exam Fee">Exam: ₹{payment.examFee}</span>
-                                <span>+</span>
-                                <span title="Certificate Charge">Cert: ₹{payment.certificateCharge}</span>
-                                {payment.bookPrice > 0 && (
-                                  <>
-                                    <span>+</span>
-                                    <span title="Book Cost">Books: ₹{payment.bookPrice}</span>
-                                  </>
+
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shadow-sm ring-2 ring-background overflow-hidden relative">
+                                {payment.studentId?.documents?.photo ? (
+                                  <img src={payment.studentId.documents.photo} alt={payment.studentId.name} className="w-full h-full object-cover" />
+                                ) : (
+                                  (payment.studentId?.name || 'U').charAt(0).toUpperCase()
                                 )}
+                              </div>
+                              <div>
+                                <p className="font-medium text-base">{payment.studentId?.name}</p>
+                                <div className="flex flex-col gap-0.5 text-xs text-muted-foreground mt-0.5">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-mono bg-muted px-1 rounded">{payment.studentId?.rollNo}</span>
+                                    {payment.studentId?.phone && <span>• {payment.studentId.phone}</span>}
+                                  </div>
+                                  {payment.studentId?.email && <span>{payment.studentId.email}</span>}
+                                  <div className="flex flex-wrap gap-x-2 text-[10px] text-muted-foreground mt-1 items-center">
+                                    <span title="Exam & Cert" className="bg-blue-50 text-blue-700 px-1.5 rounded">Exam: ₹{payment.examFee + payment.certificateCharge}</span>
+                                    {payment.bookPrice > 0 && <span className="bg-amber-50 text-amber-700 px-1.5 rounded">Books: ₹{payment.bookPrice}</span>}
+                                  </div>
+                                </div>
                               </div>
                             </div>
                           </div>
                           <div className="text-right">
-                            <p className="font-semibold">₹{payment.totalAmount.toLocaleString()}</p>
+                            <p className="font-bold text-base">₹{payment.totalAmount.toLocaleString()}</p>
+                            <span className="text-[10px] text-muted-foreground">Due Amount</span>
                           </div>
                         </div>
                       ))}
@@ -565,24 +608,36 @@ export default function InstitutePaymentsPage() {
               {groupPaidByBatch().map((group: any) => (
                 <div key={group.batchId} className="border rounded-xl overflow-hidden shadow-sm bg-card">
                   <div className="bg-muted/30 p-4 flex justify-between items-center border-b">
-                    <h3 className="font-bold flex items-center gap-2">
-                      {group.courseName}
-                      <Badge variant={group.status === 'Active' ? 'default' : 'secondary'}>{group.status}</Badge>
-                    </h3>
+                    <div className="flex flex-col">
+                      <h3 className="font-bold flex items-center gap-2 text-lg">
+                        {group.batchName}
+                        <Badge variant={group.status === 'Active' ? 'default' : 'secondary'}>{group.status}</Badge>
+                      </h3>
+                      <span className="text-xs text-muted-foreground">{group.courseName}</span>
+                    </div>
                     <p className="font-bold text-green-600">Total: ₹{group.total.toLocaleString()}</p>
                   </div>
                   <div className="divide-y max-h-[300px] overflow-y-auto">
                     {group.payments.map((payment: any) => (
                       <div key={payment._id} className="p-3 flex justify-between items-center text-sm hover:bg-muted/10 transition-colors">
-                        <div>
-                          <p className="font-medium">{payment.studentId?.name}</p>
-                          <div className="flex flex-wrap gap-x-2 text-[11px] text-muted-foreground mt-0.5">
-                            <span className="text-green-600/80">Paid: {new Date(payment.paidAt).toLocaleDateString()}</span>
-                            <span className="text-gray-300">|</span>
-                            <span>Exam: ₹{payment.examFee}</span>
-                            <span>+</span>
-                            <span>Cert: ₹{payment.certificateCharge}</span>
-                            {payment.bookPrice > 0 && <span>+ Books: ₹{payment.bookPrice}</span>}
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shadow-sm ring-2 ring-background overflow-hidden relative">
+                            {payment.studentId?.documents?.photo ? (
+                              <img src={payment.studentId.documents.photo} alt={payment.studentId.name} className="w-full h-full object-cover" />
+                            ) : (
+                              (payment.studentId?.name || 'U').charAt(0).toUpperCase()
+                            )}
+                          </div>
+                          <div>
+                            <p className="font-medium text-base">{payment.studentId?.name}</p>
+                            <div className="flex flex-col gap-0.5 text-xs text-muted-foreground mt-0.5">
+                              <div className="flex items-center gap-2">
+                                <span className="text-green-600/80 font-medium">Paid: {new Date(payment.paidAt).toLocaleDateString()}</span>
+                                <span className="text-gray-300">|</span>
+                                <span className="font-mono">{payment.studentId?.rollNo}</span>
+                              </div>
+                              {payment.studentId?.email && <span>{payment.studentId.email}</span>}
+                            </div>
                           </div>
                         </div>
                         <p className="font-semibold text-green-700">₹{payment.totalAmount.toLocaleString()}</p>

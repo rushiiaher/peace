@@ -17,6 +17,7 @@ export default function ConvertEnquiryPage() {
 
     const [enquiry, setEnquiry] = useState<any>(null)
     const [courses, setCourses] = useState<any[]>([])
+    const [batches, setBatches] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
     const [submitting, setSubmitting] = useState(false)
 
@@ -29,13 +30,20 @@ export default function ConvertEnquiryPage() {
             const user = JSON.parse(localStorage.getItem('user') || '{}')
             if (!user.instituteId) return
 
-            const [enqRes, coursesRes] = await Promise.all([
+            const [enqRes, coursesRes, batchesRes] = await Promise.all([
                 fetch(`/api/enquiries/${id}`),
-                fetch(`/api/institutes/${user.instituteId}/courses`)
+                fetch(`/api/institutes/${user.instituteId}/courses`),
+                fetch(`/api/batches?instituteId=${user.instituteId}`)
             ])
 
             if (enqRes.ok) setEnquiry(await enqRes.json())
-            if (coursesRes.ok) setCourses(await coursesRes.json())
+            if (coursesRes.ok) {
+                const rawCourses = await coursesRes.json()
+                // Deduplicate items based on courseId._id
+                const uniqueCourses = Array.from(new Map(rawCourses.map((item: any) => [item.courseId?._id, item])).values())
+                setCourses(uniqueCourses)
+            }
+            if (batchesRes.ok) setBatches(await batchesRes.json())
         } catch (error) {
             toast.error('Failed to load data')
             router.push('/institute-admin/enquiries')
@@ -134,6 +142,7 @@ export default function ConvertEnquiryPage() {
                     <StudentForm
                         initialData={prefillData}
                         courses={courses}
+                        batches={batches}
                         onSubmit={handleConvert}
                         loading={submitting}
                         isEdit={false} // It's a new student creation technically

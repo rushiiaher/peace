@@ -172,7 +172,10 @@ export default function BatchResultEntryPage() {
         const studentMarks = marksMap[studentId] || {}
         let total = 0
         dynamicComponents.forEach((comp: any) => {
-            total += (studentMarks[comp.name] || 0)
+            const val = studentMarks[comp.name]
+            // Treat -1 (Not Conducted) as 0 for total calculation
+            const numericVal = (val === -1 || val === undefined || val === null) ? 0 : val
+            total += numericVal
         })
         return total
     }

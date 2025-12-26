@@ -63,7 +63,9 @@ export default function InstituteStudentsPage() {
     try {
       const res = await fetch(`/api/institutes/${instituteId}/courses`)
       const data = await res.json()
-      setCourses(data)
+      // Deduplicate to avoid React key errors in filter dropdown
+      const uniqueCourses = Array.from(new Map(data.map((item: any) => [item.courseId?._id, item])).values()).filter((c: any) => c.courseId?._id)
+      setCourses(uniqueCourses)
     } catch (error) {
       toast.error('Failed to fetch courses')
     }
@@ -220,9 +222,9 @@ export default function InstituteStudentsPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Courses</SelectItem>
-                {courses.map((ca: any) => (
-                  <SelectItem key={ca.courseId?._id} value={ca.courseId?._id}>
-                    {ca.courseId?.name}
+                {courses.map((ca: any, idx: number) => (
+                  <SelectItem key={`${ca.courseId?._id || 'unknown'}-${idx}`} value={ca.courseId?._id || ''}>
+                    {ca.courseId?.name || 'Unknown Course'}
                   </SelectItem>
                 ))}
               </SelectContent>

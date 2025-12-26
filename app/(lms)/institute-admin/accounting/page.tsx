@@ -264,29 +264,29 @@ export default function AccountingPage() {
             <CardContent className="space-y-4">
               <div>
                 <p className="text-xs text-muted-foreground uppercase font-semibold">Pending Dues</p>
-                <p className="text-3xl font-bold text-orange-600">₹45,000</p>
+                <p className="text-3xl font-bold text-orange-600">₹{(stats.pendingRoyalty || 0).toLocaleString()}</p>
                 <div className="h-1.5 w-full bg-orange-200 rounded-full mt-2 overflow-hidden">
-                  <div className="h-full bg-orange-500 w-[70%]" />
+                  <div className="h-full bg-orange-500" style={{ width: `${Math.min(((stats.pendingRoyalty || 0) / 100000) * 100, 100)}%` }} />
                 </div>
-                <p className="text-[10px] text-right mt-1 text-orange-600 font-medium">70% of limit used</p>
+                <p className="text-[10px] text-right mt-1 text-orange-600 font-medium">To be paid immediately</p>
               </div>
 
               <div className="space-y-2 bg-white dark:bg-background p-3 rounded-lg border text-sm">
                 <div className="flex justify-between text-muted-foreground">
                   <span>Course Fees</span>
-                  <span>₹32,000</span>
+                  <span>₹{(stats.pendingCourseFees || 0).toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between text-muted-foreground">
                   <span>Books & Materials</span>
-                  <span>₹13,000</span>
+                  <span>₹{(stats.pendingBookFees || 0).toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between font-medium pt-2 border-t">
                   <span>Total Payable</span>
-                  <span>₹45,000</span>
+                  <span>₹{(stats.pendingRoyalty || 0).toLocaleString()}</span>
                 </div>
               </div>
 
-              <Button className="w-full bg-orange-600 hover:bg-orange-700 text-white shadow-lg shadow-orange-500/20">
+              <Button className="w-full bg-orange-600 hover:bg-orange-700 text-white shadow-lg shadow-orange-500/20" disabled={(stats.pendingRoyalty || 0) <= 0}>
                 Generate Invoice & Pay <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </CardContent>

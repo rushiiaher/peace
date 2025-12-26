@@ -31,17 +31,25 @@ export async function POST(req: Request) {
     const batch = await Batch.create(data)
 
     // 2. Update Institute's Course Assignment
-    await Institute.findByIdAndUpdate(data.instituteId, {
-      $push: {
-        courses: {
-          courseId: data.courseId,
-          startDate: data.startDate,
-          endDate: data.endDate,
-          institutePrice: data.institutePrice,
-          enrollmentActive: true
-        }
+    // 2. Update Institute's Course Assignment (only if not already assigned)
+    const institute = await Institute.findById(data.instituteId)
+    if (institute) {
+      const isAlreadyAssigned = institute.courses.some((c: any) => c.courseId.toString() === data.courseId)
+
+      if (!isAlreadyAssigned) {
+        await Institute.findByIdAndUpdate(data.instituteId, {
+          $push: {
+            courses: {
+              courseId: data.courseId,
+              startDate: data.startDate,
+              endDate: data.endDate,
+              institutePrice: data.institutePrice,
+              enrollmentActive: true
+            }
+          }
+        })
       }
-    })
+    }
 
     return NextResponse.json(batch, { status: 201 })
   } catch (error) {

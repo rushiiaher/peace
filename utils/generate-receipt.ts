@@ -34,6 +34,9 @@ interface ReceiptData {
     courseName: string
     courseDuration: string
     instituteName: string
+    instituteAddress?: string
+    institutePhone?: string
+    instituteEmail?: string
 }
 
 export const generateReceiptHtml = (data: ReceiptData) => {
@@ -44,10 +47,10 @@ export const generateReceiptHtml = (data: ReceiptData) => {
                 <div style="display: flex; align-items: center; gap: 15px;">
                      <img src="/Peacexperts_LOGO.png" alt="Logo" style="height: 70px;" />
                      <div>
-                         <h2 style="margin: 0; color: #d97706; font-size: 18px; font-weight: bold; line-height: 1.2;">Professional Education Academy<br/>For Computer Experts, Nashik</h2>
+                         <h2 style="margin: 0; color: #d97706; font-size: 18px; font-weight: bold; line-height: 1.2;">${data.instituteName}</h2>
                          <p style="margin: 5px 0 0 0; font-size: 11px; color: #555; font-weight: 500;">Affiliated with Ministry of Corporate Affairs (Govt. of India) & An ISO:9001:2015 Certified Company</p>
-                         <p style="margin: 3px 0 0 0; font-size: 11px; color: #333;"><strong>Reg. Office:</strong> 1st Floor, Above HDFC Bank, Near K.K.Wagh College, Nashik - 422003</p>
-                         <p style="margin: 2px 0 0 0; font-size: 11px; color: #333;"><strong>Contact:</strong> +91-9999999999 | <strong>Email:</strong> info@peaceexperts.com</p>
+                         <p style="margin: 3px 0 0 0; font-size: 11px; color: #333;"><strong>Reg. Office:</strong> ${data.instituteAddress || 'Address not available'}</p>
+                         <p style="margin: 2px 0 0 0; font-size: 11px; color: #333;"><strong>Contact:</strong> ${data.institutePhone || '-'} | <strong>Email:</strong> ${data.instituteEmail || '-'}</p>
                      </div>
                 </div>
                 <div style="text-align: right; font-size: 12px; font-weight: bold; color: #d97706;">
@@ -122,48 +125,46 @@ export const generateReceiptHtml = (data: ReceiptData) => {
         <head>
             <title>Fee Receipt - ${data.receiptNo}</title>
             <style>
-                @page { size: A4; margin: 0; }
-                body { font-family: sans-serif; -webkit-print-color-adjust: exact; margin: 0; padding: 20px; box-sizing: border-box; }
-                .receipt-container { width: 100%; max-width: 800px; margin: 0 auto; border: 1px solid #ccc; }
+                @page { size: A4; margin: 5mm; }
+                body { font-family: sans-serif; -webkit-print-color-adjust: exact; margin: 0; padding: 0; box-sizing: border-box; }
+                .receipt-container { width: 100%; max-width: 100%; margin: 0 auto; }
                 
                 .receipt-part { 
                     border: 2px solid #4a148c; 
-                    margin-bottom: 20px; 
+                    margin-bottom: 10px; 
                     position: relative;
+                    page-break-inside: avoid;
                 }
                 
                 .header {
-                    background-color: #4a148c;
-                    color: white;
-                    padding: 8px 15px;
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    font-size: 14px;
-                    font-weight: bold;
+                    background-color: #f6efe0; 
+                    padding: 8px 12px; 
+                    border-bottom: 2px solid #d97706; 
+                    display: flex; align-items: start; justify-content: space-between;
                 }
                 
                 .receipt-body {
-                    padding: 15px 20px;
+                    padding: 10px 15px;
                     background-color: white;
                     color: #333;
-                    font-size: 14px;
-                    line-height: 1.6;
+                    font-size: 13px;
+                    line-height: 1.4;
                 }
 
-                .row { display: flex; flex-wrap: wrap; margin-bottom: 8px; align-items: baseline; }
+                .row { display: flex; flex-wrap: wrap; margin-bottom: 4px; align-items: baseline; }
                 .col-half { width: 50%; }
                 .col-grow { flex-grow: 1; }
-                .col-fixed { margin-left: 15px; }
+                .col-fixed { margin-left: 10px; }
                 .text-right { text-align: right; }
                 
-                .title-row { margin-bottom: 10px; }
-                .box-title { font-weight: bold; font-size: 16px; width: 100%; }
+                .title-row { margin-bottom: 8px; justify-content: center; }
+                .box-title { font-weight: bold; font-size: 16px; width: 100%; text-align: center; text-decoration: underline; color: #dc2626; }
                 
+                /* Compact spacing for fields */
                 .underline-fill { 
                     border-bottom: 1px dotted #000; 
                     display: inline-block; 
-                    width: 80%; 
+                    width: 70%; 
                     margin-left: 5px; 
                     padding-left: 5px;
                 }
@@ -176,37 +177,38 @@ export const generateReceiptHtml = (data: ReceiptData) => {
                     display: flex;
                     justify-content: space-between;
                     align-items: flex-end;
-                    margin-top: 30px;
+                    margin-top: 15px;
                 }
 
                 .refund-box {
                     border: 2px solid #000;
-                    padding: 5px;
+                    padding: 4px;
                     display: inline-block;
                     position: relative;
-                    min-width: 150px;
+                    min-width: 140px;
                 }
                 .rupee-icon {
                     background: black;
                     color: white;
-                    width: 25px;
-                    height: 25px;
+                    width: 20px;
+                    height: 20px;
                     text-align: center;
-                    line-height: 25px;
+                    line-height: 20px;
                     font-weight: bold;
                     position: absolute;
-                    top: 5px;
-                    left: 5px;
+                    top: 4px;
+                    left: 4px;
+                    font-size: 12px;
                 }
                 .amount-box {
-                    padding-left: 35px;
-                    font-size: 18px;
+                    padding-left: 30px;
+                    font-size: 16px;
                     font-weight: bold;
-                    height: 25px;
-                    line-height: 25px;
+                    height: 20px;
+                    line-height: 20px;
                 }
                 .refund-text {
-                    font-size: 10px;
+                    font-size: 9px;
                     font-weight: bold;
                     margin-top: 2px;
                     text-transform: uppercase;
@@ -214,28 +216,28 @@ export const generateReceiptHtml = (data: ReceiptData) => {
 
                 .auth-sig {
                     font-weight: bold;
-                    font-size: 12px;
+                    font-size: 11px;
                     text-align: right;
-                    border-top: 1px solid #ccc; /* Minimal visual guide for signature */
-                    padding-top: 5px;
-                    width: 200px;
+                    border-top: 1px solid #ccc;
+                    padding-top: 4px;
+                    width: 180px;
                 }
 
                 .cut-line {
-                    border-top: 1px dashed #4a90e2;
+                    border-top: 1px dashed #999;
                     text-align: center;
-                    margin: 20px 0;
-                    color: #4a90e2;
-                    font-size: 12px;
+                    margin: 10px 0;
+                    color: #999;
+                    font-size: 10px;
                     position: relative;
+                    height: 10px;
                 }
                 .cut-line span {
                     background: white;
-                    padding: 0 10px;
+                    padding: 0 5px;
                     position: relative;
-                    top: -10px;
+                    top: -8px;
                 }
-
             </style>
         </head>
         <body>

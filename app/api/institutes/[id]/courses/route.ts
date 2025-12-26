@@ -17,6 +17,17 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   try {
     await connectDB()
     const { courseId, startDate, endDate } = await req.json()
+
+    // Prevent Duplicate Assignment
+    const existing = await Institute.findOne({
+      _id: params.id,
+      'courses.courseId': courseId
+    })
+
+    if (existing) {
+      return NextResponse.json({ error: 'This course is already assigned to this institute.' }, { status: 400 })
+    }
+
     const institute = await Institute.findByIdAndUpdate(
       params.id,
       { $push: { courses: { courseId, startDate, endDate } } },

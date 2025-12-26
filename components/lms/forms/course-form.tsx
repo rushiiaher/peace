@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { SectionHeader } from "@/components/lms/section"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -21,7 +21,8 @@ import {
     Receipt,
     Plus,
     Trash2,
-    GraduationCap
+    GraduationCap,
+    Cpu
 } from "lucide-react"
 import Link from 'next/link'
 
@@ -33,6 +34,12 @@ interface CourseFormProps {
 export function CourseForm({ initialData, mode }: CourseFormProps) {
     const router = useRouter()
     const [loading, setLoading] = useState(false)
+    const [qbs, setQbs] = useState<any[]>([])
+    const [finalExamCount, setFinalExamCount] = useState(initialData?.finalExamCount || 1)
+    const [examConfigs, setExamConfigs] = useState<any[]>(
+        initialData?.examConfigurations || []
+    )
+
     const [evaluationComponents, setEvaluationComponents] = useState(
         initialData?.evaluationComponents || [{ name: 'VIVA', maxMarks: 50 }, { name: 'PRACTICAL', maxMarks: 100 }]
     )
@@ -43,6 +50,51 @@ export function CourseForm({ initialData, mode }: CourseFormProps) {
         const newComponents = [...evaluationComponents]
         newComponents[index] = { ...newComponents[index], [field]: value }
         setEvaluationComponents(newComponents)
+    }
+
+    useEffect(() => {
+        fetch('/api/question-banks')
+            .then(res => res.json())
+            .then(data => setQbs(Array.isArray(data) ? data : []))
+            .catch(err => console.error("Failed to fetch QBs", err))
+
+        // Initialize exam configs if empty
+        if ((!initialData?.examConfigurations || initialData.examConfigurations.length === 0) && finalExamCount > 0) {
+            updateExamConfigsCount(finalExamCount)
+        }
+    }, [])
+
+    const updateExamConfigsCount = (count: number) => {
+        setFinalExamCount(count)
+        const current = [...examConfigs]
+        if (count > current.length) {
+            for (let i = current.length; i < count; i++) {
+                current.push({ examNumber: i + 1, duration: 60, totalQuestions: 50, questionBanks: [] })
+            }
+        } else if (count < current.length) {
+            current.length = count
+        }
+        setExamConfigs(current)
+    }
+
+    const updateExamConfig = (index: number, field: string, value: any) => {
+        const newConfigs = [...examConfigs]
+        newConfigs[index] = { ...newConfigs[index], [field]: value }
+        setExamConfigs(newConfigs)
+    }
+
+    const toggleQB = (examIndex: number, qbId: string) => {
+        const newConfigs = [...examConfigs]
+        const currentQBs = newConfigs[examIndex].questionBanks || []
+        // Handle if questionBanks contains objects (populated) or strings
+        const currentIds = currentQBs.map((qb: any) => typeof qb === 'object' ? qb._id : qb)
+
+        if (currentIds.includes(qbId)) {
+            newConfigs[examIndex].questionBanks = currentIds.filter((id: string) => id !== qbId)
+        } else {
+            newConfigs[examIndex].questionBanks = [...currentIds, qbId]
+        }
+        setExamConfigs(newConfigs)
     }
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -58,7 +110,8 @@ export function CourseForm({ initialData, mode }: CourseFormProps) {
             syllabus: formData.get('syllabus'),
             description: formData.get('description'),
             duration: formData.get('duration'),
-            finalExamCount: Number(formData.get('finalExamCount')),
+            finalExamCount: finalExamCount,
+            examConfigurations: examConfigs,
             baseFee: Number(formData.get('baseFee')),
             examFee: Number(formData.get('examFee')),
             bookPrice: Number(formData.get('bookPrice')),
@@ -122,9 +175,83 @@ export function CourseForm({ initialData, mode }: CourseFormProps) {
                         <Label htmlFor="duration">Duration</Label>
                         <Input id="duration" name="duration" defaultValue={initialData?.duration} placeholder="e.g. 6 months" className="h-11" />
                     </div>
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader className="border-b bg-muted/20">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-indigo-500/10 rounded-lg">
+                            <Cpu className="w-5 h-5 text-indigo-600" />
+                        </div>
+                        <div>
+                            <CardTitle>Exam Configuration</CardTitle>
+                            <CardDescription>Setup details for each final exam</CardDescription>
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent className="p-6 space-y-6">
                     <div className="space-y-2">
-                        <Label htmlFor="finalExamCount">Final Exam Count</Label>
-                        <Input id="finalExamCount" name="finalExamCount" type="number" defaultValue={initialData?.finalExamCount || 1} min="1" className="h-11" />
+                        <Label htmlFor="finalExamCount">Number of Final Exams</Label>
+                        <Input
+                            id="finalExamCount"
+                            name="finalExamCount"
+                            type="number"
+                            value={finalExamCount}
+                            onChange={(e) => updateExamConfigsCount(Number(e.target.value))}
+                            min="1"
+                            className="h-11 max-w-[200px]"
+                        />
+                    </div>
+
+                    <div className="grid gap-6">
+                        {examConfigs.map((config, index) => (
+                            <div key={index} className="border rounded-lg p-4 space-y-4 bg-muted/10">
+                                <h4 className="font-semibold flex items-center gap-2">
+                                    <span className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs">
+                                        {index + 1}
+                                    </span>
+                                    Exam {index + 1}
+                                </h4>
+                                <div className="grid md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label>Duration (Minutes)</Label>
+                                        <Input
+                                            type="number"
+                                            value={config.duration}
+                                            onChange={(e) => updateExamConfig(index, 'duration', Number(e.target.value))}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Total Questions</Label>
+                                        <Input
+                                            type="number"
+                                            value={config.totalQuestions}
+                                            onChange={(e) => updateExamConfig(index, 'totalQuestions', Number(e.target.value))}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Question Banks Source</Label>
+                                    <div className="border rounded-md max-h-40 overflow-y-auto p-2 grid grid-cols-1 gap-2 bg-background">
+                                        {qbs.length > 0 ? qbs.map(qb => (
+                                            <div key={qb._id} className="flex items-center space-x-2">
+                                                <input
+                                                    type="checkbox"
+                                                    id={`exam-${index}-qb-${qb._id}`}
+                                                    checked={(config.questionBanks?.map((q: any) => typeof q === 'object' ? q._id : q) || []).includes(qb._id)}
+                                                    onChange={() => toggleQB(index, qb._id)}
+                                                    className="rounded border-gray-300"
+                                                />
+                                                <label htmlFor={`exam-${index}-qb-${qb._id}`} className="text-sm cursor-pointer flex-1">
+                                                    {qb.topic} <span className="text-xs text-muted-foreground">({qb.questions?.length})</span>
+                                                </label>
+                                            </div>
+                                        )) : <div className="text-sm text-muted-foreground p-2">No Question Banks Available</div>}
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </CardContent>
             </Card>

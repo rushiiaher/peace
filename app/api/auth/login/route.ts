@@ -31,21 +31,36 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Single Session Enforcement
-    // If active within last 2 minutes, block login
-    const TWO_MINUTES_AGO = new Date(Date.now() - 2 * 60 * 1000)
-    if (user.lastActiveAt && user.lastActiveAt > TWO_MINUTES_AGO) {
-      return NextResponse.json({ error: 'User is currently logged in on another device. Please try again later or wait for session to timeout.' }, { status: 403 })
-    }
+    // Single Session Enforcement Logic
+    // We generate a unique session token for every login.
+    // This invalidates any previous session for this user (unless super-admin).
 
-    // Update lastActiveAt
+    // Note: We REMOVED the "active in last 2 minutes" block. 
+    // Now, logging in simply kicks the other device out.
+
+    const sessionToken = crypto.randomUUID()
+
+    // Update User with new session
     await User.findByIdAndUpdate(user._id, {
       lastActiveAt: new Date(),
-      lastLogin: new Date()
+      lastLogin: new Date(),
+      sessionToken: sessionToken
     })
 
+    const tokenPayload: any = {
+      userId: user._id,
+      email: user.email,
+      role: user.role,
+      instituteId: user.instituteId
+    }
+
+    // Only non-super-admins exist in the single-session realm
+    if (user.role !== 'super-admin') {
+      tokenPayload.sessionToken = sessionToken
+    }
+
     const token = jwt.sign(
-      { userId: user._id, email: user.email, role: user.role, instituteId: user.instituteId },
+      tokenPayload,
       JWT_SECRET,
       { expiresIn: '7d' }
     )

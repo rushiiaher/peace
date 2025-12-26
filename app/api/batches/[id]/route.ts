@@ -13,10 +13,26 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
   }
 }
 
+import User from '@/lib/models/User'
+
 export async function DELETE(req: Request, { params }: { params: { id: string } }) {
   try {
     await connectDB()
+
+    // Find batch to get enrolled students
+    const batch = await Batch.findById(params.id)
+    if (!batch) return NextResponse.json({ error: 'Batch not found' }, { status: 404 })
+
+    // Deallocate course from enrolled students
+    if (batch.students && batch.students.length > 0) {
+      await User.updateMany(
+        { _id: { $in: batch.students } },
+        { $pull: { courses: { courseId: batch.courseId } } }
+      )
+    }
+
     await Batch.findByIdAndDelete(params.id)
+
     return NextResponse.json({ success: true })
   } catch (error) {
     return NextResponse.json({ error: 'Failed to delete batch' }, { status: 500 })

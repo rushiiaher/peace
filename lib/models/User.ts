@@ -29,7 +29,16 @@ const UserSchema = new mongoose.Schema({
   guardianPhone: { type: String },
   motherName: { type: String }, // NEW
   bloodGroup: { type: String }, // NEW
-  aadhaarCardNo: { type: String }, // NEW
+  aadhaarCardNo: {
+    type: String,
+    validate: {
+      validator: function (v: string) {
+        // Optional field, but if present must be 12 digits
+        return !v || /^\d{12}$/.test(v)
+      },
+      message: 'Aadhaar Card No must be exactly 12 digits'
+    }
+  }, // NEW
   status: { type: String, enum: ['Active', 'Inactive'], default: 'Active' },
   documents: {
     photo: { type: String },
@@ -39,6 +48,7 @@ const UserSchema = new mongoose.Schema({
   },
   lastLogin: { type: Date },
   lastActiveAt: { type: Date }, // For session tracking
+  sessionToken: { type: String }, // For single session enforcement
   createdAt: { type: Date, default: Date.now }
 })
 

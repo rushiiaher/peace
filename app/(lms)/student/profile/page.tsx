@@ -21,7 +21,7 @@ export default function ProfilePage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false)
   const [documentDialogOpen, setDocumentDialogOpen] = useState(false)
-  const [idCardDialogOpen, setIdCardDialogOpen] = useState(false)
+
   const [editForm, setEditForm] = useState<any>({})
   const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' })
   const [documentForm, setDocumentForm] = useState({ type: 'photo', file: null as File | null, idProofType: '' })
@@ -501,22 +501,17 @@ export default function ProfilePage() {
             <CardHeader>
               <CardTitle className="text-base">Digital ID Card</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="aspect-video bg-gradient-to-br from-primary/20 to-primary/5 rounded-lg flex items-center justify-center cursor-pointer" onClick={() => setIdCardDialogOpen(true)}>
-                {student.documents?.photo ? (
-                  <img src={student.documents.photo} alt="Profile" className="w-full h-full object-cover rounded-lg" />
-                ) : (
-                  <p className="text-sm text-muted-foreground">Click to preview ID Card</p>
-                )}
+            <CardContent className="space-y-4">
+              <div className="bg-muted/20 p-4 rounded-lg border border-dashed text-center">
+                <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-2">
+                  <FileText className="w-6 h-6 text-primary" />
+                </div>
+                <p className="text-sm font-medium">Student Identity Card</p>
+                <p className="text-xs text-muted-foreground mt-1">Download your official institute identity card.</p>
               </div>
-              <div className="flex gap-2">
-                <Button className="flex-1" size="sm" onClick={downloadIdCard}>
-                  <Download className="w-4 h-4 mr-1" /> Download
-                </Button>
-                <Button className="flex-1" size="sm" variant="outline" onClick={() => setIdCardDialogOpen(true)}>
-                  <Eye className="w-4 h-4 mr-1" /> Preview
-                </Button>
-              </div>
+              <Button className="w-full" onClick={downloadIdCard}>
+                <Download className="w-4 h-4 mr-2" /> Download ID Card
+              </Button>
             </CardContent>
           </Card>
 
@@ -645,104 +640,7 @@ export default function ProfilePage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={idCardDialogOpen} onOpenChange={setIdCardDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Digital ID Card Preview</DialogTitle>
-          </DialogHeader>
-          <div className="bg-white rounded-xl shadow-lg border overflow-hidden relative" style={{ width: '100%', aspectRatio: '1.58' }}>
-            {/* Header / Background Strip */}
-            <div className="absolute top-4 left-4 right-4 h-32 bg-[#E8E0D5]"></div>
 
-            {/* Blue Brand Tab */}
-            <div className="absolute top-4 right-4 w-64 h-12 bg-[#008AC5]">
-              <div className="h-full flex items-center justify-end px-4 text-white font-bold text-lg">
-                PEACE India | 1010
-              </div>
-            </div>
-
-            {/* ID Card Pill */}
-            <div className="absolute top-20 right-10 bg-white px-8 py-2 rounded-full shadow-sm">
-              <span className="text-[#D97706] font-bold text-xl">ID CARD</span>
-            </div>
-
-            {/* Logo & Institute Name Area */}
-            <div className="relative z-10 px-8 pt-8 flex gap-4">
-              <div className="w-24 h-24 shrink-0 bg-white/50 rounded flex items-center justify-center">
-                <img src="/Peacexperts_LOGO.png" alt="Logo" className="max-w-full max-h-full" />
-              </div>
-              <div className="pt-2">
-                <h3 className="text-[#D97706] font-bold text-lg leading-tight">{student.instituteId?.name || 'Professional Education Academy'}</h3>
-                <p className="text-xs text-gray-600">For Computer Experts</p>
-                <p className="text-[10px] text-gray-500 mt-1 max-w-xs">{student.instituteId?.address || 'Affiliated with Ministry of Corporate Affairs'}</p>
-                <p className="text-[10px] text-gray-700 font-semibold mt-0.5 max-w-xs">
-                  Ph: {student.instituteId?.phone} | {student.instituteId?.email}
-                </p>
-              </div>
-            </div>
-
-            {/* Content Area */}
-            <div className="relative z-10 px-10 mt-12 grid grid-cols-3 gap-4">
-              <div className="col-span-2 space-y-3">
-                <div className="flex gap-2 text-sm">
-                  <span className="font-bold text-[#0CA5B0] w-32 shrink-0">Student Reg. No.:</span>
-                  <span className="font-bold">{student.rollNo || 'N/A'}</span>
-                </div>
-                <div className="flex gap-2 text-sm items-center">
-                  <span className="font-bold text-[#0CA5B0] w-32 shrink-0">Name:</span>
-                  <span className="font-bold text-lg uppercase tracking-wide">{student.name}</span>
-                </div>
-                <div className="flex gap-2 text-sm">
-                  <span className="font-bold text-[#0CA5B0] w-32 shrink-0">Training Inst.:</span>
-                  <div className="font-bold text-xs uppercase leading-tight pt-0.5">
-                    {student.instituteId?.name || 'Vision IT Professional Education Institute'}
-                    <br /><span className="text-gray-600 font-normal normal-case">{(student.instituteId?.address || '').split(',').pop()}</span>
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-x-8 gap-y-2 text-sm mt-1">
-                  <div className="flex gap-2">
-                    <span className="font-bold text-[#0CA5B0]">Course:</span>
-                    <span className="font-bold">{student.courses?.[0]?.courseId?.code || student.courses?.[0]?.courseId?.name || 'N/A'}</span>
-                  </div>
-                  {student.bloodGroup && (
-                    <div className="flex gap-2">
-                      <span className="font-bold text-[#0CA5B0]">B. Group:</span>
-                      <span className="font-bold">{student.bloodGroup}</span>
-                    </div>
-                  )}
-                </div>
-                <div className="flex gap-2 text-sm">
-                  <span className="font-bold text-[#0CA5B0]">DOB:</span>
-                  <span className="font-bold">{student.dateOfBirth ? new Date(student.dateOfBirth).toLocaleDateString() : 'N/A'}</span>
-                </div>
-                <div className="flex gap-2 text-sm">
-                  <span className="font-bold text-[#0CA5B0]">Mobile No.:</span>
-                  <span className="font-bold">{student.phone || 'N/A'}</span>
-                </div>
-              </div>
-
-              {/* Photo */}
-              <div className="col-span-1 flex justify-end items-start -mt-4">
-                {student.documents?.photo ? (
-                  <div className="w-32 h-40 border bg-gray-100">
-                    <img src={student.documents.photo} className="w-full h-full object-cover" alt="Student" />
-                  </div>
-                ) : (
-                  <div className="w-32 h-40 border bg-gray-100 flex items-center justify-center text-xs text-gray-400">
-                    No Photo
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Bottom Strip */}
-            <div className="absolute bottom-4 left-4 right-4 h-4 bg-[#E8E0D5]"></div>
-          </div>
-          <DialogFooter>
-            <Button onClick={downloadIdCard}><Download className="w-4 h-4 mr-2" /> Download ID Card</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

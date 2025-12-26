@@ -7,6 +7,7 @@ const AdmitCardSchema = new mongoose.Schema({
   studentName: { type: String, required: true },
   courseName: { type: String, required: true },
   examTitle: { type: String, required: true },
+  examNumber: { type: Number },
   examDate: { type: Date, required: true },
   startTime: { type: String, required: true },
   endTime: { type: String, required: true },
@@ -20,7 +21,7 @@ const AdmitCardSchema = new mongoose.Schema({
 })
 
 // Add virtual for backward compatibility
-AdmitCardSchema.virtual('rescheduled').get(function() {
+AdmitCardSchema.virtual('rescheduled').get(function () {
   return this.isRescheduled
 })
 
