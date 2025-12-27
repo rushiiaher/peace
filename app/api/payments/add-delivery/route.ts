@@ -19,9 +19,8 @@ export async function POST(req: Request) {
         }
 
         payment.deliveryCharge = deliveryCharge
-        // Recalculate total
-        payment.totalAmount = (payment.baseFee || 0) +
-            (payment.examFee || 0) +
+        // Recalculate total (Excluding Base Fee)
+        payment.totalAmount = (payment.examFee || 0) +
             (payment.bookPrice || 0) +
             (payment.certificateCharge || 0) +
             deliveryCharge

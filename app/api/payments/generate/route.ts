@@ -13,18 +13,21 @@ export async function POST(req: Request) {
 
     for (const student of students) {
       for (const enrollment of student.courses) {
-        const existingPayment = await Payment.findOne({
+        let existingPayment = await Payment.findOne({
           studentId: student._id,
           courseId: enrollment.courseId
         })
 
-        if (!existingPayment) {
-          const course = await Course.findById(enrollment.courseId)
-          if (course && student.instituteId) {
-            const certificateCharge = course.certificateCharge || 60
-            const totalAmount = course.baseFee + course.examFee + certificateCharge +
-              (enrollment.booksIncluded ? course.bookPrice + course.deliveryCharge : 0)
+        const course = await Course.findById(enrollment.courseId)
+        if (course && student.instituteId) {
+          const certificateCharge = course.certificateCharge ?? 60
 
+          // Calculate correct total: Exam + Cert + Books (if included). 
+          // Base Fee is EXCLUDED. Delivery Charge is EXCLUDED (added per batch later).
+          const coreAmount = course.examFee + certificateCharge +
+            (enrollment.booksIncluded ? course.bookPrice : 0)
+
+          if (!existingPayment) {
             await Payment.create({
               instituteId: student.instituteId,
               studentId: student._id,
@@ -32,12 +35,30 @@ export async function POST(req: Request) {
               baseFee: course.baseFee,
               examFee: course.examFee,
               bookPrice: enrollment.booksIncluded ? course.bookPrice : 0,
-              deliveryCharge: enrollment.booksIncluded ? course.deliveryCharge : 0,
+              deliveryCharge: 0, // Initially 0, added per batch at payment time
               certificateCharge,
-              totalAmount,
+              totalAmount: coreAmount,
               status: 'Pending'
             })
             created++
+          } else if (existingPayment.status === 'Pending') {
+            // Fix existing pending records if they differ (e.g. included base fee or auto-delivery)
+            // We preserve existing deliveryCharge if it was set (assuming it might be a valid batch charge), 
+            // but we ensure Base Fee is NOT in the total.
+            const currentTotal = coreAmount + (existingPayment.deliveryCharge || 0)
+
+            if (existingPayment.totalAmount !== currentTotal) {
+              existingPayment.totalAmount = currentTotal
+              // Update component fields to match current course stats if needed, 
+              // but primarily we care about the Total and ensuring Base/Delivery logic is correct.
+              // We'll update fee fields to match course just in case they changed.
+              existingPayment.examFee = course.examFee
+              existingPayment.certificateCharge = certificateCharge
+              existingPayment.bookPrice = enrollment.booksIncluded ? course.bookPrice : 0
+              // We do NOT reset deliveryCharge here to avoid clearing a manually added batch charge.
+
+              await existingPayment.save()
+            }
           }
         }
       }

@@ -411,11 +411,13 @@ export default function InstitutesPage() {
                     <SelectValue placeholder="Select course to assign" />
                   </SelectTrigger>
                   <SelectContent>
-                    {courses.map((course: any) => (
-                      <SelectItem key={course._id} value={course._id}>
-                        {course.name} ({course.code})
-                      </SelectItem>
-                    ))}
+                    {courses
+                      .filter((c: any) => !selectedInstitute?.courses?.some((assignment: any) => (assignment.courseId?._id || assignment.courseId) === c._id))
+                      .map((course: any) => (
+                        <SelectItem key={course._id} value={course._id}>
+                          {course.name} ({course.code})
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>

@@ -171,7 +171,7 @@ export default function CoursesPage() {
 
       <div className="grid gap-4">
         {courses.map((course: any) => {
-          const totalFee = (course.baseFee || 0) + (course.examFee || 0) + (course.bookPrice || 0) + (course.deliveryCharge || 0) + (course.certificateCharge || 60)
+          const totalFee = (course.baseFee || 0) + (course.examFee || 0) + (course.bookPrice || 0) + (course.deliveryCharge || 0) + (course.certificateCharge ?? 60)
           const instituteCount = getInstituteCount(course._id)
 
           return (
@@ -266,7 +266,7 @@ export default function CoursesPage() {
                         <Award className="w-3.5 h-3.5" />
                         <p className="text-xs font-medium uppercase tracking-wider">Cert. Charge</p>
                       </div>
-                      <p className="text-lg font-semibold">₹{(course.certificateCharge || 60)}</p>
+                      <p className="text-lg font-semibold">₹{(course.certificateCharge ?? 60)}</p>
                     </div>
                     <div className="space-y-1 pl-4 border-l border-border/50">
                       <div className="flex items-center gap-1.5 text-primary">
@@ -343,7 +343,7 @@ export default function CoursesPage() {
                 </div>
                 <div>
                   <Label htmlFor="edit-certificateCharge">Certificate Charge (₹)</Label>
-                  <Input id="edit-certificateCharge" name="certificateCharge" type="number" defaultValue={selectedCourse.certificateCharge || 60} />
+                  <Input id="edit-certificateCharge" name="certificateCharge" type="number" defaultValue={selectedCourse.certificateCharge ?? 60} />
                 </div>
               </div>
               <Button type="submit">Update Course</Button>

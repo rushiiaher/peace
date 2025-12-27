@@ -7,15 +7,15 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
-import { Separator } from "@/components/ui/separator"
+
 import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
-import { Settings, Building2, Mail, Phone, MapPin, Monitor, Edit, Plus, Trash2, Clock, CheckCircle2, Save } from "lucide-react"
+import { Settings, Building2, Mail, Phone, MapPin, Monitor, Edit, Plus, Trash2, Clock, CheckCircle2 } from "lucide-react"
 import Loader from "@/components/ui/loader"
 
 export default function SettingsPage() {
   const [institute, setInstitute] = useState<any>(null)
-  const [editOpen, setEditOpen] = useState(false)
+
   const [systemsOpen, setSystemsOpen] = useState(false)
   const [timingsOpen, setTimingsOpen] = useState(false)
   const [newSystem, setNewSystem] = useState('')
@@ -36,32 +36,7 @@ export default function SettingsPage() {
       .then(setInstitute)
   }, [instituteId])
 
-  const handleUpdateProfile = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    const formData = new FormData(e.currentTarget)
-    const data = {
-      name: formData.get('name'),
-      email: formData.get('email'),
-      phone: formData.get('phone'),
-      address: formData.get('address'),
-      location: formData.get('location')
-    }
 
-    try {
-      const res = await fetch(`/api/institutes/${instituteId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      })
-      if (res.ok) {
-        toast.success('Profile updated successfully')
-        setEditOpen(false)
-        fetch(`/api/institutes/${instituteId}`).then(res => res.json()).then(setInstitute)
-      }
-    } catch (error) {
-      toast.error('Failed to update profile')
-    }
-  }
 
   const handleAddSystem = async () => {
     if (!newSystem.trim()) {
@@ -172,9 +147,7 @@ export default function SettingsPage() {
                   <p className="text-sm text-muted-foreground">Manage your institute's public information</p>
                 </div>
               </div>
-              <Button variant="outline" size="sm" onClick={() => setEditOpen(true)} className="gap-2">
-                <Edit className="w-4 h-4" /> Edit Profile
-              </Button>
+
             </div>
           </CardHeader>
           <CardContent className="pt-6">
@@ -306,45 +279,7 @@ export default function SettingsPage() {
         </Card>
       </div>
 
-      {/* Edit Profile Dialog */}
-      <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Edit Profile Details</DialogTitle>
-            <DialogDescription>Update your institute's contact information.</DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleUpdateProfile} className="space-y-4 pt-4">
-            <div className="grid gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Institute Name</Label>
-                <Input id="name" name="name" defaultValue={institute.name} required />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone</Label>
-                  <Input id="phone" name="phone" defaultValue={institute.phone} required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="location">City/Location</Label>
-                  <Input id="location" name="location" defaultValue={institute.location} required />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email Address</Label>
-                <Input id="email" name="email" type="email" defaultValue={institute.email} required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="address">Full Address</Label>
-                <Input id="address" name="address" defaultValue={institute.address} />
-              </div>
-            </div>
-            <DialogFooter className="mt-4">
-              <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
-              <Button type="submit"><Save className="w-4 h-4 mr-2" /> Save Changes</Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+
 
       {/* Manage Systems Dialog */}
       <Dialog open={systemsOpen} onOpenChange={setSystemsOpen}>

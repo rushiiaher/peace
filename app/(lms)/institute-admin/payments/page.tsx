@@ -637,6 +637,11 @@ export default function InstitutePaymentsPage() {
                                 <span className="font-mono">{payment.studentId?.rollNo}</span>
                               </div>
                               {payment.studentId?.email && <span>{payment.studentId.email}</span>}
+                              <div className="flex flex-wrap gap-x-2 text-[10px] text-muted-foreground mt-1 items-center">
+                                <span title="Exam & Cert" className="bg-blue-50 text-blue-700 px-1.5 rounded">Exam: ₹{((payment.examFee || 0) + (payment.certificateCharge || 0))}</span>
+                                {payment.bookPrice > 0 && <span className="bg-amber-50 text-amber-700 px-1.5 rounded">Books: ₹{payment.bookPrice}</span>}
+                                {payment.deliveryCharge > 0 && <span className="bg-orange-50 text-orange-700 px-1.5 rounded">Delivery: ₹{payment.deliveryCharge}</span>}
+                              </div>
                             </div>
                           </div>
                         </div>
