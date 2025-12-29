@@ -54,7 +54,7 @@ export default function BatchesPage() {
   const fetchData = async () => {
     try {
       const [batchesRes, usersRes, coursesRes] = await Promise.all([
-        fetch(`/api/batches?instituteId=${instituteId}`),
+        fetch(`/api/batches?instituteId=${instituteId}&limit=100`),
         fetch('/api/users'),
         fetch(`/api/institutes/${instituteId}/courses`)
       ])
