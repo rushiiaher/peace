@@ -35,9 +35,12 @@ export async function GET(req: Request) {
       ]
     }
 
+    const limit = parseInt(searchParams.get('limit') || '50')
+
     const qbs = await QuestionBank.find(query)
       .populate('courseId', 'name code')
       .sort({ createdAt: -1 })
+      .limit(limit)
 
     return NextResponse.json(qbs)
   } catch (error) {

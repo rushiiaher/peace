@@ -20,8 +20,8 @@ export function SessionHeartbeat() {
             }
         }
 
-        // Ping every 1 minute
-        const interval = setInterval(ping, 60 * 1000)
+        // Ping every 5 minutes
+        const interval = setInterval(ping, 5 * 60 * 1000)
 
         // Initial ping
         ping()

@@ -20,9 +20,12 @@ export async function GET(req: Request) {
       ]
     }
 
+    const limit = parseInt(searchParams.get('limit') || '50')
+
     const institutes = await Institute.find(query)
       .populate('courses.courseId')
       .sort({ createdAt: -1 })
+      .limit(limit)
 
     // Optimized: Calculate pending payments in ONE query
     const instituteIds = institutes.map((i: any) => i._id)
