@@ -45,7 +45,13 @@ export async function GET(req: Request) {
       query['courses.royaltyPaid'] = true
     }
 
-    const users = await User.find(query).select('-password').sort({ createdAt: -1 }).lean()
+    const limit = parseInt(searchParams.get('limit') || '50')
+
+    const users = await User.find(query)
+      .select('-password')
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .lean()
     await User.populate(users, { path: 'courses.courseId' })
 
     // augment with fee status if fetching students for an institute

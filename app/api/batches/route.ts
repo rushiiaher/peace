@@ -13,7 +13,13 @@ export async function GET(req: Request) {
     if (instituteId) query.instituteId = instituteId
     if (courseId) query.courseId = courseId
 
-    const batches = await Batch.find(query).populate('courseId').populate('students').sort({ createdAt: -1 })
+    const limit = parseInt(searchParams.get('limit') || '50')
+
+    const batches = await Batch.find(query)
+      .populate('courseId')
+      .populate('students')
+      .sort({ createdAt: -1 })
+      .limit(limit)
     return NextResponse.json(batches)
   } catch (error) {
     return NextResponse.json({ error: 'Failed to fetch batches' }, { status: 500 })
