@@ -217,7 +217,7 @@ export default function UsersPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-2 md:col-span-2">
                   <Label htmlFor="instituteId">Institute {selectedRole === 'student' ? '(Required)' : '(Optional)'}</Label>
                   <Select name="instituteId" value={selectedInstituteId} onValueChange={setSelectedInstituteId} required={selectedRole === 'student'}>
                     <SelectTrigger>
@@ -481,7 +481,7 @@ export default function UsersPage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-2 md:col-span-2">
                     <Label htmlFor="edit-instituteId" className="font-semibold">Institute</Label>
                     <Select name="instituteId" defaultValue={selectedUser.instituteId} disabled={selectedUser.role === 'super-admin'}>
                       <SelectTrigger className="h-10">

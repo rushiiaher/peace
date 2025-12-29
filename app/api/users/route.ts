@@ -111,6 +111,14 @@ export async function POST(req: Request) {
     await connectDB()
     const data = await req.json()
 
+    // Check for duplicate email
+    if (data.email) {
+      const existingUser = await User.findOne({ email: data.email }).select('_id').lean()
+      if (existingUser) {
+        return NextResponse.json({ error: 'Email already exists. Please use a different email.' }, { status: 400 })
+      }
+    }
+
     // Construct full name if parts are provided
     if (data.firstName || data.lastName) {
       const parts = [data.firstName, data.middleName, data.lastName].filter(Boolean)

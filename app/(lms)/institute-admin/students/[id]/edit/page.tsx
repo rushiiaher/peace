@@ -66,7 +66,8 @@ export default function EditStudentPage() {
                 router.push('/institute-admin/students')
                 router.refresh()
             } else {
-                toast.error('Failed to update student')
+                const err = await res.json()
+                toast.error(err.error || 'Failed to update student')
             }
         } catch (error) {
             toast.error('Failed to update student')

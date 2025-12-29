@@ -175,11 +175,7 @@ export default function ProfilePage() {
       ctx.textAlign = 'center'
       ctx.fillText('ID CARD', canvas.width - 170, 137)
 
-      // "PEACE India | 1010" Text
-      ctx.fillStyle = '#ffffff'
-      ctx.font = 'bold 24px Arial, sans-serif'
-      ctx.textAlign = 'right'
-      ctx.fillText('PEACE India | 1010', canvas.width - 40, 58)
+      // "PEACE India | 1010" Text Removed as per request
 
       // --- Identity & Logo ---
       // Load Logo
@@ -287,9 +283,9 @@ export default function ProfilePage() {
 
       ctx.fillStyle = '#0CA5B0'
       ctx.font = 'bold 26px Arial, sans-serif'
-      ctx.fillText('Course:', startX, startY)
+      ctx.fillText('Course Code:', startX, startY)
       ctx.fillStyle = '#000000'
-      ctx.fillText(courseName, startX + 110, startY)
+      ctx.fillText(courseName, startX + 185, startY)
 
       // Blood Group
       if (student.bloodGroup) {

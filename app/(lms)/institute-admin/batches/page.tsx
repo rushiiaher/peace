@@ -94,8 +94,22 @@ export default function BatchesPage() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const startDate = new Date(newBatchStart);
+    const endDate = new Date(newBatchEnd);
+
     if (startDate < today) {
-      toast.error('Start Date cannot be in the past');
+      toast.error('Start Date cannot be in the past. Please enter a valid future date.');
+      return;
+    }
+
+    if (endDate <= startDate) {
+      toast.error('End Date must be after Start Date. Please check your dates.');
+      return;
+    }
+
+    // Check for duplicate batch name
+    const isDuplicate = batches.some(b => b.name.toLowerCase() === newBatchName.trim().toLowerCase());
+    if (isDuplicate) {
+      toast.error('A batch with this name already exists. Please choose a unique name.');
       return;
     }
 
@@ -174,16 +188,31 @@ export default function BatchesPage() {
     }
   }
 
-  // Pre-fill batch name based on course
+  // Pre-fill batch name based on course & generate unique batch number
   useEffect(() => {
     if (newBatchCourse && newBatchStart) {
       const course = availableCourses.find((c: any) => c._id === newBatchCourse)
       const year = new Date(newBatchStart).getFullYear()
+
       if (course) {
-        setNewBatchName(`${course.code} - ${year} Batch`)
+        // 1. Get accurate count of batches for this course
+        const existingBatchesForCourse = batches.filter(b =>
+          (b.courseId?._id === newBatchCourse || b.courseId === newBatchCourse)
+        )
+        const nextBatchNum = existingBatchesForCourse.length + 1
+
+        // 2. Derive Short Code
+        let shortCode = course.code ? course.code.trim().toUpperCase() : ''
+        if (!shortCode && course.name) {
+          // Generate simplistic short code if missing (e.g. "Full Stack" -> "FS")
+          shortCode = course.name.split(' ').map((w: string) => w[0]).join('').toUpperCase().substring(0, 4)
+        }
+
+        // 3. Construct Name: "CODE - Batch N (YEAR)"
+        setNewBatchName(`${shortCode} - Batch ${nextBatchNum} (${year})`)
       }
     }
-  }, [newBatchCourse, newBatchStart, availableCourses])
+  }, [newBatchCourse, newBatchStart, availableCourses, batches])
 
   const getEnrolledStudents = (batch: any) => {
     if (!batch || !batch.students) return []
@@ -423,44 +452,94 @@ export default function BatchesPage() {
 
       {/* Create Batch Dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Create New Batch</DialogTitle>
-            <DialogDescription>Set up a new course session/batch.</DialogDescription>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 bg-primary/10 rounded-full">
+                <Package className="w-5 h-5 text-primary" />
+              </div>
+              <DialogTitle className="text-xl">Create New Batch</DialogTitle>
+            </div>
+            <DialogDescription>
+              Define a new academic session. Ensure dates are accurate for attendance tracking.
+            </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleCreateBatch} className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Select Course</Label>
+
+          <form onSubmit={handleCreateBatch} className="space-y-6 pt-2">
+            <div className="space-y-3">
+              <Label className="text-sm font-semibold">Select Course</Label>
               <Select value={newBatchCourse} onValueChange={setNewBatchCourse}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose a course..." />
+                <SelectTrigger className="w-full h-11 bg-muted/5 [&>span]:truncate">
+                  <SelectValue placeholder="Identify the course..." />
                 </SelectTrigger>
                 <SelectContent>
                   {availableCourses.map((c: any) => (
-                    <SelectItem key={c._id} value={c._id}>{c.name}</SelectItem>
+                    <SelectItem key={c._id} value={c._id} className="cursor-pointer">{c.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-5">
               <div className="space-y-2">
-                <Label>Start Date</Label>
-                <Input type="date" value={newBatchStart} onChange={e => setNewBatchStart(e.target.value)} required />
+                <Label className="text-sm font-semibold flex items-center gap-2">
+                  Starts On <span className="text-red-500">*</span>
+                </Label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    type="date"
+                    value={newBatchStart}
+                    onChange={e => setNewBatchStart(e.target.value)}
+                    required
+                    className="pl-9 h-11 bg-muted/5"
+                    min={new Date().toISOString().split('T')[0]}
+                  />
+                </div>
               </div>
               <div className="space-y-2">
-                <Label>End Date</Label>
-                <Input type="date" value={newBatchEnd} onChange={e => setNewBatchEnd(e.target.value)} required />
+                <Label className="text-sm font-semibold flex items-center gap-2">
+                  Ends On <span className="text-red-500">*</span>
+                </Label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    type="date"
+                    value={newBatchEnd}
+                    onChange={e => setNewBatchEnd(e.target.value)}
+                    required
+                    className="pl-9 h-11 bg-muted/5"
+                    min={newBatchStart || new Date().toISOString().split('T')[0]}
+                  />
+                </div>
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>Batch Name</Label>
-              <Input value={newBatchName} onChange={e => setNewBatchName(e.target.value)} placeholder="e.g. FSWD - 2026 Batch" required />
+            <div className="bg-blue-50 dark:bg-blue-950/30 p-3 rounded-md flex gap-2 items-start text-xs text-blue-700 dark:text-blue-300">
+              <div className="mt-0.5"><Clock className="w-3.5 h-3.5" /></div>
+              <div>
+                <p className="font-semibold mb-0.5">Date Guide</p>
+                <p>Start date must be today or in the future. End date must be strictly after the start date.</p>
+              </div>
             </div>
 
-            <DialogFooter className="pt-4">
-              <Button type="submit" className="w-full">Create Batch</Button>
+            <div className="space-y-3">
+              <Label className="text-sm font-semibold">Batch Name</Label>
+              <Input
+                value={newBatchName}
+                onChange={e => setNewBatchName(e.target.value)}
+                placeholder="e.g. FSWD - 2026 Batch"
+                required
+                className="h-11 bg-muted/5"
+              />
+              <p className="text-[10px] text-muted-foreground">
+                This name will be displayed on student certificates and ID cards.
+              </p>
+            </div>
+
+            <DialogFooter className="pt-2">
+              <Button type="button" variant="ghost" onClick={() => setCreateOpen(false)}>Cancel</Button>
+              <Button type="submit" className="min-w-[120px]">Create Batch</Button>
             </DialogFooter>
           </form>
         </DialogContent>

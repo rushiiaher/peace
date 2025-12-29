@@ -29,6 +29,7 @@ export default function InstituteExamsPage() {
   const [instituteId, setInstituteId] = useState<string | null>(null)
   const [students, setStudents] = useState<any[]>([])
   const [courses, setCourses] = useState<any[]>([])
+  const [examResults, setExamResults] = useState<any[]>([]) // Renamed to avoid confusion
 
   // Scheduling State
   const [selectedCourseId, setSelectedCourseId] = useState<string>('')
@@ -42,36 +43,37 @@ export default function InstituteExamsPage() {
   // New State for Batch-wise Scheduling
   const [batches, setBatches] = useState<any[]>([])
   const [selectedBatchId, setSelectedBatchId] = useState<string>('')
-  const [batchStudents, setBatchStudents] = useState<any[]>([])
+  const [allCourseStudents, setAllCourseStudents] = useState<any[]>([])
 
   // ... existing effects ...
 
   // Helper to check exam status
   const getStudentExamStatus = (studentId: string, examNum: number) => {
-    // Check if Admit Card exists for this exam number.
-    // Ideally we should filter by courseId too. Since we don't assume AdmitCard has courseId directly populated,
-    // we rely on the fact that we are contextually scheduling for 'selectedCourseId'.
-    // However, if a student is in multiple courses, this might be ambiguous if examNumbers are just 1, 2.
-    // IMPROVEMENT: AdmitCard has `examTitle` or `courseName`. 
-    // Best effort: Check if any admit card for this student matches the examNumber.
-    // Realistically, examNumber is unique within a course. 
-    // If we want to be strict, we'd look up the examId -> courseId. 
-    // For now, let's assume filtering by `examNumber` is sufficient given the context.
-    return admitCards.some((c: any) =>
+    // Check if Admit Card exists (Assigned)
+    const assigned = admitCards.some((c: any) =>
       (c.studentId?._id === studentId || c.studentId === studentId) &&
       c.examNumber === examNum
     )
+    // Check if Result exists (Completed) - Optional safety check
+    // Assuming results have examNumber or we match by logic. 
+    // Since result structure isn't fully clear, we focus on admit card which is the prerequisite.
+    // However, let's also check if user is in 'results' for this exam if possible.
+    // For now, strict admit card check is usually enough for "Assigned".
+    return assigned
   }
 
   // Filter eligible students
-  const eligibleStudents = batchStudents.filter(student => {
-    const examNum = parseInt(selectedExamNumber)
+  // Check eligibility for a specific student
+  const isStudentEligible = (student: any, examNum: number) => {
     const hasTakenCurrent = getStudentExamStatus(student._id, examNum)
     const hasTakenPrevious = examNum === 1 ? true : getStudentExamStatus(student._id, examNum - 1)
-
-    // strict sequence: Must have taken previous, must not have taken current
     return hasTakenPrevious && !hasTakenCurrent
-  })
+  }
+
+  // Filter eligible students for selected batch
+  const eligibleStudents = allCourseStudents
+    .filter(s => s.batchId?._id === selectedBatchId || s.batchId === selectedBatchId)
+    .filter(student => isStudentEligible(student, parseInt(selectedExamNumber)))
 
   // ...
 
@@ -109,24 +111,25 @@ export default function InstituteExamsPage() {
 
   // ... existing effects ...
 
+  // Filters batches to show only those with eligible students for the selected exam
+  const availableBatches = batches.filter(batch => {
+    if (batch.status !== 'Active') return false
+    // Check if ANY student in this batch is eligible for selectedExamNumber
+    const studentsInBatch = allCourseStudents.filter(s => s.batchId?._id === batch._id || s.batchId === batch._id)
+    const hasEligible = studentsInBatch.some(s => isStudentEligible(s, parseInt(selectedExamNumber)))
+    return hasEligible
+  })
+
   // Fetch batches when course changes
   useEffect(() => {
     if (selectedCourseId && instituteId) {
       fetchBatchesForCourse()
+      fetchStudentsForCourse() // Fetch all potential students once
       setSelectedBatchId('')
-      setBatchStudents([])
       setSelectedStudentIds([])
     }
   }, [selectedCourseId, instituteId])
 
-  // Fetch students when batch changes
-  useEffect(() => {
-    if (selectedBatchId && instituteId) {
-      fetchStudentsForBatch()
-    } else {
-      setBatchStudents([])
-    }
-  }, [selectedBatchId, instituteId])
 
   const fetchBatchesForCourse = async () => {
     try {
@@ -139,25 +142,23 @@ export default function InstituteExamsPage() {
     }
   }
 
-  const fetchStudentsForBatch = async () => {
-    // setLoading(true) // Don't block whole page, maybe local loading state?
+  const fetchStudentsForCourse = async () => {
     try {
-      // Fetch Royalty Paid students only for this batch
-      const res = await fetch(`/api/users?instituteId=${instituteId}&role=student&courseId=${selectedCourseId}&batchId=${selectedBatchId}&royaltyPaid=true`)
+      // Fetch ALL Royalty Paid students for this course
+      const res = await fetch(`/api/users?instituteId=${instituteId}&role=student&courseId=${selectedCourseId}&royaltyPaid=true`)
       const data = await res.json()
-      setBatchStudents(Array.isArray(data) ? data : [])
-      // Auto-select all? No, let user select.
+      setAllCourseStudents(Array.isArray(data) ? data : [])
       setSelectedStudentIds([])
-    } finally {
-      // setLoading(false)
+    } catch (e) {
+      console.error("Failed to fetch students")
     }
   }
 
   const toggleSelectAll = () => {
-    if (selectedStudentIds.length === batchStudents.length && batchStudents.length > 0) {
+    if (selectedStudentIds.length === eligibleStudents.length && eligibleStudents.length > 0) {
       setSelectedStudentIds([])
     } else {
-      setSelectedStudentIds(batchStudents.map(s => s._id))
+      setSelectedStudentIds(eligibleStudents.map(s => s._id))
     }
   }
 
@@ -425,7 +426,7 @@ export default function InstituteExamsPage() {
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Select Course</label>
                   <Select value={selectedCourseId} onValueChange={setSelectedCourseId}>
-                    <SelectTrigger>
+                    <SelectTrigger className="w-full [&>span]:truncate">
                       <SelectValue placeholder="Choose course..." />
                     </SelectTrigger>
                     <SelectContent>
@@ -437,27 +438,8 @@ export default function InstituteExamsPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Select Batch</label>
-                  <Select value={selectedBatchId} onValueChange={setSelectedBatchId} disabled={!selectedCourseId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder={!selectedCourseId ? "Select Course First" : "Choose active batch..."} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {batches.length === 0 ? (
-                        <SelectItem value="none" disabled>No active batches</SelectItem>
-                      ) : (
-                        batches.map((b: any) => (
-                          <SelectItem key={b._id} value={b._id}>{b.name}</SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-[10px] text-muted-foreground">Only Active batches are shown.</p>
-                </div>
-
-                <div className="space-y-2">
                   <label className="text-sm font-medium">Select Exam</label>
-                  <Select value={selectedExamNumber} onValueChange={setSelectedExamNumber} disabled={!selectedCourseId}>
+                  <Select value={selectedExamNumber} onValueChange={(val) => { setSelectedExamNumber(val); setSelectedBatchId('') }} disabled={!selectedCourseId}>
                     <SelectTrigger>
                       <SelectValue placeholder="Choose exam..." />
                     </SelectTrigger>
@@ -473,6 +455,25 @@ export default function InstituteExamsPage() {
                       )}
                     </SelectContent>
                   </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Select Batch</label>
+                  <Select value={selectedBatchId} onValueChange={setSelectedBatchId} disabled={!selectedCourseId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder={!selectedCourseId ? "Select Course First" : "Choose active batch..."} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableBatches.length === 0 ? (
+                        <SelectItem value="none" disabled>No eligible batches</SelectItem>
+                      ) : (
+                        availableBatches.map((b: any) => (
+                          <SelectItem key={b._id} value={b._id}>{b.name}</SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[10px] text-muted-foreground">Only batches with eligible students are shown.</p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">

@@ -18,6 +18,14 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
   try {
     await connectDB()
     const data = await req.json()
+
+    // Check for duplicate email if email is being updated
+    if (data.email) {
+      const existingUser = await User.findOne({ email: data.email, _id: { $ne: params.id } }).select('_id').lean()
+      if (existingUser) {
+        return NextResponse.json({ error: 'Email already exists used by another account.' }, { status: 400 })
+      }
+    }
     if (data.password) {
       data.password = await bcrypt.hash(data.password, 10)
     }
