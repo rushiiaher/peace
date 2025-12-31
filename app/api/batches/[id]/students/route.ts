@@ -88,6 +88,18 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
     const batch = await Batch.findById(params.id)
     if (!batch) return NextResponse.json({ error: 'Batch not found' }, { status: 404 })
 
+    // 0. Check for Completed Payment (Guard)
+    const Payment = (await import('@/lib/models/Payment')).default
+    const paidPayment = await Payment.findOne({
+      studentId,
+      courseId: batch.courseId,
+      status: 'Paid'
+    })
+
+    if (paidPayment) {
+      return NextResponse.json({ error: 'Cannot remove student: Payment to Super Admin is already complete.' }, { status: 400 })
+    }
+
     // 1. Remove from Batch
     await Batch.findByIdAndUpdate(params.id, { $pull: { students: studentId } })
 
@@ -99,11 +111,11 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
     }
 
     // 3. Remove/Void Pending Payment for this course (Clean up)
-    const Payment = (await import('@/lib/models/Payment')).default
+    // Clean up both Pending and Failed attempts
     await Payment.deleteMany({
       studentId,
       courseId: batch.courseId,
-      status: 'Pending'
+      status: { $in: ['Pending', 'Failed'] }
     })
 
     const updatedBatch = await Batch.findById(params.id).populate('students')

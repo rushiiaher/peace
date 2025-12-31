@@ -71,8 +71,11 @@ export default function InstituteExamsPage() {
   }
 
   // Filter eligible students for selected batch
+  const selectedBatch = batches.find(b => b._id === selectedBatchId)
+  const batchStudentIds = selectedBatch?.students?.map((s: any) => s._id || s) || []
+
   const eligibleStudents = allCourseStudents
-    .filter(s => s.batchId?._id === selectedBatchId || s.batchId === selectedBatchId)
+    .filter(s => batchStudentIds.includes(s._id))
     .filter(student => isStudentEligible(student, parseInt(selectedExamNumber)))
 
   // ...
@@ -111,14 +114,7 @@ export default function InstituteExamsPage() {
 
   // ... existing effects ...
 
-  // Filters batches to show only those with eligible students for the selected exam
-  const availableBatches = batches.filter(batch => {
-    if (batch.status !== 'Active') return false
-    // Check if ANY student in this batch is eligible for selectedExamNumber
-    const studentsInBatch = allCourseStudents.filter(s => s.batchId?._id === batch._id || s.batchId === batch._id)
-    const hasEligible = studentsInBatch.some(s => isStudentEligible(s, parseInt(selectedExamNumber)))
-    return hasEligible
-  })
+
 
   // Fetch batches when course changes
   useEffect(() => {
@@ -464,22 +460,23 @@ export default function InstituteExamsPage() {
                       <SelectValue placeholder={!selectedCourseId ? "Select Course First" : "Choose active batch..."} />
                     </SelectTrigger>
                     <SelectContent>
-                      {availableBatches.length === 0 ? (
-                        <SelectItem value="none" disabled>No eligible batches</SelectItem>
+                      {batches.length === 0 ? (
+                        <SelectItem value="none" disabled>No active batches</SelectItem>
                       ) : (
-                        availableBatches.map((b: any) => (
+                        batches.map((b: any) => (
                           <SelectItem key={b._id} value={b._id}>{b.name}</SelectItem>
                         ))
                       )}
                     </SelectContent>
                   </Select>
-                  <p className="text-[10px] text-muted-foreground">Only batches with eligible students are shown.</p>
+                  <p className="text-[10px] text-muted-foreground">Select a batch to view eligible students.</p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Date</label>
-                    <Input type="date" value={scheduleDate} onChange={(e) => setScheduleDate(e.target.value)} min={new Date(Date.now() + 86400000).toISOString().split('T')[0]} />
+                    <Input type="date" value={scheduleDate} onChange={(e) => setScheduleDate(e.target.value)} min={new Date(Date.now() + 6 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]} />
+                    <p className="text-[10px] text-muted-foreground">Please select a date at least 6 days from today.</p>
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Start Time</label>
