@@ -81,13 +81,20 @@ export async function POST(req: Request) {
 
     const busySystemNames = new Set<string>()
 
+    // Get buffer time from institute settings (default 30 minutes)
+    const bufferMinutes = institute.examTimings?.breakBetweenSections || 30
+
     existingExams.forEach((ex: any) => {
       const exStart = getMinutes(ex.startTime)
       let exEnd = getMinutes(ex.endTime)
       if (!exEnd || exEnd <= exStart) exEnd = exStart + (ex.duration || 60)
 
-      // Overlap: (StartA < EndB) && (EndA > StartB)
-      if (examStartMins < exEnd && examEndMins > exStart) {
+      // Add buffer time to exam end for system cooldown/cleanup
+      const exReservedEnd = exEnd + bufferMinutes
+      const currentReservedEnd = examEndMins + bufferMinutes
+
+      // Overlap check including buffer: (StartA < ReservedEndB) && (ReservedEndA > StartB)
+      if (examStartMins < exReservedEnd && currentReservedEnd > exStart) {
         ex.systemAssignments?.forEach((sa: any) => {
           if (sa.systemName) busySystemNames.add(sa.systemName)
         })

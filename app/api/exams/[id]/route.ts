@@ -8,6 +8,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     const exam = await Exam.findById(params.id)
       .populate('courseId', 'name code')
       .populate('instituteId', 'name')
+      .populate('systemAssignments.studentId', 'name email rollNo')
     if (!exam) return NextResponse.json({ error: 'Exam not found' }, { status: 404 })
     return NextResponse.json(exam)
   } catch (error) {

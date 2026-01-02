@@ -57,8 +57,11 @@ export default function EditExamPage() {
             setDate(examDate.toISOString().split('T')[0])
             setStartTime(examData.startTime)
 
-            // Fetch institute data
-            const instRes = await fetch(`/api/institutes/${examData.instituteId}`)
+            // Fetch institute data - FIXED: Get instituteId properly
+            const instituteId = examData.instituteId?._id || examData.instituteId
+            const instRes = await fetch(`/api/institutes/${instituteId}`)
+            if (!instRes.ok) throw new Error('Failed to fetch institute')
+
             const instData = await instRes.json()
             setInstitute(instData)
             setAllSystems(instData.systems || [])
@@ -68,13 +71,17 @@ export default function EditExamPage() {
 
             setLoading(false)
         } catch (error: any) {
+            console.error('Fetch exam error:', error)
             toast.error(error.message || 'Failed to load exam')
             setLoading(false)
         }
     }
 
     const checkSystemAvailability = async () => {
-        if (!date || !startTime || !exam) return
+        if (!date || !startTime || !exam || !institute) {
+            toast.error('Missing required data')
+            return
+        }
 
         setCheckingAvailability(true)
         try {
@@ -84,10 +91,6 @@ export default function EditExamPage() {
             const endDateTime = new Date(examDateTime.getTime() + duration * 60000)
             const endTime = endDateTime.toTimeString().slice(0, 5)
 
-            // Fetch all exams on this date
-            const res = await fetch(`/api/exams?instituteId=${exam.instituteId}&date=${date}`)
-            const examsOnDate = await res.json()
-
             // Calculate time in minutes for comparison
             const getMinutes = (timeStr: string) => {
                 const [h, m] = timeStr.split(':').map(Number)
@@ -96,6 +99,36 @@ export default function EditExamPage() {
 
             const examStartMins = getMinutes(startTime)
             const examEndMins = getMinutes(endTime)
+
+            // VALIDATE OPENING/CLOSING HOURS
+            const { examTimings } = institute
+            if (examTimings) {
+                const openMins = getMinutes(examTimings.openingTime || '09:00')
+                const closeMins = getMinutes(examTimings.closingTime || '18:00')
+
+                if (examStartMins < openMins) {
+                    toast.error(`Exam cannot start before opening time (${examTimings.openingTime})`)
+                    setCheckingAvailability(false)
+                    return
+                }
+                if (examStartMins >= closeMins) {
+                    toast.error(`Exam cannot start at or after closing time (${examTimings.closingTime})`)
+                    setCheckingAvailability(false)
+                    return
+                }
+                if (examEndMins > closeMins) {
+                    toast.error(`Exam ends at ${endTime}, which is after closing time (${examTimings.closingTime})`)
+                    setCheckingAvailability(false)
+                    return
+                }
+            }
+
+            // Fetch all exams on this date
+            const res = await fetch(`/api/exams?instituteId=${exam.instituteId?._id || exam.instituteId}&date=${date}`)
+            const examsOnDate = await res.json()
+
+            // Get buffer time from institute settings (default 30 minutes for cooldown/cleanup)
+            const bufferMinutes = institute.examTimings?.breakBetweenSections || 30
 
             // Find busy systems
             const busy = new Set<string>()
@@ -109,8 +142,12 @@ export default function EditExamPage() {
                 let exEnd = getMinutes(ex.endTime)
                 if (!exEnd || exEnd <= exStart) exEnd = exStart + (ex.duration || 60)
 
-                // Check for overlap: (StartA < EndB) && (EndA > StartB)
-                if (examStartMins < exEnd && examEndMins > exStart) {
+                // Add buffer time to exam end for system cooldown/cleanup
+                const exReservedEnd = exEnd + bufferMinutes
+                const currentReservedEnd = examEndMins + bufferMinutes
+
+                // Check for overlap including buffer: (StartA < ReservedEndB) && (ReservedEndA > StartB)
+                if (examStartMins < exReservedEnd && currentReservedEnd > exStart) {
                     ex.systemAssignments?.forEach((sa: any) => {
                         if (sa.systemName) busy.add(sa.systemName)
                     })
@@ -125,9 +162,10 @@ export default function EditExamPage() {
 
             setAvailableSystems(available)
 
-            toast.success(`Found ${available.length} available systems`)
-        } catch (error) {
-            toast.error('Failed to check system availability')
+            toast.success(`Found ${available.length} available systems (${busySystems.size} busy, ${hardwareAvailable.length - available.length} offline)`)
+        } catch (error: any) {
+            console.error('Availability check error:', error)
+            toast.error(error.message || 'Failed to check system availability')
         } finally {
             setCheckingAvailability(false)
         }
@@ -299,6 +337,23 @@ export default function EditExamPage() {
                                 {exam.duration} minutes
                             </div>
                         </div>
+
+                        {institute?.examTimings && (
+                            <div className="space-y-2">
+                                <Label>Institute Hours</Label>
+                                <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
+                                    <div className="flex items-center gap-2 text-xs text-blue-700 dark:text-blue-300">
+                                        <Clock className="w-3 h-3" />
+                                        <span className="font-medium">
+                                            {institute.examTimings.openingTime} - {institute.examTimings.closingTime}
+                                        </span>
+                                    </div>
+                                    <p className="text-[10px] text-blue-600/70 dark:text-blue-400/70 mt-0.5">
+                                        Exams must be within these hours
+                                    </p>
+                                </div>
+                            </div>
+                        )}
 
                         <Separator />
 
