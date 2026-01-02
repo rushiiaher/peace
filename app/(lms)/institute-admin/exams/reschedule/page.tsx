@@ -21,6 +21,7 @@ export default function RescheduleRequestPage() {
     const [allCourses, setAllCourses] = useState<any[]>([])
     const [allBatches, setAllBatches] = useState<any[]>([])
     const [allExams, setAllExams] = useState<any[]>([])
+    const [existingRequests, setExistingRequests] = useState<any[]>([]) // Track existing requests
 
     // Selection State
     const [selectedCourseId, setSelectedCourseId] = useState<string>('')
@@ -48,18 +49,21 @@ export default function RescheduleRequestPage() {
     const fetchData = async () => {
         setLoading(true)
         try {
-            const [coursesRes, batchesRes, examsRes] = await Promise.all([
+            const [coursesRes, batchesRes, examsRes, requestsRes] = await Promise.all([
                 fetch(`/api/institutes/${instituteId}/courses`),
                 fetch(`/api/batches?instituteId=${instituteId}`),
-                fetch(`/api/exams`) // Might need to filter by institute
+                fetch(`/api/exams`),
+                fetch(`/api/exams/reschedule-requests?instituteId=${instituteId}`) // Fetch existing requests
             ])
 
             const courses = await coursesRes.json()
             const batches = await batchesRes.json()
             const exams = await examsRes.json()
+            const requests = await requestsRes.json()
 
             setAllCourses(Array.isArray(courses) ? courses : [])
             setAllBatches(Array.isArray(batches) ? batches : [])
+            setExistingRequests(Array.isArray(requests) ? requests : [])
 
             const relevantExams = Array.isArray(exams) ? exams.filter((e: any) =>
                 (e.instituteId?._id === instituteId || e.instituteId === instituteId) && e.type === 'Final'
@@ -158,6 +162,16 @@ export default function RescheduleRequestPage() {
         setSelectedStudents(newSet)
     }
 
+    // Helper to get existing request status for a student
+    const getStudentRequestStatus = (studentId: string) => {
+        if (!selectedExamId) return null
+        const request = existingRequests.find(r =>
+            (r.studentId?._id || r.studentId) === studentId &&
+            (r.originalExamId?._id || r.originalExamId) === selectedExamId
+        )
+        return request
+    }
+
     const handleSubmit = async () => {
         if (selectedStudents.size === 0) {
             toast.error('Select at least one student')
@@ -178,9 +192,6 @@ export default function RescheduleRequestPage() {
                 reason: reasons[sid]
             }))
 
-            // Re-find the exam to be safe
-            const exam = allExams.find(e => e._id === selectedExamId)
-
             const res = await fetch('/api/exams/reschedule-requests', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -191,13 +202,21 @@ export default function RescheduleRequestPage() {
                 })
             })
 
+            const data = await res.json()
+
             if (res.ok) {
-                toast.success('Reschedule requests sent to Super Admin')
+                if (data.created > 0) {
+                    toast.success(`${data.created} reschedule request(s) sent to Super Admin`)
+                }
+                if (data.skipped > 0) {
+                    toast.warning(`${data.skipped} student(s) already have pending/approved requests`)
+                }
                 setSelectedStudents(new Set())
                 setReasons({})
-                // Optionally reset exam selection or navigate away
+                // Refresh existing requests to show new ones
+                fetchData()
             } else {
-                toast.error('Failed to submit requests')
+                toast.error(data.error || 'Failed to submit requests')
             }
         } catch (error) {
             toast.error('Submission error')
@@ -312,47 +331,74 @@ export default function RescheduleRequestPage() {
                                             <TableHead className="w-[50px]">Select</TableHead>
                                             <TableHead>Student</TableHead>
                                             <TableHead>Attendance Status</TableHead>
+                                            <TableHead>Request Status</TableHead>
                                             <TableHead>Reason for Reschedule</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {studentsToDisplay.map(student => (
-                                            <TableRow key={student.id}>
-                                                <TableCell>
-                                                    <Checkbox
-                                                        checked={selectedStudents.has(student.id)}
-                                                        onCheckedChange={() => toggleStudent(student.id)}
-                                                    />
-                                                </TableCell>
-                                                <TableCell>
-                                                    <div>
-                                                        <div className="font-medium">{student.name}</div>
-                                                        <div className="text-xs text-muted-foreground">{student.rollNo}</div>
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell>
-                                                    {student.attended ? (
-                                                        <span className="inline-flex items-center px-2 py-1 rounded bg-green-50 text-green-700 text-xs font-medium border border-green-200">
-                                                            Present
-                                                        </span>
-                                                    ) : (
-                                                        <span className="inline-flex items-center px-2 py-1 rounded bg-red-50 text-red-700 text-xs font-medium border border-red-200">
-                                                            Absent
-                                                        </span>
-                                                    )}
-                                                </TableCell>
-                                                <TableCell>
-                                                    {selectedStudents.has(student.id) && (
-                                                        <Textarea
-                                                            placeholder="Describe reason (e.g. Medical, Tech Issue)..."
-                                                            value={reasons[student.id] || ''}
-                                                            onChange={(e) => handleReasonChange(student.id, e.target.value)}
-                                                            className="min-h-[80px] text-sm"
+                                        {studentsToDisplay.map(student => {
+                                            const existingRequest = getStudentRequestStatus(student.id)
+                                            const hasActiveRequest = existingRequest &&
+                                                (existingRequest.status === 'Pending' || existingRequest.status === 'Approved')
+
+                                            return (
+                                                <TableRow key={student.id} className={hasActiveRequest ? 'bg-muted/30' : ''}>
+                                                    <TableCell>
+                                                        <Checkbox
+                                                            checked={selectedStudents.has(student.id)}
+                                                            onCheckedChange={() => toggleStudent(student.id)}
+                                                            disabled={hasActiveRequest}
                                                         />
-                                                    )}
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <div>
+                                                            <div className="font-medium">{student.name}</div>
+                                                            <div className="text-xs text-muted-foreground">{student.rollNo}</div>
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {student.attended ? (
+                                                            <span className="inline-flex items-center px-2 py-1 rounded bg-green-50 text-green-700 text-xs font-medium border border-green-200">
+                                                                Present
+                                                            </span>
+                                                        ) : (
+                                                            <span className="inline-flex items-center px-2 py-1 rounded bg-red-50 text-red-700 text-xs font-medium border border-red-200">
+                                                                Absent
+                                                            </span>
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {existingRequest ? (
+                                                            <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium border ${existingRequest.status === 'Pending'
+                                                                    ? 'bg-yellow-50 text-yellow-700 border-yellow-200'
+                                                                    : existingRequest.status === 'Approved'
+                                                                        ? 'bg-green-50 text-green-700 border-green-200'
+                                                                        : 'bg-red-50 text-red-700 border-red-200'
+                                                                }`}>
+                                                                {existingRequest.status}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-xs text-muted-foreground">No request</span>
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {existingRequest && hasActiveRequest ? (
+                                                            <div className="text-sm text-muted-foreground italic">
+                                                                {existingRequest.reason}
+                                                            </div>
+                                                        ) : selectedStudents.has(student.id) ? (
+                                                            <Textarea
+                                                                placeholder="Describe reason (e.g. Medical, Tech Issue)..."
+                                                                value={reasons[student.id] || ''}
+                                                                onChange={(e) => handleReasonChange(student.id, e.target.value)}
+                                                                className="min-h-[80px] text-sm"
+                                                            />
+                                                        ) : null}
+                                                    </TableCell>
+                                                </TableRow>
+                                            )
+                                        })
+                                        }
                                     </TableBody>
                                 </Table>
 
@@ -366,7 +412,8 @@ export default function RescheduleRequestPage() {
                         )}
                     </CardContent>
                 </Card>
-            )}
-        </div>
+            )
+            }
+        </div >
     )
 }

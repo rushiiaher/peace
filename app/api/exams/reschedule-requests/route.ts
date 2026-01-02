@@ -18,10 +18,26 @@ export async function POST(req: Request) {
         if (!originalExam) return NextResponse.json({ error: 'Original exam not found' }, { status: 404 })
 
         const createdRequests = []
+        const skippedStudents = []
 
         for (const reqData of requests) {
             const { studentId, reason } = reqData
             if (studentId && reason) {
+                // Check if a request already exists for this student and exam
+                const existingRequest = await RescheduleRequest.findOne({
+                    originalExamId,
+                    studentId,
+                    status: { $in: ['Pending', 'Approved'] } // Don't allow duplicate if pending or approved
+                })
+
+                if (existingRequest) {
+                    skippedStudents.push({
+                        studentId,
+                        reason: `Already has a ${existingRequest.status.toLowerCase()} request`
+                    })
+                    continue
+                }
+
                 const newReq = await RescheduleRequest.create({
                     instituteId,
                     originalExamId,
@@ -33,7 +49,12 @@ export async function POST(req: Request) {
             }
         }
 
-        return NextResponse.json({ message: 'Requests submitted successfully', count: createdRequests.length })
+        return NextResponse.json({
+            message: 'Requests processed successfully',
+            created: createdRequests.length,
+            skipped: skippedStudents.length,
+            skippedStudents
+        })
     } catch (error: any) {
         return NextResponse.json({ error: 'Failed to submit requests: ' + error.message }, { status: 500 })
     }

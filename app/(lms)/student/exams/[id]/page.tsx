@@ -195,6 +195,12 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
 
     const timeTaken = Math.floor((Date.now() - startTime) / 1000)
 
+    console.log('=== SUBMITTING EXAM ===')
+    console.log('Total Questions:', exam.questions?.length)
+    console.log('Answers Array:', answers)
+    console.log('Answered Count:', answers.filter(a => a !== -1).length)
+    console.log('Time Taken:', timeTaken, 'seconds')
+
     try {
       const res = await fetch(`/api/exams/${id}/submit`, {
         method: 'POST',
@@ -207,6 +213,10 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
           warnings
         })
       })
+
+      const responseData = await res.json()
+      console.log('Submission Response:', responseData)
+
       if (res.ok) {
         if (isAutoSubmit) {
           toast.error('Exam Auto-Submitted', {
@@ -217,9 +227,11 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
         }
         router.push('/student/exams')
       } else {
+        console.error('Submission failed:', responseData)
         toast.error('Failed to submit exam')
       }
     } catch (error) {
+      console.error('Submission error:', error)
       toast.error('Failed to submit exam')
     }
   }
@@ -368,6 +380,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
                     const newAnswers = [...answers]
                     newAnswers[currentQuestion] = parseInt(v)
                     setAnswers(newAnswers)
+                    console.log(`Question ${currentQuestion + 1}: Selected option ${parseInt(v)} (${String.fromCharCode(65 + parseInt(v))})`)
                   }}
                   className="space-y-3"
                 >
@@ -377,8 +390,11 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
                       className={`flex items-center space-x-3 p-4 rounded-lg border-2 transition-all cursor-pointer hover:bg-blue-50 dark:hover:bg-gray-700 ${answers[currentQuestion] === j ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-700'
                         }`}
                     >
-                      <RadioGroupItem value={j.toString()} id={`opt${j}`} />
-                      <Label htmlFor={`opt${j}`} className="cursor-pointer flex-1 text-base">
+                      <RadioGroupItem
+                        value={j.toString()}
+                        id={`q${currentQuestion}-opt${j}`}
+                      />
+                      <Label htmlFor={`q${currentQuestion}-opt${j}`} className="cursor-pointer flex-1 text-base">
                         <span className="font-medium mr-2">({String.fromCharCode(65 + j)})</span>
                         {opt}
                       </Label>
@@ -428,10 +444,10 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
               </Button>
             )}
           </div>
-        </div>
+        </div >
 
         {/* Question Palette */}
-        <div className="space-y-4">
+        < div className="space-y-4" >
           <Card className="shadow-lg sticky top-20">
             <CardContent className="p-4">
               <h3 className="font-semibold mb-4">Question Palette</h3>
@@ -477,8 +493,8 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
               </div>
             </CardContent>
           </Card>
-        </div>
-      </div>
-    </div>
+        </div >
+      </div >
+    </div >
   )
 }
