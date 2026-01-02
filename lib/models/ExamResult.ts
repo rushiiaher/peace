@@ -8,7 +8,9 @@ const ExamResultSchema = new mongoose.Schema({
   totalMarks: { type: Number, required: true },
   percentage: { type: Number },
   timeTaken: { type: Number },
-  submittedAt: { type: Date, default: Date.now }
+  submittedAt: { type: Date, default: Date.now },
+  superseded: { type: Boolean, default: false }, // True if replaced by rescheduled exam result
+  supersededBy: { type: mongoose.Schema.Types.ObjectId, ref: 'ExamResult' } // Points to new result
 })
 
 export default mongoose.models.ExamResult || mongoose.model('ExamResult', ExamResultSchema)

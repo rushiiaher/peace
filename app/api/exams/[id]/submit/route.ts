@@ -33,6 +33,9 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       return NextResponse.json(existingResult)
     }
 
+    // Check if this is a rescheduled exam (title contains "Rescheduled")
+    const isRescheduled = exam.title?.includes('(Rescheduled)')
+
     const result = await ExamResult.create({
       examId: params.id,
       studentId,
@@ -42,6 +45,36 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       percentage,
       timeTaken
     })
+
+    // If this is a rescheduled exam, mark previous results for this student/course as superseded
+    if (isRescheduled) {
+      const originalExamTitle = exam.title.replace(' (Rescheduled)', '')
+
+      // Find original exam (without "Rescheduled" suffix, same course)
+      const originalExam = await Exam.findOne({
+        courseId: exam.courseId,
+        instituteId: exam.instituteId,
+        title: originalExamTitle,
+        type: 'Final'
+      })
+
+      if (originalExam) {
+        // Mark old result as superseded
+        await ExamResult.updateMany(
+          {
+            studentId,
+            examId: originalExam._id,
+            superseded: false // Only update if not already superseded
+          },
+          {
+            $set: {
+              superseded: true,
+              supersededBy: result._id
+            }
+          }
+        )
+      }
+    }
 
     return NextResponse.json(result, { status: 201 })
   } catch (error: any) {
