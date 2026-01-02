@@ -515,11 +515,11 @@ export default function SuperAdminExamsPage() {
                             size="sm"
                             variant="outline"
                             className="h-8"
-                            onClick={() => handleEditExam(exam)}
+                            onClick={() => window.location.href = `/super-admin/exams/${exam._id}/edit`}
                             disabled={exam.status === 'Completed'}
                           >
                             <Edit className="w-3.5 h-3.5 mr-1.5" />
-                            Edit
+                            Edit Schedule
                           </Button>
 
                           {exam.status !== 'Completed' && (
@@ -716,11 +716,11 @@ export default function SuperAdminExamsPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => handleEditExam(exam)}
+                        onClick={() => window.location.href = `/super-admin/exams/${exam._id}/edit`}
                         disabled={exam.status === 'Completed'}
                       >
                         <Edit className="w-3.5 h-3.5 mr-1.5" />
-                        Edit
+                        Edit Schedule
                       </Button>
 
 
