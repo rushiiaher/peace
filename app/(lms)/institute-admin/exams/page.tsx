@@ -305,43 +305,81 @@ export default function InstituteExamsPage() {
   }
 
   const handleScheduleExam = async () => {
-    if (!selectedCourseId || selectedStudentIds.length === 0 || !scheduleDate || !startTime) {
-      toast.error('Please select course, students, date, and time')
+    console.log('=== Schedule Exam Button Clicked ===')
+    console.log('Selected Course ID:', selectedCourseId)
+    console.log('Selected Student IDs:', selectedStudentIds)
+    console.log('Schedule Date:', scheduleDate)
+    console.log('Start Time:', startTime)
+    console.log('Batch ID:', selectedBatchId)
+    console.log('Exam Number:', selectedExamNumber)
+
+    if (!selectedCourseId) {
+      toast.error('Please select a course')
+      return
+    }
+    if (selectedStudentIds.length === 0) {
+      toast.error('Please select at least one student')
+      return
+    }
+    if (!scheduleDate) {
+      toast.error('Please select a date')
+      return
+    }
+    if (!startTime) {
+      toast.error('Please select a start time')
+      return
+    }
+
+    // Validate date is at least 6 days in the future
+    const selectedDate = new Date(scheduleDate)
+    const minDate = new Date(Date.now() + 6 * 24 * 60 * 60 * 1000)
+    if (selectedDate < minDate) {
+      toast.error('Exam date must be at least 6 days from today')
       return
     }
 
     setScheduling(true)
     try {
+      console.log('Sending request to /api/exams/schedule-final...')
+      const requestBody = {
+        instituteId,
+        courseId: selectedCourseId,
+        studentIds: selectedStudentIds,
+        date: scheduleDate,
+        startTime,
+        title: scheduleTitle,
+        batchId: selectedBatchId,
+        examNumber: parseInt(selectedExamNumber)
+      }
+      console.log('Request body:', requestBody)
+
       const res = await fetch('/api/exams/schedule-final', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          instituteId,
-          courseId: selectedCourseId,
-          studentIds: selectedStudentIds,
-          date: scheduleDate,
-          startTime,
-          title: scheduleTitle,
-          batchId: selectedBatchId,
-          examNumber: parseInt(selectedExamNumber)
-        })
+        body: JSON.stringify(requestBody)
       })
 
+      console.log('Response status:', res.status)
       const data = await res.json()
+      console.log('Response data:', data)
+
       if (res.ok) {
-        toast.success(`Exam Scheduled Successfully`)
+        toast.success(`Exam Scheduled Successfully!`)
         setExams([...exams, data.exam ? data.exam : data])
         setSelectedStudentIds([])
         setScheduleTitle('')
         setActiveTab('final')
         fetchAdmitCards()
       } else {
-        toast.error(data.error || 'Failed to schedule')
+        console.error('Scheduling failed:', data.error)
+        toast.error(data.error || 'Failed to schedule exam')
       }
-    } catch (error) {
-      toast.error('Scheduling failed')
+    } catch (error: any) {
+      console.error('Error scheduling exam:', error)
+      toast.error(`Scheduling failed: ${error.message || 'Unknown error'}`)
     } finally {
       setScheduling(false)
+      console.log('=== Schedule Exam Complete ===')
     }
   }
 
