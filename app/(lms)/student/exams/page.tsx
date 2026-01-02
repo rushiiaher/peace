@@ -236,7 +236,10 @@ export default function StudentExamsPage() {
           ) : (
             exams.filter((e: any) => e.type === 'Final').map((exam: any) => {
               const attempted = results.some((r: any) => r.examId?._id === exam._id)
-              const assignment = exam.systemAssignments?.find((a: any) => a.studentId === studentId)
+              // Fix: Handle both populated (object) and unpopulated (string) studentId
+              const assignment = exam.systemAssignments?.find((a: any) =>
+                (a.studentId?._id || a.studentId) === studentId
+              )
               const isPresent = assignment?.attended || false
 
               return (

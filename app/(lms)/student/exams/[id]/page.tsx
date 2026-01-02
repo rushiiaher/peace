@@ -132,7 +132,10 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
         setTimeLeft(data.duration * 60)
 
         if (data.type === 'Final' && studentId) {
-          const assignment = data.systemAssignments?.find((a: any) => a.studentId === studentId)
+          // Fix: Handle both populated (object) and unpopulated (string) studentId
+          const assignment = data.systemAssignments?.find((a: any) =>
+            (a.studentId?._id || a.studentId) === studentId
+          )
           const isPresent = assignment?.attended || false
           setCanAttempt(isPresent)
 
