@@ -93,14 +93,16 @@ export default function FeesPage() {
     const examFee = course?.examFee || 0
     const certCharge = course?.certificateCharge || 0
     const bookPrice = course?.bookPrice || 0
-    const deliveryCharge = course?.deliveryCharge || 0
+    const deliveryCharge = course?.deliveryCharge || 0 // Not collected from students
 
     const royalty = examFee + certCharge
     const suggestedPrice = baseFee + royalty
     const institutePrice = courseAssignment.institutePrice || suggestedPrice
 
+    // Delivery charge is NOT included in student fees anymore
+    // Institute admin will pay delivery charges separately per batch to super admin
     const finalAmount = courseEnrollment.booksIncluded
-      ? institutePrice + bookPrice + deliveryCharge
+      ? institutePrice + bookPrice
       : institutePrice
 
     const studentPayments = payments.filter((p: any) =>
@@ -110,7 +112,7 @@ export default function FeesPage() {
     const paidAmount = studentPayments.reduce((sum: number, p: any) => sum + p.paidAmount, 0)
     const dueAmount = finalAmount - paidAmount
 
-    return { finalAmount, paidAmount, dueAmount, courseAssignment, course, payments: studentPayments, booksIncluded: courseEnrollment.booksIncluded }
+    return { finalAmount, paidAmount, dueAmount, courseAssignment, course, payments: studentPayments, booksIncluded: courseEnrollment.booksIncluded, deliveryCharge }
   }
 
   const getStudentTotalDue = (student: any) => {
@@ -968,13 +970,15 @@ export default function FeesPage() {
                       <div className="flex justify-between"><span>Certificate Charge:</span> <span>₹{feeDetails.course?.certificateCharge?.toLocaleString()}</span></div>
                       <div className="col-span-2 border-t border-blue-200 dark:border-blue-800 my-1"></div>
                       {feeDetails.booksIncluded && (
-                        <>
-                          <div className="flex justify-between"><span>Books:</span> <span>₹{feeDetails.course?.bookPrice?.toLocaleString()}</span></div>
-                          <div className="flex justify-between"><span>Delivery:</span> <span>₹{feeDetails.course?.deliveryCharge?.toLocaleString()}</span></div>
-                        </>
+                        <div className="flex justify-between"><span>Books:</span> <span>₹{feeDetails.course?.bookPrice?.toLocaleString()}</span></div>
                       )}
                       <div className="flex justify-between font-medium text-foreground"><span>Total:</span> <span>₹{feeDetails.finalAmount.toLocaleString()}</span></div>
                     </div>
+                    {feeDetails.booksIncluded && feeDetails.deliveryCharge > 0 && (
+                      <p className="text-[10px] text-muted-foreground mt-2 italic">
+                        Note: Delivery charges (₹{feeDetails.deliveryCharge.toLocaleString()}) are paid separately by institute per batch.
+                      </p>
+                    )}
                   </div>
                 </div>
               )
