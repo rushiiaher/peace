@@ -21,16 +21,27 @@ export default function SuperAdminExamsPage() {
   const [exams, setExams] = useState<any[]>([])
   const [courses, setCourses] = useState([])
   const [institutes, setInstitutes] = useState([])
+  const [batches, setBatches] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  // State for Create/DPP forms removed in favor of dedicated pages
   const [editOpen, setEditOpen] = useState(false)
   const [selectedExam, setSelectedExam] = useState<any>(null)
-  const [qbs, setQbs] = useState<any[]>([]) // Still needed for filter dropdowns
+  const [qbs, setQbs] = useState<any[]>([])
 
   const [searchQuery, setSearchQuery] = useState('')
-  // selectedCourseId repurposed for Filter
   const [filterCourseId, setFilterCourseId] = useState('')
   const [activeTab, setActiveTab] = useState("DPP")
+
+  // Enhanced filters for Final Exams
+  const [finalExamInstituteId, setFinalExamInstituteId] = useState('')
+  const [finalExamCourseId, setFinalExamCourseId] = useState('')
+  const [finalExamBatchStatus, setFinalExamBatchStatus] = useState('all') // all, active, inactive
+  const [finalExamBatchId, setFinalExamBatchId] = useState('')
+
+  // Enhanced filters for Rescheduled Exams (same pattern)
+  const [reschInstituteId, setReschInstituteId] = useState('')
+  const [reschCourseId, setReschCourseId] = useState('')
+  const [reschBatchStatus, setReschBatchStatus] = useState('all')
+  const [reschBatchId, setReschBatchId] = useState('')
 
   const [reschFilterCourse, setReschFilterCourse] = useState('all')
   const [reschFilterInst, setReschFilterInst] = useState('all')
@@ -40,6 +51,7 @@ export default function SuperAdminExamsPage() {
     fetchExams()
     fetchCourses()
     fetchInstitutes()
+    fetchBatches()
     fetchQBs()
   }, [])
 
@@ -73,6 +85,17 @@ export default function SuperAdminExamsPage() {
       setInstitutes(data)
     } catch (error) {
       toast.error('Failed to fetch institutes')
+    }
+  }
+
+  const fetchBatches = async () => {
+    try {
+      const res = await fetch('/api/batches')
+      const data = await res.json()
+      setBatches(Array.isArray(data) ? data : [])
+    } catch (error) {
+      console.error('Failed to fetch batches', error)
+      setBatches([])
     }
   }
 
@@ -336,60 +359,145 @@ export default function SuperAdminExamsPage() {
           <div className="space-y-4">
             <Card>
               <CardContent className="p-4">
-                <div className="flex flex-wrap gap-3">
-                  {/* Course Filter */}
-                  <Select value={reschFilterCourse} onValueChange={setReschFilterCourse}>
-                    <SelectTrigger className="w-[200px]">
-                      <SelectValue placeholder="Filter by Course" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Courses</SelectItem>
-                      {courses.map((c: any) => (
-                        <SelectItem key={c._id} value={c._id}>{c.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-
-                  {/* Institute Filter */}
-                  <Select value={reschFilterInst} onValueChange={setReschFilterInst}>
-                    <SelectTrigger className="w-[200px]">
-                      <SelectValue placeholder="Filter by Institute" />
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+                  {/* 1. Institute Filter */}
+                  <Select
+                    value={reschInstituteId}
+                    onValueChange={(value) => {
+                      setReschInstituteId(value)
+                      setReschCourseId('')
+                      setReschBatchId('')
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Institute" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Institutes</SelectItem>
-                      {institutes.map((i: any) => (
-                        <SelectItem key={i._id} value={i._id}>{i.name}</SelectItem>
+                      {institutes.map((inst: any) => (
+                        <SelectItem key={inst._id} value={inst._id}>{inst.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
 
-                  {/* Status Filter */}
-                  <Select value={reschFilterStatus} onValueChange={setReschFilterStatus}>
-                    <SelectTrigger className="w-[200px]">
-                      <SelectValue placeholder="Filter by Status" />
+                  {/* 2. Course Filter (allocated to selected institute) */}
+                  <Select
+                    value={reschCourseId}
+                    onValueChange={(value) => {
+                      setReschCourseId(value)
+                      setReschBatchId('')
+                    }}
+                    disabled={!reschInstituteId || reschInstituteId === 'all'}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Course" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="Scheduled">Scheduled</SelectItem>
-                      <SelectItem value="Active">Active</SelectItem>
-                      <SelectItem value="Completed">Completed</SelectItem>
+                      <SelectItem value="all">All Courses</SelectItem>
+                      {reschInstituteId && reschInstituteId !== 'all' &&
+                        institutes
+                          .find((inst: any) => inst._id === reschInstituteId)
+                          ?.courses?.map((courseId: any) => {
+                            const course: any = courses.find((c: any) => c._id === (courseId?._id || courseId))
+                            return course ? (
+                              <SelectItem key={course._id} value={course._id}>
+                                {course.name}
+                              </SelectItem>
+                            ) : null
+                          })
+                      }
                     </SelectContent>
                   </Select>
 
-                  <Button variant="outline" onClick={() => {
-                    setReschFilterCourse('all')
-                    setReschFilterInst('all')
-                    setReschFilterStatus('all')
-                  }}>Clear</Button>
+                  {/* 3. Batch Status Filter */}
+                  <Select
+                    value={reschBatchStatus}
+                    onValueChange={setReschBatchStatus}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Batch Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Batches</SelectItem>
+                      <SelectItem value="active">Active Only</SelectItem>
+                      <SelectItem value="inactive">Inactive Only</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  {/* 4. Batch Filter */}
+                  <Select
+                    value={reschBatchId}
+                    onValueChange={setReschBatchId}
+                    disabled={!reschCourseId || reschCourseId === 'all'}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Batch" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Batches</SelectItem>
+                      {batches
+                        .filter((batch: any) => {
+                          if (reschInstituteId && reschInstituteId !== 'all') {
+                            if ((batch.instituteId?._id || batch.instituteId) !== reschInstituteId) return false
+                          }
+                          if (reschCourseId && reschCourseId !== 'all') {
+                            if ((batch.courseId?._id || batch.courseId) !== reschCourseId) return false
+                          }
+                          if (reschBatchStatus !== 'all') {
+                            if (reschBatchStatus === 'active' && !batch.isActive) return false
+                            if (reschBatchStatus === 'inactive' && batch.isActive) return false
+                          }
+                          return true
+                        })
+                        .map((batch: any) => (
+                          <SelectItem key={batch._id} value={batch._id}>
+                            {batch.name} {!batch.isActive ? '(Inactive)' : ''}
+                          </SelectItem>
+                        ))
+                      }
+                    </SelectContent>
+                  </Select>
+
+                  {/* Clear Button */}
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setReschInstituteId('')
+                      setReschCourseId('')
+                      setReschBatchStatus('all')
+                      setReschBatchId('')
+                    }}
+                  >
+                    Clear
+                  </Button>
                 </div>
               </CardContent>
             </Card>
 
             {filterByType('Final')
               .filter((exam: any) => exam.title.includes('(Rescheduled)'))
-              .filter((exam: any) => reschFilterCourse === 'all' || exam.courseId?._id === reschFilterCourse)
-              .filter((exam: any) => reschFilterInst === 'all' || exam.instituteId?._id === reschFilterInst)
-              .filter((exam: any) => reschFilterStatus === 'all' || exam.status === reschFilterStatus)
+              .filter((exam: any) => {
+                // Filter by Institute
+                if (reschInstituteId && reschInstituteId !== 'all') {
+                  if ((exam.instituteId?._id || exam.instituteId) !== reschInstituteId) return false
+                }
+                // Filter by Course
+                if (reschCourseId && reschCourseId !== 'all') {
+                  if ((exam.courseId?._id || exam.courseId) !== reschCourseId) return false
+                }
+                // Filter by Batch
+                if (reschBatchId && reschBatchId !== 'all') {
+                  const hasBatchStudents = exam.systemAssignments?.some((sa: any) => {
+                    const student = sa.studentId
+                    if (student && student.batchId) {
+                      return (student.batchId._id || student.batchId) === reschBatchId
+                    }
+                    return false
+                  })
+                  if (!hasBatchStudents) return false
+                }
+                return true
+              })
               .map((exam: any) => {
                 const rescheduledCount = exam.systemAssignments?.length || 0
                 return (
@@ -538,7 +646,8 @@ export default function SuperAdminExamsPage() {
                     </CardContent>
                   </Card>
                 )
-              })}
+              })
+            }
           </div>
         )}
 
@@ -546,25 +655,18 @@ export default function SuperAdminExamsPage() {
           <div className="space-y-4">
             <Card>
               <CardContent className="p-4">
-                <div className="flex flex-wrap gap-3">
-                  <Select value={filterCourseId} onValueChange={(value) => {
-                    setFilterCourseId(value === 'all' ? '' : value)
-                  }}>
-                    <SelectTrigger className="w-[200px]">
-                      <SelectValue placeholder="Filter by Course" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Courses</SelectItem>
-                      {courses.map((course: any) => (
-                        <SelectItem key={course._id} value={course._id}>{course.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Select onValueChange={(value) => {
-                    setSearchQuery(value === 'all' ? '' : value)
-                  }}>
-                    <SelectTrigger className="w-[200px]">
-                      <SelectValue placeholder="Filter by Institute" />
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+                  {/* 1. Institute Filter */}
+                  <Select
+                    value={finalExamInstituteId}
+                    onValueChange={(value) => {
+                      setFinalExamInstituteId(value)
+                      setFinalExamCourseId('') // Reset course when institute changes
+                      setFinalExamBatchId('') // Reset batch when institute changes
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Institute" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Institutes</SelectItem>
@@ -573,34 +675,128 @@ export default function SuperAdminExamsPage() {
                       ))}
                     </SelectContent>
                   </Select>
-                  <Input
-                    type="date"
-                    className="w-[200px]"
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                  <Select onValueChange={(value) => setSearchQuery(value === 'all' ? '' : value)}>
-                    <SelectTrigger className="w-[200px]">
-                      <SelectValue placeholder="Filter by Status" />
+
+                  {/* 2. Course Filter (allocated to selected institute) */}
+                  <Select
+                    value={finalExamCourseId}
+                    onValueChange={(value) => {
+                      setFinalExamCourseId(value)
+                      setFinalExamBatchId('') // Reset batch when course changes
+                    }}
+                    disabled={!finalExamInstituteId || finalExamInstituteId === 'all'}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Course" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="Scheduled">Scheduled</SelectItem>
-                      <SelectItem value="Active">Active</SelectItem>
-                      <SelectItem value="Completed">Completed</SelectItem>
+                      <SelectItem value="all">All Courses</SelectItem>
+                      {finalExamInstituteId && finalExamInstituteId !== 'all' &&
+                        institutes
+                          .find((inst: any) => inst._id === finalExamInstituteId)
+                          ?.courses?.map((courseId: any) => {
+                            const course: any = courses.find((c: any) => c._id === (courseId?._id || courseId))
+                            return course ? (
+                              <SelectItem key={course._id} value={course._id}>
+                                {course.name}
+                              </SelectItem>
+                            ) : null
+                          })
+                      }
                     </SelectContent>
                   </Select>
-                  <Button variant="outline" onClick={() => { setFilterCourseId(''); setSearchQuery('') }}>Clear</Button>
+
+                  {/* 3. Batch Status Filter */}
+                  <Select
+                    value={finalExamBatchStatus}
+                    onValueChange={setFinalExamBatchStatus}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Batch Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Batches</SelectItem>
+                      <SelectItem value="active">Active Only</SelectItem>
+                      <SelectItem value="inactive">Inactive Only</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  {/* 4. Batch Filter (filtered by institute, course, and status) */}
+                  <Select
+                    value={finalExamBatchId}
+                    onValueChange={setFinalExamBatchId}
+                    disabled={!finalExamCourseId || finalExamCourseId === 'all'}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Batch" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Batches</SelectItem>
+                      {batches
+                        .filter((batch: any) => {
+                          // Filter by institute
+                          if (finalExamInstituteId && finalExamInstituteId !== 'all') {
+                            if ((batch.instituteId?._id || batch.instituteId) !== finalExamInstituteId) return false
+                          }
+                          // Filter by course
+                          if (finalExamCourseId && finalExamCourseId !== 'all') {
+                            if ((batch.courseId?._id || batch.courseId) !== finalExamCourseId) return false
+                          }
+                          // Filter by batch status
+                          if (finalExamBatchStatus !== 'all') {
+                            if (finalExamBatchStatus === 'active' && !batch.isActive) return false
+                            if (finalExamBatchStatus === 'inactive' && batch.isActive) return false
+                          }
+                          return true
+                        })
+                        .map((batch: any) => (
+                          <SelectItem key={batch._id} value={batch._id}>
+                            {batch.name} {!batch.isActive ? '(Inactive)' : ''}
+                          </SelectItem>
+                        ))
+                      }
+                    </SelectContent>
+                  </Select>
+
+                  {/* Clear Button */}
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setFinalExamInstituteId('')
+                      setFinalExamCourseId('')
+                      setFinalExamBatchStatus('all')
+                      setFinalExamBatchId('')
+                    }}
+                  >
+                    Clear
+                  </Button>
                 </div>
               </CardContent>
             </Card>
             {filterByType('Final')
               .filter((exam: any) => !exam.title.includes('(Rescheduled)'))
-              .filter((exam: any) => !filterCourseId || exam.courseId?._id === filterCourseId)
-              .filter((exam: any) => !searchQuery ||
-                exam.instituteId?._id === searchQuery ||
-                exam.status === searchQuery ||
-                new Date(exam.date).toISOString().split('T')[0] === searchQuery
-              )
+              .filter((exam: any) => {
+                // Filter by Institute
+                if (finalExamInstituteId && finalExamInstituteId !== 'all') {
+                  if ((exam.instituteId?._id || exam.instituteId) !== finalExamInstituteId) return false
+                }
+                // Filter by Course
+                if (finalExamCourseId && finalExamCourseId !== 'all') {
+                  if ((exam.courseId?._id || exam.courseId) !== finalExamCourseId) return false
+                }
+                // Filter by Batch (if exam has batch info)
+                if (finalExamBatchId && finalExamBatchId !== 'all') {
+                  // Check if any section in the exam has students from the selected batch
+                  const hasBatchStudents = exam.systemAssignments?.some((sa: any) => {
+                    const student = sa.studentId
+                    if (student && student.batchId) {
+                      return (student.batchId._id || student.batchId) === finalExamBatchId
+                    }
+                    return false
+                  })
+                  if (!hasBatchStudents) return false
+                }
+                return true
+              })
               .map((exam: any) => (
                 <Card key={exam._id} className="hover:shadow-lg transition-all border-l-4 border-l-purple-500 overflow-hidden group">
                   <CardContent className="p-0">
@@ -729,8 +925,9 @@ export default function SuperAdminExamsPage() {
                 </Card>
               ))}
           </div>
-        )}
-      </div>
+        )
+        }
+      </div >
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="sm:max-w-[500px]">
@@ -827,6 +1024,6 @@ export default function SuperAdminExamsPage() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </div >
   )
 }

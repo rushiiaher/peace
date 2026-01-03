@@ -177,6 +177,54 @@ export default function InventoryPage() {
 
     const getEnrollment = (student: any) => student.courses?.find((c: any) => (c.courseId?._id || c.courseId) === selectedCourse)
 
+    const handleExportCSV = () => {
+        if (filteredResults.length === 0) {
+            toast.error('No data to export')
+            return
+        }
+
+        // Prepare CSV headers
+        const headers = ['Student Name', 'Mother Name', 'Roll No', 'Email', 'Phone', 'Marks Details', 'Percentage', 'Status']
+
+        // Prepare CSV rows
+        const rows = filteredResults.map(res => {
+            const marksDisplay = [
+                ...res.evaluationMarks.map((m: any) => `${m.name}: ${m.marksObtained}`),
+                res.onlineExamScore !== undefined ? `Final Exam: ${res.onlineExamScore}` : null
+            ].filter(Boolean).join('; ')
+
+            return [
+                res.studentId?.name || '',
+                res.studentId?.motherName || '',
+                res.studentId?.rollNo || '',
+                res.studentId?.email || '',
+                res.studentId?.phone || '',
+                marksDisplay,
+                `${res.percentage}%`,
+                res.certificateDispatched ? 'Dispatched' : 'Pending'
+            ]
+        })
+
+        // Create CSV content
+        const csvContent = [
+            headers.join(','),
+            ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+        ].join('\n')
+
+        // Create and trigger download
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+        const link = document.createElement('a')
+        const url = URL.createObjectURL(blob)
+        link.setAttribute('href', url)
+        link.setAttribute('download', `certificates_export_${new Date().toISOString().split('T')[0]}.csv`)
+        link.style.visibility = 'hidden'
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+
+        toast.success('CSV exported successfully')
+    }
+
     // Client-side filtering for Search Query
     const filteredStudents = students.filter(student =>
         student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -371,7 +419,7 @@ export default function InventoryPage() {
                         {/* Actions */}
                         {filteredResults.length > 0 && (
                             <div className="flex justify-end gap-2">
-                                <Button variant="outline" className="gap-2">
+                                <Button variant="outline" className="gap-2" onClick={handleExportCSV}>
                                     <Download className="w-4 h-4" /> Export CSV
                                 </Button>
                                 <Button variant="outline" onClick={() => handleDispatch('certificate')} className="gap-2 bg-blue-50 text-blue-600 hover:bg-blue-100 border-blue-200">

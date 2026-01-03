@@ -53,7 +53,13 @@ export function CourseForm({ initialData, mode }: CourseFormProps) {
     }
 
     useEffect(() => {
-        fetch('/api/question-banks')
+        // Fetch question banks filtered by course
+        const courseId = initialData?._id || initialData?.id
+        const qbUrl = courseId
+            ? `/api/question-banks?courseId=${courseId}`
+            : '/api/question-banks'
+
+        fetch(qbUrl)
             .then(res => res.json())
             .then(data => setQbs(Array.isArray(data) ? data : []))
             .catch(err => console.error("Failed to fetch QBs", err))
@@ -62,7 +68,7 @@ export function CourseForm({ initialData, mode }: CourseFormProps) {
         if ((!initialData?.examConfigurations || initialData.examConfigurations.length === 0) && finalExamCount > 0) {
             updateExamConfigsCount(finalExamCount)
         }
-    }, [])
+    }, [initialData])
 
     const updateExamConfigsCount = (count: number) => {
         setFinalExamCount(count)

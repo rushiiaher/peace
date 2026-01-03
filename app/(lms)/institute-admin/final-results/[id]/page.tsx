@@ -85,21 +85,47 @@ export default function BatchResultEntryPage() {
             setCourse(currentBatch.courseId)
             const courseId = currentBatch.courseId._id || currentBatch.courseId
 
-            // 2.1 Fetch Final Exam Metadata & Results
+            // 2.1 Fetch ALL Final Exam Metadata & Results (including rescheduled ones)
             let fExamResults: any[] = []
             let fExamMeta: any = null
             try {
                 const examsRes = await fetch(`/api/exams?courseId=${courseId}&type=Final`)
                 const exams = await examsRes.json()
                 if (exams.length > 0) {
-                    fExamMeta = exams[0] // Latest final exam
+                    // Get the most recent exam for metadata (marks, duration, etc.)
+                    fExamMeta = exams[0]
                     setFinalExamMetadata(fExamMeta)
 
-                    const eresRes = await fetch(`/api/exam-results?examId=${fExamMeta._id}`)
-                    fExamResults = await eresRes.json()
+                    // Fetch non-superseded results from ALL Final exams for this course
+                    // This handles cases where students took original or rescheduled exams
+                    const allExamIds = exams.map((e: any) => e._id)
+
+                    const resultsPromises = allExamIds.map((examId: string) =>
+                        fetch(`/api/exam-results?examId=${examId}`).then(r => r.json())
+                    )
+
+                    const allExamResults = await Promise.all(resultsPromises)
+                    const flatResults = allExamResults.flat()
+
+                    // Filter out superseded results and keep only latest for each student
+                    const studentResultMap = new Map()
+                    flatResults.forEach((result: any) => {
+                        if (result.superseded !== true) {
+                            const studentId = result.studentId?._id || result.studentId
+                            // Keep the latest result (higher score or more recent)
+                            if (!studentResultMap.has(studentId) ||
+                                result.score > studentResultMap.get(studentId).score ||
+                                new Date(result.submittedAt) > new Date(studentResultMap.get(studentId).submittedAt)) {
+                                studentResultMap.set(studentId, result)
+                            }
+                        }
+                    })
+
+                    fExamResults = Array.from(studentResultMap.values())
                     setFinalExamResults(fExamResults)
                 }
             } catch (e) { console.error("Exam fetch error", e) }
+
 
             // 3. Fetch Students (Royalty Paid Only)
             const studentsRes = await fetch(`/api/users?instituteId=${instituteId}&role=student&courseId=${courseId}&royaltyPaid=true&batchId=${batchId}`)

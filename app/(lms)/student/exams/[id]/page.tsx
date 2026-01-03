@@ -21,15 +21,18 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
   const [startTime] = useState(Date.now())
   const [studentId, setStudentId] = useState<string | null>(null)
   const [studentName, setStudentName] = useState<string>('')
+  const [studentDetails, setStudentDetails] = useState<any>(null)
   const [timeLeft, setTimeLeft] = useState<number>(0)
   const [canAttempt, setCanAttempt] = useState(false)
   const [countdown, setCountdown] = useState<number | null>(null)
   const [examStarted, setExamStarted] = useState(false)
+  const [elapsedTime, setElapsedTime] = useState(0) // Track elapsed seconds
 
   // Security States
   const [warnings, setWarnings] = useState(0)
-  const [isFullScreen, setIsFullScreen] = useState(false) // Default to true to prevent initial flicker, actual check in useEffect
+  const [isFullScreen, setIsFullScreen] = useState(false)
   const [hasSubmitted, setHasSubmitted] = useState(false)
+  const [lastViolationTime, setLastViolationTime] = useState(0) // Debounce violations
 
   // Full Screen & Security Logic
   const enterFullScreen = () => {
@@ -39,8 +42,14 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
     }
   }
 
-  // Handle violations
+  // Handle violations with debouncing to prevent duplicate warnings
   const handleViolation = (type: string) => {
+    const now = Date.now()
+    // Ignore if violation was triggered less than 2 seconds ago
+    if (now - lastViolationTime < 2000) return
+
+    setLastViolationTime(now)
+
     if (warnings >= 3) {
       handleSubmit(true)
       return
@@ -70,6 +79,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
     // 2. Event Listeners
     const handleVisibilityChange = () => {
       if (document.hidden) {
+        console.log('Visibility violation detected - tab switch/minimize')
         handleViolation("Tab Switch Detected")
       }
     }
@@ -77,22 +87,12 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
     const handleFullScreenChange = () => {
       const isFull = !!document.fullscreenElement
       setIsFullScreen(isFull)
-      if (!isFull) {
-        // Allow a small grace period or just warn immediately?
-        // Let's warn but not count as violation immediately unless they don't go back?
-        // Strategy: Just UI block, NO violation on exit unless they do something else?
-        // User request: "if they try to go back they get a warning that if they switch they are going to loose the exam"
-        // Let's just track it via state for the blocker UI
-      }
+      // Full screen exit just shows blocker UI, doesn't count as violation
+      // Actual violations are tracked via visibility change
     }
 
-    const handleBlur = () => {
-      handleViolation("Window Focus Lost")
-    }
-
-    // prevent console opening attempts roughly
+    // prevent console opening attempts
     const handleKeydown = (e: KeyboardEvent) => {
-      // Prevent F12, Ctrl+Shift+I, Alt+Tab (can't really prevent alt-tab but can detect blur)
       if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I')) {
         e.preventDefault()
       }
@@ -100,14 +100,12 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
 
     document.addEventListener("visibilitychange", handleVisibilityChange)
     document.addEventListener("fullscreenchange", handleFullScreenChange)
-    window.addEventListener("blur", handleBlur)
     window.addEventListener("keydown", handleKeydown)
 
     return () => {
       clearTimeout(timer)
       document.removeEventListener("visibilitychange", handleVisibilityChange)
       document.removeEventListener("fullscreenchange", handleFullScreenChange)
-      window.removeEventListener("blur", handleBlur)
       window.removeEventListener("keydown", handleKeydown)
     }
   }, [examStarted, canAttempt, hasSubmitted])
@@ -118,6 +116,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
       const userData = JSON.parse(user)
       setStudentId(userData.id || userData._id)
       setStudentName(userData.name || 'Student')
+      setStudentDetails(userData) // Save full details for display
     }
   }, [])
 
@@ -184,6 +183,8 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
         }
         return prev - 1
       })
+      // Track elapsed time
+      setElapsedTime(prev => prev + 1)
     }, 1000)
 
     return () => clearInterval(timer)
@@ -375,7 +376,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
                 <p className="text-base leading-relaxed">{currentQ?.question}</p>
 
                 <RadioGroup
-                  value={answers[currentQuestion] !== undefined && answers[currentQuestion] !== -1 ? answers[currentQuestion].toString() : undefined}
+                  value={answers[currentQuestion] !== undefined && answers[currentQuestion] !== -1 ? answers[currentQuestion].toString() : ""}
                   onValueChange={(v) => {
                     const newAnswers = [...answers]
                     newAnswers[currentQuestion] = parseInt(v)
@@ -406,53 +407,94 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
           </Card>
 
           {/* Navigation Buttons */}
-          <div className="flex items-center justify-between gap-4">
-            <Button
-              variant="outline"
-              onClick={() => setCurrentQuestion(Math.max(0, currentQuestion - 1))}
-              disabled={currentQuestion === 0}
-              className="flex-1"
-            >
-              <ChevronLeft className="w-4 h-4 mr-2" />
-              Previous
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => {
-                const newAnswers = [...answers]
-                newAnswers[currentQuestion] = -1
-                setAnswers(newAnswers)
-              }}
-            >
-              Clear Response
-            </Button>
-            {currentQuestion < exam.questions?.length - 1 ? (
+          <div className="space-y-3">
+            {/* Main Navigation Row */}
+            <div className="flex items-center gap-3">
               <Button
-                onClick={() => setCurrentQuestion(currentQuestion + 1)}
+                variant="outline"
+                onClick={() => setCurrentQuestion(Math.max(0, currentQuestion - 1))}
+                disabled={currentQuestion === 0}
                 className="flex-1"
+                size="lg"
               >
-                Next
-                <ChevronRight className="w-4 h-4 ml-2" />
+                <ChevronLeft className="w-4 h-4 mr-2" />
+                Previous
               </Button>
-            ) : (
               <Button
-                onClick={() => handleSubmit()}
-                className="flex-1 bg-green-600 hover:bg-green-700"
+                variant="outline"
+                onClick={() => {
+                  const newAnswers = [...answers]
+                  newAnswers[currentQuestion] = -1
+                  setAnswers(newAnswers)
+                }}
+                size="lg"
               >
-                <CheckCircle2 className="w-4 h-4 mr-2" />
-                Submit Exam
+                Clear Response
               </Button>
+              {currentQuestion < exam.questions?.length - 1 && (
+                <Button
+                  onClick={() => setCurrentQuestion(currentQuestion + 1)}
+                  className="flex-1"
+                  size="lg"
+                >
+                  Next
+                  <ChevronRight className="w-4 h-4 ml-2" />
+                </Button>
+              )}
+            </div>
+
+            {/* Separate Submit Exam Button */}
+            <Button
+              onClick={() => handleSubmit()}
+              disabled={elapsedTime < 1800} // 30 minutes = 1800 seconds
+              className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold py-6"
+              size="lg"
+            >
+              <CheckCircle2 className="w-5 h-5 mr-2" />
+              {elapsedTime < 1800
+                ? `Submit Exam (Available in ${Math.ceil((1800 - elapsedTime) / 60)} min)`
+                : 'Submit Exam'}
+            </Button>
+
+            {elapsedTime < 1800 && (
+              <p className="text-xs text-center text-muted-foreground">
+                Submit button will be enabled after 30 minutes from exam start
+              </p>
             )}
           </div>
         </div >
 
         {/* Question Palette */}
-        < div className="space-y-4" >
+        <div className="space-y-4">
+          {/* Student Details Card */}
+          {studentDetails && (
+            <Card className="shadow-lg">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
+                    {studentDetails.documents?.photo ? (
+                      <img src={studentDetails.documents.photo} alt={studentName} className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-2xl font-bold text-primary">
+                        {studentName.charAt(0)}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-sm">{studentName}</h4>
+                    <p className="text-xs text-muted-foreground">Roll: {studentDetails.rollNo || 'N/A'}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{exam.title}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <Card className="shadow-lg sticky top-20">
             <CardContent className="p-4">
               <h3 className="font-semibold mb-4">Question Palette</h3>
 
-              <div className="space-y-4 mb-4">
+              <div className="space-y-3 mb-4">
                 <div className="flex items-center gap-2 text-xs">
                   <div className="w-6 h-6 rounded bg-green-500 flex items-center justify-center text-white font-medium">{answeredCount}</div>
                   <span>Answered</span>
@@ -462,8 +504,12 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
                   <span>Not Answered</span>
                 </div>
                 <div className="flex items-center gap-2 text-xs">
-                  <div className="w-6 h-6 rounded bg-purple-500 flex items-center justify-center text-white font-medium">{markedCount}</div>
+                  <div className="w-6 h-6 rounded bg-violet-500 flex items-center justify-center text-white font-medium">{markedCount}</div>
                   <span>Marked for Review</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs">
+                  <div className="w-6 h-6 rounded bg-purple-600 flex items-center justify-center text-white font-medium">-</div>
+                  <span>Answered + Marked</span>
                 </div>
               </div>
 
@@ -479,10 +525,13 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
                         key={i}
                         onClick={() => setCurrentQuestion(i)}
                         className={`w-8 h-8 rounded-sm font-medium text-xs transition-all flex items-center justify-center ${isCurrent ? 'ring-2 ring-blue-500 ring-offset-1' : ''
-                          } ${isAnswered && isMarked ? 'bg-purple-500 text-white hover:bg-purple-600' :
-                            isAnswered ? 'bg-green-500 text-white hover:bg-green-600' :
-                              isMarked ? 'bg-orange-500 text-white hover:bg-orange-600' :
-                                'bg-red-500 text-white hover:bg-red-600'
+                          } ${isAnswered && isMarked
+                            ? 'bg-purple-600 text-white hover:bg-purple-700'
+                            : isAnswered
+                              ? 'bg-green-500 text-white hover:bg-green-600'
+                              : isMarked
+                                ? 'bg-violet-500 text-white hover:bg-violet-600'
+                                : 'bg-red-500 text-white hover:bg-red-600'
                           }`}
                       >
                         {i + 1}
