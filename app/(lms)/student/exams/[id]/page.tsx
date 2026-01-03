@@ -466,24 +466,37 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
 
         {/* Question Palette */}
         <div className="space-y-4">
-          {/* Student Details Card */}
+          {/* Student Details Card - ID Verification */}
           {studentDetails && (
-            <Card className="shadow-lg">
+            <Card className="shadow-lg border-2 border-primary/20">
               <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
-                    {studentDetails.documents?.photo ? (
-                      <img src={studentDetails.documents.photo} alt={studentName} className="w-full h-full object-cover" />
-                    ) : (
-                      <span className="text-2xl font-bold text-primary">
-                        {studentName.charAt(0)}
-                      </span>
-                    )}
+                <div className="flex items-start gap-3">
+                  {/* Rectangular Photo ID */}
+                  <div className="shrink-0">
+                    <div className="w-20 h-24 rounded-lg border-2 border-primary/30 bg-muted/30 flex items-center justify-center overflow-hidden">
+                      {studentDetails.documents?.photo ? (
+                        <img
+                          src={studentDetails.documents.photo}
+                          alt={studentName}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-primary/10 flex items-center justify-center">
+                          <span className="text-3xl font-bold text-primary">
+                            {studentName.charAt(0)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-[9px] text-center text-muted-foreground mt-1">Student ID</p>
                   </div>
-                  <div className="flex-1">
-                    <h4 className="font-semibold text-sm">{studentName}</h4>
+
+                  {/* Student Info */}
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-bold text-sm truncate">{studentName}</h4>
                     <p className="text-xs text-muted-foreground">Roll: {studentDetails.rollNo || 'N/A'}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{exam.title}</p>
+                    <p className="text-[11px] text-muted-foreground mt-1 line-clamp-2">{exam.title}</p>
+                    <Badge variant="outline" className="mt-2 text-[10px]">Verified</Badge>
                   </div>
                 </div>
               </CardContent>

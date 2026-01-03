@@ -183,40 +183,90 @@ export default function InventoryPage() {
             return
         }
 
-        // Prepare CSV headers
-        const headers = ['Student Name', 'Mother Name', 'Roll No', 'Email', 'Phone', 'Marks Details', 'Percentage', 'Status']
+        // Get context info
+        const selectedInst = institutes.find((i: any) => i._id === selectedInstitute)
+        const selectedCrs = courses.find((c: any) => (c.courseId?._id || c.courseId._id) === selectedCourse)
+        const selectedBtch = batches.find((b: any) => b._id === selectedBatch)
+
+        const instituteName = selectedInst?.name || 'All Institutes'
+        const courseName = selectedCrs?.courseId?.name || 'All Courses'
+        const batchName = selectedBtch?.name || 'All Batches'
+
+        // Collect all unique evaluation component names
+        const allEvalComponents = new Set<string>()
+        filteredResults.forEach(res => {
+            res.evaluationMarks?.forEach((m: any) => {
+                allEvalComponents.add(m.name)
+            })
+        })
+        const evalComponentNames = Array.from(allEvalComponents).sort()
+
+        // Build dynamic headers
+        const baseHeaders = ['Sr. No', 'Student Name', 'Mother Name', 'Roll No', 'Email', 'Phone']
+        const marksHeaders = [...evalComponentNames, 'Final Exam']
+        const summaryHeaders = ['Total Marks', 'Percentage', 'Dispatch Status']
+        const headers = [...baseHeaders, ...marksHeaders, ...summaryHeaders]
 
         // Prepare CSV rows
-        const rows = filteredResults.map(res => {
-            const marksDisplay = [
-                ...res.evaluationMarks.map((m: any) => `${m.name}: ${m.marksObtained}`),
-                res.onlineExamScore !== undefined ? `Final Exam: ${res.onlineExamScore}` : null
-            ].filter(Boolean).join('; ')
-
-            return [
+        const rows = filteredResults.map((res, index) => {
+            const baseData = [
+                (index + 1).toString(),
                 res.studentId?.name || '',
                 res.studentId?.motherName || '',
                 res.studentId?.rollNo || '',
                 res.studentId?.email || '',
-                res.studentId?.phone || '',
-                marksDisplay,
-                `${res.percentage}%`,
+                res.studentId?.phone || ''
+            ]
+
+            // Map evaluation marks to their columns
+            const marksData = evalComponentNames.map(componentName => {
+                const mark = res.evaluationMarks?.find((m: any) => m.name === componentName)
+                return mark ? mark.marksObtained.toString() : '-'
+            })
+
+            // Add Final Exam score (use onlineExamScore, not from evaluationMarks)
+            const finalExamScore = res.onlineExamScore !== undefined && res.onlineExamScore !== null
+                ? res.onlineExamScore.toString()
+                : '-'
+            marksData.push(finalExamScore)
+
+            // Summary data
+            const summaryData = [
+                res.totalMarks?.toString() || '-',
+                res.percentage ? `${res.percentage}%` : '-',
                 res.certificateDispatched ? 'Dispatched' : 'Pending'
             ]
+
+            return [...baseData, ...marksData, ...summaryData]
         })
 
-        // Create CSV content
-        const csvContent = [
+        // Create CSV content with context header
+        const csvLines = [
+            // Context Information
+            `Institute,"${instituteName}"`,
+            `Course,"${courseName}"`,
+            `Batch,"${batchName}"`,
+            `Export Date,"${new Date().toLocaleDateString()}"`,
+            `Total Students,"${filteredResults.length}"`,
+            '', // Empty line
+            // Column Headers
             headers.join(','),
+            // Data Rows
             ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
-        ].join('\n')
+        ]
+
+        const csvContent = csvLines.join('\n')
 
         // Create and trigger download
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
         const link = document.createElement('a')
         const url = URL.createObjectURL(blob)
         link.setAttribute('href', url)
-        link.setAttribute('download', `certificates_export_${new Date().toISOString().split('T')[0]}.csv`)
+
+        // Better filename with context
+        const filename = `${instituteName.replace(/\s+/g, '_')}_${courseName.replace(/\s+/g, '_')}_Certificates_${new Date().toISOString().split('T')[0]}.csv`
+        link.setAttribute('download', filename)
+
         link.style.visibility = 'hidden'
         document.body.appendChild(link)
         link.click()

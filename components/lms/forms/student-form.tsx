@@ -145,7 +145,6 @@ export function StudentForm({
                     <h3>Account Details</h3>
                 </div>
                 <div className="flex flex-col md:flex-row gap-6">
-                    {/* Photo Upload Section */}
                     <div className="shrink-0 flex flex-col items-center space-y-3">
                         <div className="w-32 h-40 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center overflow-hidden bg-muted/50 relative group">
                             {photoPreview ? (
@@ -155,7 +154,7 @@ export function StudentForm({
                             )}
                             <input
                                 type="file"
-                                accept="image/*"
+                                accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,image/bmp,image/svg+xml"
                                 onChange={handlePhotoChange}
                                 className="absolute inset-0 opacity-0 cursor-pointer z-10"
                                 title="Upload Photo"
@@ -164,7 +163,10 @@ export function StudentForm({
                                 <Edit className="w-6 h-6 text-white" />
                             </div>
                         </div>
-                        <p className="text-xs text-muted-foreground">Upload Photo</p>
+                        <div className="text-center space-y-1">
+                            <p className="text-xs text-muted-foreground font-medium">Upload Photo</p>
+                            <p className="text-[10px] text-muted-foreground/70">JPG, PNG, GIF, WebP</p>
+                        </div>
                     </div>
 
                     <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-6">
