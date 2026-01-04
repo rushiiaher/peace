@@ -128,7 +128,8 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
         setExam({ ...data, questions: shuffledQuestions })
         setAnswers(new Array(shuffledQuestions.length).fill(-1))
         setMarkedForReview(new Array(shuffledQuestions.length).fill(false))
-        setTimeLeft(data.duration * 60)
+        // Duration is already in seconds from the API
+        setTimeLeft(data.duration)
 
         if (data.type === 'Final' && studentId) {
           // Fix: Handle both populated (object) and unpopulated (string) studentId
@@ -219,6 +220,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
       console.log('Submission Response:', responseData)
 
       if (res.ok) {
+        setHasSubmitted(true)
         if (isAutoSubmit) {
           toast.error('Exam Auto-Submitted', {
             description: 'Maximum security violations reached.'
@@ -226,7 +228,10 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
         } else {
           toast.success('Exam submitted successfully')
         }
-        router.push('/student/exams')
+        // Redirect to thank you page after 5 seconds
+        setTimeout(() => {
+          router.push('/student/exams')
+        }, 5000)
       } else {
         console.error('Submission failed:', responseData)
         toast.error('Failed to submit exam')
@@ -244,6 +249,95 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
   }
 
   if (!exam) return <div className="flex items-center justify-center min-h-[calc(100vh-64px)]"><Loader /></div>
+
+  // Thank You Page after submission
+  if (hasSubmitted) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-blue-50 to-purple-50 dark:from-gray-900 dark:to-gray-800 relative overflow-hidden">
+        {/* Confetti Effect */}
+        <div className="absolute inset-0 pointer-events-none">
+          {[...Array(50)].map((_, i) => (
+            <div
+              key={i}
+              className="absolute w-2 h-2 bg-primary rounded-full animate-ping"
+              style={{
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`,
+                animationDelay: `${Math.random() * 2}s`,
+                animationDuration: `${2 + Math.random() * 3}s`,
+                opacity: 0.6
+              }}
+            />
+          ))}
+        </div>
+
+        <Card className="max-w-2xl w-full mx-4 shadow-2xl border-2 border-primary/20 relative z-10">
+          <CardContent className="py-16 text-center space-y-6">
+            {/* Success Icon */}
+            <div className="mx-auto w-24 h-24 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mb-4">
+              <CheckCircle2 className="w-16 h-16 text-green-600 dark:text-green-400" />
+            </div>
+
+            {/* Thank You Message */}
+            <div className="space-y-2">
+              <h1 className="text-4xl font-bold text-primary">Thank You!</h1>
+              <p className="text-xl text-muted-foreground">Your exam has been submitted successfully</p>
+            </div>
+
+            {/* Exam Details */}
+            <div className="bg-muted/50 rounded-lg p-6 space-y-3 text-left max-w-md mx-auto">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Exam</span>
+                <span className="font-semibold">{exam.title}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Student</span>
+                <span className="font-semibold">{studentName}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Questions Attempted</span>
+                <span className="font-semibold">{answers.filter(a => a !== -1).length} / {exam.questions?.length}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Time Taken</span>
+                <span className="font-semibold">{formatTime(Math.floor((Date.now() - startTime) / 1000))}</span>
+              </div>
+              {warnings > 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Security Warnings</span>
+                  <span className="font-semibold text-orange-600">{warnings}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Message */}
+            <div className="space-y-2">
+              <p className="text-muted-foreground">
+                Your answers have been recorded and will be evaluated shortly.
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Results will be available once the evaluation is complete.
+              </p>
+            </div>
+
+            {/* Redirect Message */}
+            <div className="pt-4">
+              <p className="text-sm text-muted-foreground animate-pulse">
+                Redirecting to exam dashboard in 5 seconds...
+              </p>
+              <Button
+                onClick={() => router.push('/student/exams')}
+                className="mt-4"
+                size="lg"
+              >
+                Go to Dashboard Now
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
 
   if (!canAttempt) {

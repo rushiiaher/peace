@@ -192,18 +192,40 @@ export default function InventoryPage() {
         const courseName = selectedCrs?.courseId?.name || 'All Courses'
         const batchName = selectedBtch?.name || 'All Batches'
 
-        // Collect all unique evaluation component names
+        // Collect all unique evaluation component names (EXCLUDING "Final Exam")
         const allEvalComponents = new Set<string>()
         filteredResults.forEach(res => {
             res.evaluationMarks?.forEach((m: any) => {
-                allEvalComponents.add(m.name)
+                // Skip if it's named "Final Exam" - we'll handle that separately
+                if (!m.name.toLowerCase().includes('final exam')) {
+                    allEvalComponents.add(m.name)
+                }
             })
         })
         const evalComponentNames = Array.from(allEvalComponents).sort()
 
+        // Check if there are multiple final exams (shouldn't be, but handle gracefully)
+        const maxFinalExams = Math.max(...filteredResults.map(res => {
+            const finalExams = res.evaluationMarks?.filter((m: any) =>
+                m.name.toLowerCase().includes('final exam')
+            ) || []
+            const hasOnlineScore = res.onlineExamScore !== undefined && res.onlineExamScore !== null ? 1 : 0
+            return Math.max(finalExams.length, hasOnlineScore)
+        }), 0)
+
         // Build dynamic headers
         const baseHeaders = ['Sr. No', 'Student Name', 'Mother Name', 'Roll No', 'Email', 'Phone']
-        const marksHeaders = [...evalComponentNames, 'Final Exam']
+        const marksHeaders = [...evalComponentNames]
+
+        // Add Final Exam column(s)
+        if (maxFinalExams === 1) {
+            marksHeaders.push('Final Exam')
+        } else if (maxFinalExams > 1) {
+            for (let i = 1; i <= maxFinalExams; i++) {
+                marksHeaders.push(`Final Exam ${i}`)
+            }
+        }
+
         const summaryHeaders = ['Total Marks', 'Percentage', 'Dispatch Status']
         const headers = [...baseHeaders, ...marksHeaders, ...summaryHeaders]
 
@@ -218,21 +240,59 @@ export default function InventoryPage() {
                 res.studentId?.phone || ''
             ]
 
-            // Map evaluation marks to their columns
+            // Map evaluation marks to their columns (excluding Final Exam)
             const marksData = evalComponentNames.map(componentName => {
                 const mark = res.evaluationMarks?.find((m: any) => m.name === componentName)
                 return mark ? mark.marksObtained.toString() : '-'
             })
 
-            // Add Final Exam score (use onlineExamScore, not from evaluationMarks)
-            const finalExamScore = res.onlineExamScore !== undefined && res.onlineExamScore !== null
-                ? res.onlineExamScore.toString()
-                : '-'
-            marksData.push(finalExamScore)
+            // Handle Final Exam score(s)
+            // Priority: Use onlineExamScore, fallback to evaluationMarks entries
+            const finalExamFromEval = res.evaluationMarks?.filter((m: any) =>
+                m.name.toLowerCase().includes('final exam')
+            ) || []
+
+            if (res.onlineExamScore !== undefined && res.onlineExamScore !== null) {
+                // Use the onlineExamScore (single canonical source)
+                marksData.push(res.onlineExamScore.toString())
+            } else if (finalExamFromEval.length > 0) {
+                // Fallback: use from evaluationMarks
+                finalExamFromEval.forEach((fe: any) => {
+                    marksData.push(fe.marksObtained.toString())
+                })
+                // Fill remaining if needed
+                for (let i = finalExamFromEval.length; i < maxFinalExams; i++) {
+                    marksData.push('-')
+                }
+            } else {
+                // No final exam data
+                for (let i = 0; i < maxFinalExams; i++) {
+                    marksData.push('-')
+                }
+            }
+
+            // Calculate total marks correctly
+            let calculatedTotal = 0
+
+            // Sum evaluation marks (excluding Final Exam entries)
+            res.evaluationMarks?.forEach((m: any) => {
+                if (!m.name.toLowerCase().includes('final exam')) {
+                    calculatedTotal += m.marksObtained || 0
+                }
+            })
+
+            // Add final exam score
+            if (res.onlineExamScore !== undefined && res.onlineExamScore !== null) {
+                calculatedTotal += res.onlineExamScore
+            } else if (finalExamFromEval.length > 0) {
+                finalExamFromEval.forEach((fe: any) => {
+                    calculatedTotal += fe.marksObtained || 0
+                })
+            }
 
             // Summary data
             const summaryData = [
-                res.totalMarks?.toString() || '-',
+                calculatedTotal.toString(),
                 res.percentage ? `${res.percentage}%` : '-',
                 res.certificateDispatched ? 'Dispatched' : 'Pending'
             ]
@@ -500,9 +560,17 @@ export default function InventoryPage() {
                                     </TableHeader>
                                     <TableBody>
                                         {filteredResults.map(res => {
+                                            // Filter out "Final Exam" from evaluationMarks to prevent duplicates
+                                            const evalMarks = res.evaluationMarks
+                                                .filter((m: any) => !m.name.toLowerCase().includes('final exam'))
+                                                .map((m: any) => `${m.name}: ${m.marksObtained}`)
+
+                                            // Add Final Exam score separately (single source of truth)
                                             const marksDisplay = [
-                                                ...res.evaluationMarks.map((m: any) => `${m.name}: ${m.marksObtained}`),
-                                                res.onlineExamScore !== undefined ? `Final Exam: ${res.onlineExamScore}` : null
+                                                ...evalMarks,
+                                                res.onlineExamScore !== undefined && res.onlineExamScore !== null
+                                                    ? `Final Exam: ${res.onlineExamScore}`
+                                                    : null
                                             ].filter(Boolean).join(', ');
 
                                             return (
