@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "sonner"
 import {
     ArrowLeft,
@@ -41,10 +42,25 @@ export function CourseForm({ initialData, mode }: CourseFormProps) {
     )
 
     const [evaluationComponents, setEvaluationComponents] = useState(
-        initialData?.evaluationComponents || [{ name: 'VIVA', maxMarks: 50 }, { name: 'PRACTICAL', maxMarks: 100 }]
+        initialData?.evaluationComponents || []
     )
 
-    const addComponent = () => setEvaluationComponents([...evaluationComponents, { name: '', maxMarks: 0 }])
+    // Fixed INTERNAL ASSESSMENT component options (matching certificate)
+    const AVAILABLE_COMPONENTS = [
+        { name: 'Assignment', defaultMarks: 50 },
+        { name: 'Practical', defaultMarks: 50 },
+        { name: 'Project', defaultMarks: 50 },
+        { name: 'Viva', defaultMarks: 50 }
+    ]
+
+    const addComponent = () => {
+        // Find first component not already added
+        const usedNames = evaluationComponents.map((c: any) => c.name)
+        const availableOption = AVAILABLE_COMPONENTS.find(opt => !usedNames.includes(opt.name))
+        if (availableOption) {
+            setEvaluationComponents([...evaluationComponents, { name: availableOption.name, maxMarks: availableOption.defaultMarks }])
+        }
+    }
     const removeComponent = (index: number) => setEvaluationComponents(evaluationComponents.filter((_: any, i: number) => i !== index))
     const updateComponent = (index: number, field: string, value: string | number) => {
         const newComponents = [...evaluationComponents]
