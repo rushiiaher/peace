@@ -45,6 +45,10 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
   // Handle violations with debouncing to prevent duplicate warnings
   const handleViolation = (type: string) => {
     const now = Date.now()
+
+    // Ignore violations in the first 10 seconds (grace period for setup/fullscreen)
+    if (elapsedTime < 10) return
+
     // Ignore if violation was triggered less than 2 seconds ago
     if (now - lastViolationTime < 2000) return
 
@@ -138,6 +142,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
     }
   }, [])
 
+  // Timer Ref to avoid dependency loops
   useEffect(() => {
     fetch(`/api/exams/${id}`)
       .then(res => res.json())
@@ -147,10 +152,9 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
         setAnswers(new Array(shuffledQuestions.length).fill(-1))
         setMarkedForReview(new Array(shuffledQuestions.length).fill(false))
         // Duration is already in seconds from the API
-        setTimeLeft(data.duration)
+        setTimeLeft(data.duration || 1800)
 
         if (data.type === 'Final' && studentId) {
-          // Fix: Handle both populated (object) and unpopulated (string) studentId
           const assignment = data.systemAssignments?.find((a: any) =>
             (a.studentId?._id || a.studentId) === studentId
           )
@@ -197,17 +201,17 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
     const timer = setInterval(() => {
       setTimeLeft(prev => {
         if (prev <= 1) {
-          handleSubmit()
+          clearInterval(timer)
+          handleSubmit(true)
           return 0
         }
         return prev - 1
       })
-      // Track elapsed time
       setElapsedTime(prev => prev + 1)
     }, 1000)
 
     return () => clearInterval(timer)
-  }, [examStarted, canAttempt, timeLeft])
+  }, [examStarted, canAttempt])
 
   const handleSubmit = async (isAutoSubmit = false) => {
     if (hasSubmitted) return

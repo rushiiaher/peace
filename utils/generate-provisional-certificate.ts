@@ -1,78 +1,78 @@
 // Utility to calculate grade based on percentage
 export const calculateGrade = (percentage: number): string => {
-    if (percentage >= 91) return 'A+'
-    if (percentage >= 81) return 'A'
-    if (percentage >= 71) return 'B+'
-    if (percentage >= 61) return 'B'
-    if (percentage >= 51) return 'C+'
-    if (percentage >= 41) return 'C'
-    if (percentage >= 40) return 'D'
-    return 'FAIL'
+  if (percentage >= 91) return 'A+'
+  if (percentage >= 81) return 'A'
+  if (percentage >= 71) return 'B+'
+  if (percentage >= 61) return 'B'
+  if (percentage >= 51) return 'C+'
+  if (percentage >= 41) return 'C'
+  if (percentage >= 40) return 'D'
+  return 'FAIL'
 }
 
 // Convert number to words (for Grand Total in words)
 export const numberToWords = (num: number): string => {
-    const ones = ['', 'ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN', 'EIGHT', 'NINE']
-    const tens = ['', '', 'TWENTY', 'THIRTY', 'FORTY', 'FIFTY', 'SIXTY', 'SEVENTY', 'EIGHTY', 'NINETY']
-    const teens = ['TEN', 'ELEVEN', 'TWELVE', 'THIRTEEN', 'FOURTEEN', 'FIFTEEN', 'SIXTEEN', 'SEVENTEEN', 'EIGHTEEN', 'NINETEEN']
+  const ones = ['', 'ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN', 'EIGHT', 'NINE']
+  const tens = ['', '', 'TWENTY', 'THIRTY', 'FORTY', 'FIFTY', 'SIXTY', 'SEVENTY', 'EIGHTY', 'NINETY']
+  const teens = ['TEN', 'ELEVEN', 'TWELVE', 'THIRTEEN', 'FOURTEEN', 'FIFTEEN', 'SIXTEEN', 'SEVENTEEN', 'EIGHTEEN', 'NINETEEN']
 
-    if (num === 0) return 'ZERO'
-    if (num < 10) return ones[num]
-    if (num < 20) return teens[num - 10]
-    if (num < 100) return tens[Math.floor(num / 10)] + (num % 10 !== 0 ? ' ' + ones[num % 10] : '')
-    if (num < 1000) {
-        return ones[Math.floor(num / 100)] + ' HUNDRED' + (num % 100 !== 0 ? ' ' + numberToWords(num % 100) : '')
-    }
-    return num.toString() // fallback for large numbers
+  if (num === 0) return 'ZERO'
+  if (num < 10) return ones[num]
+  if (num < 20) return teens[num - 10]
+  if (num < 100) return tens[Math.floor(num / 10)] + (num % 10 !== 0 ? ' ' + ones[num % 10] : '')
+  if (num < 1000) {
+    return ones[Math.floor(num / 100)] + ' HUNDRED' + (num % 100 !== 0 ? ' ' + numberToWords(num % 100) : '')
+  }
+  return num.toString() // fallback for large numbers
 }
 
 // Mask Aadhaar number (show only last 4 digits)
 export const maskAadhaar = (aadhaar: string): string => {
-    if (!aadhaar) return 'XXXX XXXX XXXX'
-    const cleaned = aadhaar.replace(/\s/g, '')
-    if (cleaned.length < 4) return 'XXXX XXXX ' + cleaned
-    const lastFour = cleaned.slice(-4)
-    return `XXXX XXXX ${lastFour}`
+  if (!aadhaar) return 'XXXX XXXX XXXX'
+  const cleaned = aadhaar.replace(/\s/g, '')
+  if (cleaned.length < 4) return 'XXXX XXXX ' + cleaned
+  const lastFour = cleaned.slice(-4)
+  return `XXXX XXXX ${lastFour}`
 }
 
 interface EvaluationComponent {
-    name: string
-    marksObtained: number
-    maxMarks: number
-    result?: string
+  name: string
+  marksObtained: number
+  maxMarks: number
+  result?: string
 }
 
 interface ProvisionalCertificateData {
-    candidateName: string
-    motherName: string
-    courseCode: string
-    courseName: string
-    examCenter: string
-    rollNo: string
-    aadhaarNo: string
-    evaluationComponents: EvaluationComponent[]
-    finalExamMarks: number
-    finalExamMaxMarks: number
-    finalExamQuestions: number
-    finalExamCorrect: number
-    totalMarks: number
-    totalMaxMarks: number
-    percentage: number
-    grade: string
-    result: 'PASS' | 'FAIL'
-    issueDate: string
+  candidateName: string
+  motherName: string
+  courseCode: string
+  courseName: string
+  examCenter: string
+  rollNo: string
+  aadhaarNo: string
+  evaluationComponents: EvaluationComponent[]
+  finalExamMarks: number
+  finalExamMaxMarks: number
+  finalExamQuestions: number
+  finalExamCorrect: number
+  totalMarks: number
+  totalMaxMarks: number
+  percentage: number
+  grade: string
+  result: 'PASS' | 'FAIL'
+  issueDate: string
 }
 
 export const generateProvisionalCertificateHtml = (data: ProvisionalCertificateData) => {
-    const maskedAadhaar = maskAadhaar(data.aadhaarNo)
-    const totalInWords = numberToWords(data.totalMarks)
+  const maskedAadhaar = maskAadhaar(data.aadhaarNo)
+  const totalInWords = numberToWords(data.totalMarks)
 
-    // Determine result color
-    const resultColor = data.result === 'PASS' ? '#28a745' : '#dc3545'
-    const gradeColor = data.result === 'PASS' ? '#d32f2f' : '#dc3545'
+  // Determine result color
+  const resultColor = data.result === 'PASS' ? '#28a745' : '#dc3545'
+  const gradeColor = data.result === 'PASS' ? '#d32f2f' : '#dc3545'
 
-    // Generate evaluation rows (max 4 components)
-    const evalRows = data.evaluationComponents.slice(0, 4).map(comp => `
+  // Generate evaluation rows (max 4 components)
+  const evalRows = data.evaluationComponents.slice(0, 4).map(comp => `
     <tr>
       <td style="padding: 8px; text-align: left; font-size: 14px;">${comp.name}</td>
       <td style="padding: 8px; text-align: center; font-weight: bold; color: #d32f2f; font-size: 14px;">${comp.marksObtained}</td>
@@ -83,11 +83,11 @@ export const generateProvisionalCertificateHtml = (data: ProvisionalCertificateD
     </tr>
   `).join('')
 
-    // Check if final exam passed (35+ questions correct)
-    const finalExamResult = data.finalExamCorrect >= 35 ? 'PASS' : 'FAIL'
-    const finalExamColor = finalExamResult === 'PASS' ? '#28a745' : '#dc3545'
+  // Check if final exam passed (35+ questions correct)
+  const finalExamResult = data.finalExamCorrect >= 35 ? 'PASS' : 'FAIL'
+  const finalExamColor = finalExamResult === 'PASS' ? '#28a745' : '#dc3545'
 
-    return `
+  return `
 <!DOCTYPE html>
 <html>
 <head>
@@ -108,7 +108,7 @@ export const generateProvisionalCertificateHtml = (data: ProvisionalCertificateD
       position: absolute;
       width: 100%;
       height: 100%;
-      padding: 60mm 20mm 20mm 20mm;
+      padding: 85mm 20mm 20mm 20mm;
       box-sizing: border-box;
     }
     .field {
@@ -153,7 +153,7 @@ export const generateProvisionalCertificateHtml = (data: ProvisionalCertificateD
       margin-bottom: 5mm;
     }
     .marks-table th {
-      background-color: #f0f0f0;
+      background-color: transparent ;
       padding: 8px;
       border: 1px solid #000;
       font-size: 13px;
@@ -165,7 +165,7 @@ export const generateProvisionalCertificateHtml = (data: ProvisionalCertificateD
       font-size: 14px;
     }
     .total-row {
-      background-color: #f9f9f9;
+      background-color: transparent;
       font-weight: bold;
     }
     .uid {
@@ -241,7 +241,7 @@ export const generateProvisionalCertificateHtml = (data: ProvisionalCertificateD
         
         <!-- Internal Assessment Header -->
         <tr>
-          <td colspan="3" style="padding: 8px; text-align: center; font-weight: bold; background-color: #f0f0f0; font-size: 13px;">
+          <td colspan="3" style="padding: 8px; text-align: center; font-weight: bold; background-color: transparent; font-size: 13px;">
             Internal Assessment
           </td>
         </tr>
@@ -296,16 +296,16 @@ export const generateProvisionalCertificateHtml = (data: ProvisionalCertificateD
 
 // Calculate pass/fail based on requirements
 export const calculateResult = (
-    finalExamCorrect: number,
-    totalMarks: number,
-    totalMaxMarks: number
+  finalExamCorrect: number,
+  totalMarks: number,
+  totalMaxMarks: number
 ): 'PASS' | 'FAIL' => {
-    // Must get 35+ questions correct in final exam (70+ marks)
-    const finalExamPass = finalExamCorrect >= 35
+  // Must get 35+ questions correct in final exam (70+ marks)
+  const finalExamPass = finalExamCorrect >= 35
 
-    // Must get 40%+ overall
-    const percentage = (totalMarks / totalMaxMarks) * 100
-    const overallPass = percentage >= 40
+  // Must get 40%+ overall
+  const percentage = (totalMarks / totalMaxMarks) * 100
+  const overallPass = percentage >= 40
 
-    return finalExamPass && overallPass ? 'PASS' : 'FAIL'
+  return finalExamPass && overallPass ? 'PASS' : 'FAIL'
 }
