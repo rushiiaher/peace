@@ -92,7 +92,7 @@ export const generateProvisionalCertificateHtml = (data: ProvisionalCertificateD
       font-size: 14px;
       text-transform: uppercase;
     }
-    .roll-no { top: 81mm; left: 165mm; font-size: 15px; }
+    .roll-no { top: 89mm; left: 155mm; font-size: 15px; } /* Corrected per feedback */
     
     .lbl-cand { top: 98mm; left: 80mm; }
     .lbl-moth { top: 105mm; left: 80mm; }
@@ -101,20 +101,20 @@ export const generateProvisionalCertificateHtml = (data: ProvisionalCertificateD
     .lbl-center { top: 126mm; left: 80mm; }
 
     /* Final Exam Row */
-    .row-final-title { top: 151mm; left: 20mm; font-size: 13px; color: #000; width: 70mm;}
-    .row-final-marks { top: 151mm; left: 95mm; text-align: center; width: 20mm; }
-    .row-final-max { top: 151mm; left: 125mm; text-align: center; width: 20mm; color: #000; }
-    .row-final-result { top: 175mm; left: 155mm; text-align: center; width: 40mm; font-size: 24px; }
+    .row-final-title { top: 151mm; left: 20mm; font-size: 12px; color: #000; width: 65mm; line-height: 1.2; }
+    .row-final-marks { top: 151mm; left: 88mm; text-align: center; width: 20mm; }
+    .row-final-max { top: 151mm; left: 115mm; text-align: center; width: 20mm; color: #000; }
+    .row-final-result { top: 165mm; left: 145mm; text-align: center; width: 40mm; font-size: 20px; }
 
     /* Grand Total */
-    .row-total-marks { top: 210mm; left: 95mm; text-align: center; width: 20mm; font-size: 16px; }
-    .row-total-max { top: 210mm; left: 125mm; text-align: center; width: 20mm; color: #000; font-size: 15px; }
-    .row-grade { top: 210mm; left: 175mm; font-size: 18px; }
+    .row-total-marks { top: 198mm; left: 88mm; text-align: center; width: 20mm; font-size: 16px; }
+    .row-total-max { top: 198mm; left: 115mm; text-align: center; width: 20mm; color: #000; font-size: 15px; }
+    .row-grade { top: 198mm; left: 160mm; font-size: 18px; }
 
-    .row-words { top: 220mm; left: 65mm; color: #d32f2f; font-size: 13px; font-weight: bold; }
+    .row-words { top: 205mm; left: 65mm; color: #d32f2f; font-size: 12px; font-weight: bold; }
 
-    .uid-val { top: 245mm; left: 45mm; }
-    .date-val { bottom: 35mm; left: 165mm; font-size: 12px; }
+    .uid-val { top: 228mm; left: 45mm; }
+    .date-val { bottom: 38mm; left: 170mm; font-size: 12px; }
 
   </style>
 </head>
@@ -137,9 +137,9 @@ export const generateProvisionalCertificateHtml = (data: ProvisionalCertificateD
 
   <!-- Internals (Loop) -->
   ${data.evaluationComponents.slice(0, 4).map((comp, i) => `
-    <div class="absolute-text" style="top: ${172 + (i * 7)}mm; left: 30mm; font-size: 13px; color: #000; width: 60mm;">${comp.name}</div>
-    <div class="absolute-text" style="top: ${172 + (i * 7)}mm; left: 95mm; text-align: center; width: 20mm;">${comp.marksObtained}</div>
-    <div class="absolute-text" style="top: ${172 + (i * 7)}mm; left: 125mm; text-align: center; width: 20mm; color: #000;">${comp.maxMarks}</div>
+    <div class="absolute-text" style="top: ${172 + (i * 7)}mm; left: 30mm; font-size: 12px; color: #000; width: 55mm;">${comp.name}</div>
+    <div class="absolute-text" style="top: ${172 + (i * 7)}mm; left: 88mm; text-align: center; width: 20mm;">${comp.marksObtained}</div>
+    <div class="absolute-text" style="top: ${172 + (i * 7)}mm; left: 115mm; text-align: center; width: 20mm; color: #000;">${comp.maxMarks}</div>
   `).join('')}
 
   <!-- Grand Total -->
