@@ -157,12 +157,12 @@ export default function EditExamPage() {
             setBusySystems(busy)
 
             // Filter available systems
-            const hardwareAvailable = allSystems.filter((s: any) => s.status === 'Available')
+            const hardwareAvailable = allSystems.filter((s: any) => s.status === 'Available' || s.status === 'Active')
             const available = hardwareAvailable.filter((s: any) => !busy.has(s.name))
 
             setAvailableSystems(available)
 
-            toast.success(`Found ${available.length} available systems (${busySystems.size} busy, ${hardwareAvailable.length - available.length} offline)`)
+            toast.success(`Found ${available.length} available systems (${allSystems.length - hardwareAvailable.length} offline/maintenance, ${hardwareAvailable.length - available.length} busy)`)
         } catch (error: any) {
             console.error('Availability check error:', error)
             toast.error(error.message || 'Failed to check system availability')
