@@ -115,35 +115,28 @@ export const generateProvisionalCertificateHtml = (data: ProvisionalCertificateD
     img.src = '/Provisional-JPG-JPEG-BLANK.jpg';
     
     // COORDINATE ADJUSTMENTS BASED ON USER FEEDBACK:
-    // 1. Cand Details: leftwards (shifted x to 70), downwards (increased y step)
-    // 2. Roll No: Left and Down
-    // 3. Final Exam: y down, Text change
-    // 4. Internal assessed: Rightwards, tiny up, smaller font, less gap
-    // 5. Result: Too much left
-    // 6. Grade: Left and Up, Smaller font
-    // 7. Grand total: Rightwards and Up
-    // 8. UID: Right and TOO UP
-    // 9. Date: UP and LEFT TOO MUCH
+    // Reduced spacing in Student Details (y 107 -> 104, 118 -> 112, etc.)
+    // Small roll no font size
 
     const coords = {
       rollNo: { x: 165, y: 91 },
       candidateName: { x: 70, y: 96 },
-      motherName: { x: 70, y: 107 }, 
-      courseCode: { x: 70, y: 118 }, 
-      courseName: { x: 70, y: 129 }, 
-      examCenter: { x: 70, y: 140 }, 
+      motherName: { x: 70, y: 104 }, 
+      courseCode: { x: 70, y: 112 }, 
+      courseName: { x: 70, y: 120 }, 
+      examCenter: { x: 70, y: 128 }, 
       
       finalTitle: { x: 20, y: 156 },
       finalMarks: { x: 87, y: 156 }, 
       finalMax: { x: 115, y: 156 }, 
-      finalResult: { x: 145, y: 168 }, // Too much left & slight down
+      finalResult: { x: 145, y: 168 }, 
       
-      totalMarks: { x: 93, y: 189 }, // Right and Up
-      totalMax: { x: 121, y: 189 }, // Right and Up
-      grade: { x: 150, y: 189 }, // Up and Left
-      words: { x: 85, y: 196 }, // Too Right and Little Up
-      uid: { x: 80, y: 208 }, // Right and TOO UP
-      date: { x: 155, y: 250 } // UP and LEFT too much
+      totalMarks: { x: 93, y: 189 }, 
+      totalMax: { x: 121, y: 189 }, 
+      grade: { x: 150, y: 189 }, 
+      words: { x: 85, y: 196 }, 
+      uid: { x: 80, y: 208 }, 
+      date: { x: 155, y: 250 } 
     };
 
     img.onload = () => {
@@ -168,8 +161,8 @@ export const generateProvisionalCertificateHtml = (data: ProvisionalCertificateD
         }
       };
 
-      // 1. Roll No
-      draw(data.rollNo, coords.rollNo.x, coords.rollNo.y, 14, '#d32f2f', 'left');
+      // 1. Roll No (reduced font size to 11)
+      draw(data.rollNo, coords.rollNo.x, coords.rollNo.y, 11, '#d32f2f', 'left');
       
       // 2. Candidate Details
       draw(data.candidateName, coords.candidateName.x, coords.candidateName.y, 13);
@@ -184,12 +177,12 @@ export const generateProvisionalCertificateHtml = (data: ProvisionalCertificateD
       draw(data.finalExamMaxMarks, coords.finalMax.x, coords.finalMax.y, 13, '#000000', 'center');
       draw(data.result, coords.finalResult.x, coords.finalResult.y, 20, data.resultColor, 'center');
 
-      // 4. Internal Assessment (Smaller font, Rightwards, Little up, reduced gap)
+      // 4. Internal Assessment
       data.evaluationComponents.slice(0, 4).forEach((comp, i) => {
-        const yBase = 171 + (i * 6); // Tiny up, gap reduced to 6mm
-        draw(comp.name, 35, yBase, 9, '#000000', 'left'); // Rightwards
-        draw(comp.marksObtained, 93, yBase, 9, '#d32f2f', 'center'); // Rightwards
-        draw(comp.maxMarks, 121, yBase, 9, '#000000', 'center'); // Rightwards
+        const yBase = 171 + (i * 6); 
+        draw(comp.name, 35, yBase, 9, '#000000', 'left'); 
+        draw(comp.marksObtained, 93, yBase, 9, '#d32f2f', 'center'); 
+        draw(comp.maxMarks, 121, yBase, 9, '#000000', 'center'); 
       });
 
       // 5. Grand Total
@@ -197,14 +190,13 @@ export const generateProvisionalCertificateHtml = (data: ProvisionalCertificateD
       draw(data.totalMaxMarks, coords.totalMax.x, coords.totalMax.y, 14, '#000000', 'center');
       draw(data.grade, coords.grade.x, coords.grade.y, 13, data.gradeColor, 'left');
 
-      // 6. Words (Too Right)
+      // 6. Words
       draw(data.totalInWords, coords.words.x, coords.words.y, 10, '#d32f2f', 'left');
 
-      // 7. UID (Right and TOO UP)
-      // Ensure digits are drawn
+      // 7. UID
       draw(data.maskedAadhaar, coords.uid.x, coords.uid.y, 12, '#d32f2f', 'left');
       
-      // 8. Date (UP and LEFT TOO MUCH)
+      // 8. Date 
       draw(data.issueDate, coords.date.x, coords.date.y, 12, '#d32f2f', 'left');
 
       setTimeout(() => window.print(), 500);
