@@ -84,20 +84,9 @@ export const generateProvisionalCertificateHtml = (data: ProvisionalCertificateD
 <head>
   <title>Provisional Marksheet - ${data.candidateName}</title>
   <style>
-    /* A4 format settings */
     body { margin: 0; padding: 0; display: flex; justify-content: center; background: #555; overflow: hidden; }
-    
-    canvas { 
-      background: white; 
-      box-shadow: 0 0 10px rgba(0,0,0,0.5); 
-      max-width: 100%; 
-      height: auto;
-    }
-
-    @page {
-      size: A4;
-      margin: 0;
-    }
+    canvas { background: white; box-shadow: 0 0 10px rgba(0,0,0,0.5); max-width: 100%; height: auto; }
+    @page { size: A4; margin: 0; }
     @media print {
       body { background: none; display: block; margin: 0; padding: 0; }
       canvas { box-shadow: none; width: 100%; height: 100%; max-width: none; display: block; }
@@ -115,36 +104,31 @@ export const generateProvisionalCertificateHtml = (data: ProvisionalCertificateD
     img.src = '/Provisional-JPG-JPEG-BLANK.jpg';
     
     // COORDINATE ADJUSTMENTS:
-    // Student Details: vertical gap adjusted to 9.5mm (middle ground)
-    // Roll No: slightly down and left
-    // Other fields adjusted based on visual feedback
-
     const coords = {
-      rollNo: { x: 162, y: 92 },
+      rollNo: { x: 175, y: 88 }, // Up and Rightward
       candidateName: { x: 70, y: 96 },
       motherName: { x: 70, y: 105.5 }, 
       courseCode: { x: 70, y: 115 }, 
       courseName: { x: 70, y: 124.5 }, 
       examCenter: { x: 70, y: 134 }, 
       
-      finalTitle: { x: 20, y: 158 },
-      finalMarks: { x: 87, y: 158 }, 
-      finalMax: { x: 115, y: 158 }, 
-      finalResult: { x: 135, y: 170 }, // Much left and slight down
+      finalTitle: { x: 32, y: 156 }, // Rightwards
+      finalMarks: { x: 84, y: 156 }, // Leftward (to center)
+      finalMax: { x: 112, y: 156 }, // Leftward (to center)
+      finalResult: { x: 168, y: 165 }, // Rightwards
       
-      totalMarks: { x: 93, y: 189 }, 
-      totalMax: { x: 121, y: 189 }, 
-      grade: { x: 145, y: 187 }, // Left and Up
+      totalMarks: { x: 89, y: 189 }, // Leftwards (to center)
+      totalMax: { x: 117, y: 189 }, // Leftwards (to center)
+      grade: { x: 155, y: 187 }, 
       words: { x: 85, y: 196 }, 
-      uid: { x: 100, y: 204 }, // Right and TOO UP
-      date: { x: 140, y: 245 } // UP and LEFT too much
+      uid: { x: 65, y: 204 }, // Moved Leftward to match label
+      date: { x: 140, y: 245 } 
     };
 
     img.onload = () => {
       canvas.width = img.naturalWidth;
       canvas.height = img.naturalHeight;
       ctx.drawImage(img, 0, 0);
-
       const scale = canvas.width / 210; 
 
       const draw = (text, x_mm, y_mm, size_pt = 12, color = '#d32f2f', align = 'left', weight = 'bold', maxWidth_mm = 0) => {
@@ -154,7 +138,6 @@ export const generateProvisionalCertificateHtml = (data: ProvisionalCertificateD
         ctx.textAlign = align;
         const x = x_mm * scale;
         const y = y_mm * scale;
-        
         if (maxWidth_mm > 0) {
            ctx.fillText(text, x, y, maxWidth_mm * scale);
         } else {
@@ -162,28 +145,28 @@ export const generateProvisionalCertificateHtml = (data: ProvisionalCertificateD
         }
       };
 
-      // 1. Roll No (reduced font size to 11)
+      // 1. Roll No
       draw(data.rollNo, coords.rollNo.x, coords.rollNo.y, 11, '#d32f2f', 'left');
       
-      // 2. Candidate Details
+      // 2. Candidate Details (Locked)
       draw(data.candidateName, coords.candidateName.x, coords.candidateName.y, 13);
       draw(data.motherName, coords.motherName.x, coords.motherName.y, 13);
       draw(data.courseCode, coords.courseCode.x, coords.courseCode.y, 13);
       draw(data.courseName, coords.courseName.x, coords.courseName.y, 13);
       draw(data.examCenter, coords.examCenter.x, coords.examCenter.y, 13);
 
-      // 3. Final Exam (Text: Final exam)
-      draw("Final exam", coords.finalTitle.x, coords.finalTitle.y, 9, '#000000', 'left', 'bold', 60);
+      // 3. Final Exam
+      draw("Final exam", coords.finalTitle.x, coords.finalTitle.y, 9, '#000000', 'left', 'bold', 55);
       draw(data.finalExamMarks, coords.finalMarks.x, coords.finalMarks.y, 13, '#d32f2f', 'center');
       draw(data.finalExamMaxMarks, coords.finalMax.x, coords.finalMax.y, 13, '#000000', 'center');
       draw(data.result, coords.finalResult.x, coords.finalResult.y, 20, data.resultColor, 'center');
 
-      // 4. Internal Assessment (Smaller font, Rightwards, Tiny up, reduced gap)
+      // 4. Internal Assessment
       data.evaluationComponents.slice(0, 4).forEach((comp, i) => {
-        const yBase = 170 + (i * 6); 
+        const yBase = 171 + (i * 6); 
         draw(comp.name, 38, yBase, 8.5, '#000000', 'left'); 
-        draw(comp.marksObtained, 93, yBase, 9, '#d32f2f', 'center'); 
-        draw(comp.maxMarks, 121, yBase, 9, '#000000', 'center'); 
+        draw(comp.marksObtained, 89, yBase, 9, '#d32f2f', 'center'); // Leftwards
+        draw(comp.maxMarks, 117, yBase, 9, '#000000', 'center'); // Leftwards
       });
 
       // 5. Grand Total
