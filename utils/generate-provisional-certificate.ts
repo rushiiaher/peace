@@ -114,29 +114,30 @@ export const generateProvisionalCertificateHtml = (data: ProvisionalCertificateD
     const img = new Image();
     img.src = '/Provisional-JPG-JPEG-BLANK.jpg';
     
-    // COORDINATE ADJUSTMENTS BASED ON USER FEEDBACK:
-    // Reduced spacing in Student Details (y 107 -> 104, 118 -> 112, etc.)
-    // Small roll no font size
+    // COORDINATE ADJUSTMENTS:
+    // Student Details: vertical gap adjusted to 9.5mm (middle ground)
+    // Roll No: slightly down and left
+    // Other fields adjusted based on visual feedback
 
     const coords = {
-      rollNo: { x: 165, y: 91 },
+      rollNo: { x: 162, y: 92 },
       candidateName: { x: 70, y: 96 },
-      motherName: { x: 70, y: 104 }, 
-      courseCode: { x: 70, y: 112 }, 
-      courseName: { x: 70, y: 120 }, 
-      examCenter: { x: 70, y: 128 }, 
+      motherName: { x: 70, y: 105.5 }, 
+      courseCode: { x: 70, y: 115 }, 
+      courseName: { x: 70, y: 124.5 }, 
+      examCenter: { x: 70, y: 134 }, 
       
-      finalTitle: { x: 20, y: 156 },
-      finalMarks: { x: 87, y: 156 }, 
-      finalMax: { x: 115, y: 156 }, 
-      finalResult: { x: 145, y: 168 }, 
+      finalTitle: { x: 20, y: 158 },
+      finalMarks: { x: 87, y: 158 }, 
+      finalMax: { x: 115, y: 158 }, 
+      finalResult: { x: 135, y: 170 }, // Much left and slight down
       
       totalMarks: { x: 93, y: 189 }, 
       totalMax: { x: 121, y: 189 }, 
-      grade: { x: 150, y: 189 }, 
+      grade: { x: 145, y: 187 }, // Left and Up
       words: { x: 85, y: 196 }, 
-      uid: { x: 80, y: 208 }, 
-      date: { x: 155, y: 250 } 
+      uid: { x: 100, y: 204 }, // Right and TOO UP
+      date: { x: 140, y: 245 } // UP and LEFT too much
     };
 
     img.onload = () => {
@@ -177,10 +178,10 @@ export const generateProvisionalCertificateHtml = (data: ProvisionalCertificateD
       draw(data.finalExamMaxMarks, coords.finalMax.x, coords.finalMax.y, 13, '#000000', 'center');
       draw(data.result, coords.finalResult.x, coords.finalResult.y, 20, data.resultColor, 'center');
 
-      // 4. Internal Assessment
+      // 4. Internal Assessment (Smaller font, Rightwards, Tiny up, reduced gap)
       data.evaluationComponents.slice(0, 4).forEach((comp, i) => {
-        const yBase = 171 + (i * 6); 
-        draw(comp.name, 35, yBase, 9, '#000000', 'left'); 
+        const yBase = 170 + (i * 6); 
+        draw(comp.name, 38, yBase, 8.5, '#000000', 'left'); 
         draw(comp.marksObtained, 93, yBase, 9, '#d32f2f', 'center'); 
         draw(comp.maxMarks, 121, yBase, 9, '#000000', 'center'); 
       });
@@ -188,7 +189,7 @@ export const generateProvisionalCertificateHtml = (data: ProvisionalCertificateD
       // 5. Grand Total
       draw(data.totalMarks, coords.totalMarks.x, coords.totalMarks.y, 14, '#d32f2f', 'center');
       draw(data.totalMaxMarks, coords.totalMax.x, coords.totalMax.y, 14, '#000000', 'center');
-      draw(data.grade, coords.grade.x, coords.grade.y, 13, data.gradeColor, 'left');
+      draw(data.grade, coords.grade.x, coords.grade.y, 12, data.gradeColor, 'left');
 
       // 6. Words
       draw(data.totalInWords, coords.words.x, coords.words.y, 10, '#d32f2f', 'left');
