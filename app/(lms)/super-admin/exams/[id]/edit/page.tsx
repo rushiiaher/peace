@@ -50,6 +50,15 @@ export default function EditExamPage() {
             if (!res.ok) throw new Error('Failed to fetch exam')
 
             const examData = await res.json()
+
+            // FIX: Use course configured duration if available, overriding potential bad default
+            const courseConfig = examData.courseId?.examConfigurations?.[0]
+            const courseDuration = courseConfig?.duration
+            if (courseDuration && examData.duration !== courseDuration) {
+                console.log(`Correcting duration from ${examData.duration} to ${courseDuration}`)
+                examData.duration = courseDuration
+            }
+
             setExam(examData)
 
             // Set initial form values
@@ -157,7 +166,12 @@ export default function EditExamPage() {
             setBusySystems(busy)
 
             // Filter available systems
-            const hardwareAvailable = allSystems.filter((s: any) => s.status === 'Available' || s.status === 'Active')
+            console.log('All Systems Statuses:', allSystems.map(s => `${s.name}:${s.status}`))
+
+            const hardwareAvailable = allSystems.filter((s: any) => {
+                const status = s.status?.toLowerCase()?.trim()
+                return status === 'available' || status === 'active'
+            })
             const available = hardwareAvailable.filter((s: any) => !busy.has(s.name))
 
             setAvailableSystems(available)
