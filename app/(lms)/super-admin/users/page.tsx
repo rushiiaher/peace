@@ -186,91 +186,109 @@ export default function UsersPage() {
           <DialogTrigger asChild>
             <Button className="gap-2"><Plus className="w-4 h-4" />Create New User</Button>
           </DialogTrigger>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader className="border-b pb-4 mb-4">
               <DialogTitle className="text-xl">Create New User</DialogTitle>
+              <p className="text-sm text-muted-foreground mt-1">Add a new user to the system by filling out the details below.</p>
             </DialogHeader>
             <form onSubmit={handleAdd} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Full Name</Label>
-                  <Input id="name" name="name" placeholder="John Doe" required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input id="email" name="email" type="email" placeholder="john@example.com" required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Input id="password" name="password" type="password" required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="role">Role</Label>
-                  <Select name="role" value={selectedRole} onValueChange={setSelectedRole} required>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="institute-admin">Institute Admin</SelectItem>
-                      <SelectItem value="faculty">Faculty</SelectItem>
-                      <SelectItem value="student">Student</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="instituteId">Institute {selectedRole === 'student' ? '(Required)' : '(Optional)'}</Label>
-                  <Select name="instituteId" value={selectedInstituteId} onValueChange={setSelectedInstituteId} required={selectedRole === 'student'}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select institute" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {institutes.map((inst: any) => (
-                        <SelectItem key={inst._id} value={inst._id}>{inst.name} ({inst.code})</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="status">Status</Label>
-                  <Select name="status" defaultValue="Active">
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Active">Active</SelectItem>
-                      <SelectItem value="Inactive">Inactive</SelectItem>
-                    </SelectContent>
-                  </Select>
+
+              {/* Account Information */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
+                  <UserCog className="w-4 h-4" /> Account Information
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="name">Full Name <span className="text-destructive">*</span></Label>
+                    <Input id="name" name="name" placeholder="John Doe" required />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="email">Email <span className="text-destructive">*</span></Label>
+                    <Input id="email" name="email" type="email" placeholder="john@example.com" required />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="password">Password <span className="text-destructive">*</span></Label>
+                    <Input id="password" name="password" type="password" required />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="role">Role <span className="text-destructive">*</span></Label>
+                    <Select name="role" value={selectedRole} onValueChange={setSelectedRole} required>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="institute-admin">Institute Admin</SelectItem>
+                        <SelectItem value="faculty">Faculty</SelectItem>
+                        <SelectItem value="student">Student</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
 
+              {/* Organization Details */}
+              <div className="space-y-3 pt-2 border-t">
+                <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
+                  <Building2 className="w-4 h-4" /> Organization
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1.5 md:col-span-2">
+                    <Label htmlFor="instituteId">Institute {selectedRole === 'student' ? <span className="text-destructive">*</span> : '(Optional)'}</Label>
+                    <Select name="instituteId" value={selectedInstituteId} onValueChange={setSelectedInstituteId} required={selectedRole === 'student'}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select institute" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {institutes.map((inst: any) => (
+                          <SelectItem key={inst._id} value={inst._id}>{inst.name} ({inst.code})</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="status">Status</Label>
+                    <Select name="status" defaultValue="Active">
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Active">Active</SelectItem>
+                        <SelectItem value="Inactive">Inactive</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Student Specific Details */}
               {selectedRole === 'student' && (
-                <div className="space-y-4 pt-4 border-t">
-                  <h4 className="font-medium text-sm text-muted-foreground flex items-center gap-2">
+                <div className="space-y-3 pt-2 border-t">
+                  <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
                     <GraduationCap className="w-4 h-4" /> Student Details
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="rollNo">Roll Number</Label>
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="rollNo">Roll Number <span className="text-destructive">*</span></Label>
                       <Input id="rollNo" name="rollNo" value={rollNo} onChange={(e) => setRollNo(e.target.value)} placeholder="ST-2024-001" required />
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                       <Label htmlFor="phone">Phone</Label>
                       <Input id="phone" name="phone" placeholder="+91..." />
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                       <Label htmlFor="dateOfBirth">Date of Birth</Label>
                       <Input id="dateOfBirth" name="dateOfBirth" type="date" />
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                       <Label htmlFor="address">Address</Label>
                       <Input id="address" name="address" placeholder="City, State" />
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                       <Label htmlFor="guardianName">Guardian Name</Label>
                       <Input id="guardianName" name="guardianName" />
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                       <Label htmlFor="guardianPhone">Guardian Phone</Label>
                       <Input id="guardianPhone" name="guardianPhone" />
                     </div>
@@ -357,10 +375,12 @@ export default function UsersPage() {
         </div>
 
         {(activeTab === 'all' ? users : filterByRole(activeTab)).map((user: any) => (
-          <Card key={user._id} className="overflow-hidden border-border/50 shadow-sm hover:shadow-md transition-all">
-            <div className="p-6 md:flex items-start justify-between border-b border-border/50 bg-muted/5">
-              <div className="flex items-center gap-4">
-                <div className={`h-12 w-12 rounded-xl flex items-center justify-center shadow-inner ${user.role === 'super-admin' ? 'bg-purple-100 text-purple-600' :
+          <Card key={user._id} className="group hover:border-primary/50 transition-all duration-300 shadow-sm hover:shadow-md">
+            <div className="p-5 flex flex-col md:flex-row gap-6">
+
+              {/* Left: Identity */}
+              <div className="flex items-start gap-4 md:w-[30%] min-w-[250px]">
+                <div className={`h-12 w-12 rounded-xl flex items-center justify-center shrink-0 shadow-sm ${user.role === 'super-admin' ? 'bg-purple-100 text-purple-600' :
                   user.role === 'institute-admin' ? 'bg-blue-100 text-blue-600' :
                     user.role === 'faculty' ? 'bg-orange-100 text-orange-600' :
                       'bg-emerald-100 text-emerald-600'
@@ -370,77 +390,74 @@ export default function UsersPage() {
                       user.role === 'student' ? <GraduationCap className="h-6 w-6" /> :
                         <Users className="h-6 w-6" />}
                 </div>
+                <div className="overflow-hidden">
+                  <h3 className="font-bold text-lg truncate flex items-center gap-2">
+                    {user.name}
+                    {user.status === 'Active' && <span className="inline-block w-2 h-2 rounded-full bg-green-500" />}
+                  </h3>
+                  <p className="text-sm text-muted-foreground truncate">{user.email}</p>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    <Badge variant="outline" className="text-xs font-medium capitalize bg-muted/50">
+                      {user.role.replace('-', ' ')}
+                    </Badge>
+                    {user.rollNo && <Badge variant="secondary" className="text-[10px]">{user.rollNo}</Badge>}
+                  </div>
+                </div>
+              </div>
+
+              {/* Middle: Stats/Details Grid */}
+              <div className="flex-1 grid grid-cols-2 md:grid-cols-3 gap-y-4 gap-x-6 py-1 md:border-l md:pl-6">
                 <div>
-                  <h3 className="text-lg font-bold text-foreground">{user.name}</h3>
-                  <p className="text-sm text-muted-foreground">{user.email}</p>
+                  <span className="text-[10px] uppercase text-muted-foreground font-bold tracking-wider">Institute</span>
+                  <p className="text-sm font-medium mt-0.5 truncate" title={user.instituteId ? getInstituteById(user.instituteId)?.name : 'N/A'}>
+                    {user.instituteId ? getInstituteById(user.instituteId)?.name || 'N/A' : 'N/A'}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-[10px] uppercase text-muted-foreground font-bold tracking-wider">Joined</span>
+                  <p className="text-sm font-medium mt-0.5">
+                    {new Date(user.createdAt).toLocaleDateString()}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-[10px] uppercase text-muted-foreground font-bold tracking-wider">Status</span>
+                  <p className={`text-sm font-medium mt-0.5 ${user.status === 'Active' ? 'text-green-600' : 'text-red-600'}`}>
+                    {user.status}
+                  </p>
+                </div>
+                <div className="md:col-span-3 lg:col-span-3">
+                  <span className="text-[10px] uppercase text-muted-foreground font-bold tracking-wider">Last Login</span>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {user.lastLogin ? new Date(user.lastLogin).toLocaleString() : 'Never logged in'}
+                  </p>
                 </div>
               </div>
-              <Badge className={`mt-4 md:mt-0 px-3 py-1 text-sm ${user.status === 'Active'
-                ? 'bg-emerald-500 hover:bg-emerald-600 text-white border-transparent'
-                : 'bg-destructive/10 text-destructive border-destructive/20'
-                }`}>
-                {user.status}
-              </Badge>
-            </div>
 
-            <div className="p-6 grid grid-cols-2 md:grid-cols-4 gap-6">
-              {/* Role */}
-              <div className="space-y-1.5">
-                <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  <Shield className="h-3.5 w-3.5" />
-                  <span>Role</span>
-                </div>
-                <p className="font-semibold capitalize text-sm">{user.role.replace('-', ' ')}</p>
+              {/* Right: Actions */}
+              <div className="flex flex-row md:flex-col items-center md:items-end justify-center md:justify-start gap-2 border-t md:border-t-0 pt-4 md:pt-0">
+                <Button variant="ghost" size="sm" onClick={() => { setSelectedUser(user); setEditOpen(true); }} className="h-8 w-full md:w-auto justify-start text-muted-foreground hover:text-foreground">
+                  <Edit className="w-3.5 h-3.5 mr-2" /> Edit
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => toggleStatus(user)}
+                  disabled={user.role === 'super-admin'}
+                  className={`h-8 w-full md:w-auto justify-start ${user.status === 'Active' ? 'text-orange-600 hover:bg-orange-50' : 'text-green-600 hover:bg-green-50'}`}
+                >
+                  <Shield className="w-3.5 h-3.5 mr-2" /> {user.status === 'Active' ? 'Deactivate' : 'Activate'}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleDelete(user._id)}
+                  disabled={user.role === 'super-admin'}
+                  className="h-8 w-full md:w-auto justify-start text-red-600 hover:bg-red-50 hover:text-red-700"
+                >
+                  <Trash2 className="w-3.5 h-3.5 mr-2" /> Delete
+                </Button>
               </div>
 
-              {/* Institute */}
-              <div className="space-y-1.5">
-                <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  <Building2 className="h-3.5 w-3.5" />
-                  <span>Institute</span>
-                </div>
-                <p className="font-semibold text-sm">{user.instituteId ? getInstituteById(user.instituteId)?.name || 'N/A' : 'N/A'}</p>
-              </div>
-
-              {/* Created */}
-              <div className="space-y-1.5">
-                <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  <Calendar className="h-3.5 w-3.5" />
-                  <span>Created</span>
-                </div>
-                <p className="font-semibold text-sm">{new Date(user.createdAt).toLocaleDateString()}</p>
-              </div>
-
-              {/* Last Login */}
-              <div className="space-y-1.5">
-                <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  <Calendar className="h-3.5 w-3.5" />
-                  <span>Last Login</span>
-                </div>
-                <p className="font-semibold text-sm">{user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'}</p>
-              </div>
-            </div>
-
-            <div className="px-6 py-4 bg-muted/30 border-t border-border/50 flex flex-wrap gap-3">
-              <Button variant="outline" size="sm" onClick={() => { setSelectedUser(user); setEditOpen(true); }} className="h-9 px-4 hover:bg-background shadow-sm">
-                <Edit className="w-4 h-4 mr-2" /> Edit
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => toggleStatus(user)}
-                disabled={user.role === 'super-admin'}
-                className="h-9 px-4 hover:bg-background shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
-                <Shield className="w-4 h-4 mr-2" /> {user.status === 'Active' ? 'Deactivate' : 'Activate'}
-              </Button>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => handleDelete(user._id)}
-                disabled={user.role === 'super-admin'}
-                className="h-9 px-4 bg-red-600 hover:bg-red-700 text-white shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
-                <Trash2 className="w-4 h-4 mr-2" /> Delete
-              </Button>
             </div>
           </Card>
         ))}

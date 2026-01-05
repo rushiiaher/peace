@@ -381,7 +381,11 @@ export default function InstituteExamsPage() {
         fetchAdmitCards()
       } else {
         console.error('Scheduling failed:', data.error)
-        toast.error(data.error || 'Failed to schedule exam')
+        if (data.error === 'No question banks found for this exam') {
+          toast.error("Tell Super Admin To Add question Banks For the Final Exam.")
+        } else {
+          toast.error(data.error || 'Failed to schedule exam')
+        }
       }
     } catch (error: any) {
       console.error('Error scheduling exam:', error)
@@ -544,7 +548,7 @@ export default function InstituteExamsPage() {
                     <div className="flex items-start gap-2 p-2 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-md">
                       <AlertTriangle className="w-4 h-4 text-orange-600 dark:text-orange-400 shrink-0 mt-0.5" />
                       <p className="text-sm font-medium text-orange-700 dark:text-orange-300">
-                        Exams must be scheduled at least <span className="font-bold">6 days</span> in advance.
+                        Exams must be scheduled at least <span className="font-bold">6 days</span> Before.
                       </p>
                     </div>
                   </div>
