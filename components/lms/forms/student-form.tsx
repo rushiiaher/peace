@@ -64,16 +64,6 @@ export function StudentForm({
     const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
         if (file) {
-            // Validate file size (max 5MB)
-            const maxSize = 5 * 1024 * 1024 // 5MB in bytes
-            if (file.size > maxSize) {
-                toast.error('Image too large', {
-                    description: 'Please select an image smaller than 5MB'
-                })
-                e.target.value = '' // Clear the input
-                return
-            }
-
             // Validate file type
             const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'image/svg+xml']
             if (!allowedTypes.includes(file.type)) {
@@ -84,15 +74,47 @@ export function StudentForm({
                 return
             }
 
+            // Client-side compression
             const reader = new FileReader()
-            reader.onloadend = () => {
-                const base64String = reader.result as string
-                setPhotoPreview(base64String)
-                setNewPhotoData(base64String)
-                toast.success('Photo uploaded successfully')
-            }
-            reader.onerror = () => {
-                toast.error('Failed to read image file')
+            reader.onload = (event) => {
+                const img = new Image()
+                img.onload = () => {
+                    const canvas = document.createElement('canvas')
+                    let width = img.width
+                    let height = img.height
+
+                    // Max dimensions (800x800 is plenty for profile photos)
+                    const MAX_DIM = 800
+                    if (width > height) {
+                        if (width > MAX_DIM) {
+                            height *= MAX_DIM / width
+                            width = MAX_DIM
+                        }
+                    } else {
+                        if (height > MAX_DIM) {
+                            width *= MAX_DIM / height
+                            height = MAX_DIM
+                        }
+                    }
+
+                    canvas.width = width
+                    canvas.height = height
+                    const ctx = canvas.getContext('2d')
+                    if (ctx) {
+                        ctx.drawImage(img, 0, 0, width, height)
+                        // Compress to JPEG with 0.7 quality (significantly reduces size)
+                        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7)
+
+                        setPhotoPreview(compressedBase64)
+                        setNewPhotoData(compressedBase64)
+                        toast.success('Photo optimized and uploaded')
+
+                        // Debug log size
+                        console.log('Original size:', file.size)
+                        console.log('Compressed size:', Math.ceil((compressedBase64.length * 3) / 4))
+                    }
+                }
+                img.src = event.target?.result as string
             }
             reader.readAsDataURL(file)
         }
