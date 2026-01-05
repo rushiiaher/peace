@@ -5,6 +5,7 @@ import Exam from '@/lib/models/Exam'
 import Institute from '@/lib/models/Institute'
 import AdmitCard from '@/lib/models/AdmitCard'
 import User from '@/lib/models/User'
+import Course from '@/lib/models/Course'
 
 // Helper helpers
 const timeToMinutes = (time: string) => {
@@ -72,14 +73,20 @@ export async function POST(req: Request) {
             let newExam = null
 
             try {
+                // Fetch course to get exam configuration
+                const course = await Course.findById(originalExam.courseId)
+                const examConfig = course?.examConfigurations?.[0]
+                const courseExamDuration = examConfig?.duration || null
+
                 // Resource Allocation Logic (Simplified version of schedule route)
-                const availableSystems = institute.systems.filter((s: any) => s.status === 'Available')
+                // Accept both 'Available' and 'Active' status systems
+                const availableSystems = institute.systems.filter((s: any) => s.status === 'Available' || s.status === 'Active')
                 if (availableSystems.length === 0) {
                     throw new Error(`No systems available at ${institute.name}`)
                 }
 
                 const { openingTime, closingTime, sectionDuration, breakBetweenSections } = institute.examTimings || {
-                    openingTime: '09:00', closingTime: '18:00', sectionDuration: 180, breakBetweenSections: 30
+                    openingTime: '09:00', closingTime: '18:00', sectionDuration: courseExamDuration || 180, breakBetweenSections: 30
                 }
 
                 // Find next available slot starting TOMORROW

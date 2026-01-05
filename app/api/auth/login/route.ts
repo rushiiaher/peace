@@ -72,7 +72,12 @@ export async function POST(req: NextRequest) {
         email: user.email,
         name: user.name,
         role: user.role,
-        instituteId: user.instituteId
+        instituteId: user.instituteId,
+        rollNo: user.rollNo,
+        firstName: user.firstName,
+        middleName: user.middleName,
+        lastName: user.lastName,
+        documents: user.documents // Include documents field with photo
       }
     })
   } catch (error) {

@@ -35,45 +35,51 @@ export async function POST(req: Request) {
   try {
     await connectDB()
     const { examId, studentIds, rescheduleDate, reason } = await req.json()
-    
+
     const exam = await Exam.findById(examId).populate('instituteId courseId')
     if (!exam) return NextResponse.json({ error: 'Exam not found' }, { status: 404 })
-    
+
     const institute = await Institute.findById(exam.instituteId)
     if (!institute) return NextResponse.json({ error: 'Institute not found' }, { status: 404 })
-    
-    const { openingTime = '09:00', closingTime = '18:00', sectionDuration = 180, breakBetweenSections = 30, workingDays = [1,2,3,4,5,6] } = institute.examTimings || {}
-    
+
+    // Fetch course for exam configuration
+    const course = await Course.findById(exam.courseId)
+    const examConfig = course?.examConfigurations?.[0]
+    const courseExamDuration = examConfig?.duration || null
+
+    const { openingTime = '09:00', closingTime = '18:00', sectionDuration = courseExamDuration || 180, breakBetweenSections = 30, workingDays = [1, 2, 3, 4, 5, 6] } = institute.examTimings || {}
+
     let examDate = new Date(rescheduleDate)
     if (isWeekend(examDate, workingDays)) {
       examDate = getNextWorkingDay(examDate, workingDays)
     }
-    
-    const availableSystems = institute.systems?.filter((s: any) => s.status === 'Available') || []
+
+    // Accept both 'Available' and 'Active' status systems
+    const availableSystems = institute.systems?.filter((s: any) => s.status === 'Available' || s.status === 'Active') || []
     if (availableSystems.length === 0) return NextResponse.json({ error: 'No systems available' }, { status: 400 })
-    
+
     // Get all existing exams on the same date to check conflicts
     const existingExams = await Exam.find({
       instituteId: exam.instituteId,
       date: examDate,
       _id: { $ne: examId }
     })
-    
+
     // Also get existing rescheduled admit cards for the same date
     const existingAdmitCards = await AdmitCard.find({
       examDate: examDate,
       isRescheduled: true
     })
-    
+
     let currentStartTime = openingTime
     const occupiedSlots = new Map()
-    
+
     // Mark slots occupied by existing exams
     existingExams.forEach((e: any) => {
       e.systemAssignments?.forEach((a: any) => {
         const startTime = e.startTime
         const endTime = addMinutes(startTime, e.duration || sectionDuration)
-        
+
         // Mark all time slots for this system as occupied
         let slotTime = startTime
         while (parseTime(slotTime) < parseTime(endTime)) {
@@ -83,12 +89,12 @@ export async function POST(req: Request) {
         }
       })
     })
-    
+
     // Mark slots occupied by rescheduled students
     existingAdmitCards.forEach((card: any) => {
       const startTime = card.startTime
       const endTime = card.endTime
-      
+
       let slotTime = startTime
       while (parseTime(slotTime) < parseTime(endTime)) {
         const key = `${card.systemName}-${slotTime}`
@@ -96,48 +102,48 @@ export async function POST(req: Request) {
         slotTime = addMinutes(slotTime, 20)
       }
     })
-    
+
     const rescheduledStudents = []
     let systemIndex = 0
-    
+
     for (const studentId of studentIds) {
       let assigned = false
       let attempts = 0
       const maxAttempts = 100
-      
+
       while (!assigned && attempts < maxAttempts) {
         attempts++
-        
+
         if (systemIndex >= availableSystems.length) {
           // Move to next time slot (20 minutes later)
           currentStartTime = addMinutes(currentStartTime, 20)
-          
+
           // Check if we can fit a full exam before closing time
           if (parseTime(currentStartTime) + sectionDuration > parseTime(closingTime)) {
             examDate = getNextWorkingDay(examDate, workingDays)
             currentStartTime = openingTime
-            
+
             // Clear occupied slots for new date
             occupiedSlots.clear()
-            
+
             // Reload conflicts for new date
             const newDateExams = await Exam.find({
               instituteId: exam.instituteId,
               date: examDate,
               _id: { $ne: examId }
             })
-            
+
             const newDateAdmitCards = await AdmitCard.find({
               examDate: examDate,
               isRescheduled: true
             })
-            
+
             // Rebuild occupied slots for new date
             newDateExams.forEach((e: any) => {
               e.systemAssignments?.forEach((a: any) => {
                 const startTime = e.startTime
                 const endTime = addMinutes(startTime, e.duration || sectionDuration)
-                
+
                 let slotTime = startTime
                 while (parseTime(slotTime) < parseTime(endTime)) {
                   const key = `${a.systemName}-${slotTime}`
@@ -146,11 +152,11 @@ export async function POST(req: Request) {
                 }
               })
             })
-            
+
             newDateAdmitCards.forEach((card: any) => {
               const startTime = card.startTime
               const endTime = card.endTime
-              
+
               let slotTime = startTime
               while (parseTime(slotTime) < parseTime(endTime)) {
                 const key = `${card.systemName}-${slotTime}`
@@ -161,14 +167,14 @@ export async function POST(req: Request) {
           }
           systemIndex = 0
         }
-        
+
         const system = availableSystems[systemIndex]
         const key = `${system.name}-${currentStartTime}`
-        
+
         // Check if system is free for the entire exam duration
         const examEndTime = addMinutes(currentStartTime, sectionDuration)
         let systemFree = true
-        
+
         // Check every 20-minute slot during exam duration
         let checkTime = currentStartTime
         while (parseTime(checkTime) < parseTime(examEndTime) && systemFree) {
@@ -178,16 +184,16 @@ export async function POST(req: Request) {
           }
           checkTime = addMinutes(checkTime, 20)
         }
-        
+
         // Also ensure we don't exceed institute closing time
         if (parseTime(examEndTime) > parseTime(closingTime)) {
           systemFree = false
         }
-        
+
         if (systemFree) {
           let assignment = exam.systemAssignments?.find((a: any) => a.studentId.toString() === studentId)
           // Don't modify original exam assignments here - we'll create new exam
-          
+
           // Mark all slots during exam duration as occupied
           let markTime = currentStartTime
           while (parseTime(markTime) < parseTime(examEndTime)) {
@@ -195,12 +201,12 @@ export async function POST(req: Request) {
             occupiedSlots.set(markKey, true)
             markTime = addMinutes(markTime, 20)
           }
-          
+
           const student = await User.findById(studentId)
           const course = await Course.findById(exam.courseId)
-          
+
           const existingAdmitCard = await AdmitCard.findOne({ examId, studentId })
-          
+
           if (existingAdmitCard) {
             existingAdmitCard.examDate = examDate
             existingAdmitCard.startTime = currentStartTime
@@ -231,25 +237,25 @@ export async function POST(req: Request) {
             })
             console.log('Created new admit card:', newAdmitCard._id, 'with date:', examDate, 'time:', currentStartTime)
           }
-          
+
           rescheduledStudents.push({ studentId, systemName: system.name, date: examDate, time: currentStartTime })
           assigned = true
-          
+
           // Move to next time slot with 20-minute gap
           currentStartTime = addMinutes(currentStartTime, 20)
-          
+
           // Reset system index to try all systems for next student
           systemIndex = 0
         } else {
           systemIndex++
         }
       }
-      
+
       if (!assigned) {
         throw new Error(`Failed to assign system for student ${studentId} after ${maxAttempts} attempts`)
       }
     }
-    
+
     // Create a new exam for rescheduled students
     const rescheduledExam = await Exam.create({
       courseId: exam.courseId,
@@ -273,12 +279,12 @@ export async function POST(req: Request) {
       })),
       status: 'Scheduled'
     })
-    
+
     // Create new admit cards for rescheduled exam and mark old ones as rescheduled
     for (const rs of rescheduledStudents) {
       const student = await User.findById(rs.studentId)
       const course = await Course.findById(exam.courseId)
-      
+
       // Create new admit card for rescheduled exam
       await AdmitCard.create({
         examId: rescheduledExam._id,
@@ -296,27 +302,27 @@ export async function POST(req: Request) {
         sectionNumber: 999,
         rescheduled: false
       })
-      
+
       // Mark original admit card as rescheduled
       await AdmitCard.updateOne(
         { examId: exam._id, studentId: rs.studentId },
         { rescheduled: true, rescheduledReason: reason }
       )
     }
-    
+
     // Remove rescheduled students from original exam
     if (exam.systemAssignments) {
       exam.systemAssignments = exam.systemAssignments.filter(
         (assignment: any) => !studentIds.includes(assignment.studentId.toString())
       )
     }
-    
+
     console.log('Original exam students after removal:', exam.systemAssignments?.length)
-    
+
     exam.markModified('systemAssignments')
     await exam.save()
-    
-    return NextResponse.json({ 
+
+    return NextResponse.json({
       message: `${rescheduledStudents.length} students rescheduled successfully`,
       rescheduledStudents,
       originalExamId: exam._id,

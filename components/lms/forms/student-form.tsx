@@ -64,11 +64,35 @@ export function StudentForm({
     const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
         if (file) {
+            // Validate file size (max 5MB)
+            const maxSize = 5 * 1024 * 1024 // 5MB in bytes
+            if (file.size > maxSize) {
+                toast.error('Image too large', {
+                    description: 'Please select an image smaller than 5MB'
+                })
+                e.target.value = '' // Clear the input
+                return
+            }
+
+            // Validate file type
+            const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'image/svg+xml']
+            if (!allowedTypes.includes(file.type)) {
+                toast.error('Invalid file type', {
+                    description: 'Please select a valid image file (JPG, PNG, GIF, WebP, BMP, or SVG)'
+                })
+                e.target.value = '' // Clear the input
+                return
+            }
+
             const reader = new FileReader()
             reader.onloadend = () => {
                 const base64String = reader.result as string
                 setPhotoPreview(base64String)
                 setNewPhotoData(base64String)
+                toast.success('Photo uploaded successfully')
+            }
+            reader.onerror = () => {
+                toast.error('Failed to read image file')
             }
             reader.readAsDataURL(file)
         }
@@ -165,7 +189,7 @@ export function StudentForm({
                         </div>
                         <div className="text-center space-y-1">
                             <p className="text-xs text-muted-foreground font-medium">Upload Photo</p>
-                            <p className="text-[10px] text-muted-foreground/70">JPG, PNG, GIF, WebP</p>
+                            <p className="text-[10px] text-muted-foreground/70">JPG, JPEG, PNG, GIF, WebP, BMP, SVG</p>
                         </div>
                     </div>
 

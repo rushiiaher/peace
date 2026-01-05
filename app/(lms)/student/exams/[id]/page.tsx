@@ -117,6 +117,24 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
       setStudentId(userData.id || userData._id)
       setStudentName(userData.name || 'Student')
       setStudentDetails(userData) // Save full details for display
+
+      // If documents/photo not in localStorage, fetch fresh data from API
+      if (!userData.documents?.photo && (userData.id || userData._id)) {
+        fetch(`/api/users/${userData.id || userData._id}`)
+          .then(res => res.json())
+          .then(freshData => {
+            if (freshData && !freshData.error) {
+              setStudentDetails(freshData)
+              // Optionally update localStorage with fresh data
+              localStorage.setItem('user', JSON.stringify({
+                ...userData,
+                documents: freshData.documents,
+                rollNo: freshData.rollNo
+              }))
+            }
+          })
+          .catch(err => console.error('Failed to fetch student details:', err))
+      }
     }
   }, [])
 
@@ -402,6 +420,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
                 </p>
               </div>
               <Button
+                type="button"
                 onClick={enterFullScreen}
                 className="w-full bg-destructive hover:bg-destructive/90 text-white"
                 size="lg"
@@ -453,6 +472,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
                   <Badge variant="secondary" className="ml-2 bg-blue-100 text-blue-700 hover:bg-blue-100 border-blue-200">2 Marks</Badge>
                 </h3>
                 <Button
+                  type="button"
                   size="sm"
                   variant={markedForReview[currentQuestion] ? 'default' : 'outline'}
                   onClick={() => {
@@ -505,6 +525,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
             {/* Main Navigation Row */}
             <div className="flex items-center gap-3">
               <Button
+                type="button"
                 variant="outline"
                 onClick={() => setCurrentQuestion(Math.max(0, currentQuestion - 1))}
                 disabled={currentQuestion === 0}
@@ -515,6 +536,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
                 Previous
               </Button>
               <Button
+                type="button"
                 variant="outline"
                 onClick={() => {
                   const newAnswers = [...answers]
@@ -527,6 +549,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
               </Button>
               {currentQuestion < exam.questions?.length - 1 && (
                 <Button
+                  type="button"
                   onClick={() => setCurrentQuestion(currentQuestion + 1)}
                   className="flex-1"
                   size="lg"
@@ -539,6 +562,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
 
             {/* Separate Submit Exam Button */}
             <Button
+              type="button"
               onClick={() => handleSubmit()}
               disabled={elapsedTime < 1800} // 30 minutes = 1800 seconds
               className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold py-6"
@@ -629,6 +653,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
 
                     return (
                       <button
+                        type="button"
                         key={i}
                         onClick={() => setCurrentQuestion(i)}
                         className={`w-8 h-8 rounded-sm font-medium text-xs transition-all flex items-center justify-center ${isCurrent ? 'ring-2 ring-blue-500 ring-offset-1' : ''

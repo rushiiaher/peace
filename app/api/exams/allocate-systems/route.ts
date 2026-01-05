@@ -40,10 +40,19 @@ export async function POST(req: Request) {
     const institute = await Institute.findById(instituteId)
     if (!institute) return NextResponse.json({ error: 'Institute not found' }, { status: 404 })
 
-    const { openingTime = '09:00', closingTime = '18:00', sectionDuration = 180, breakBetweenSections = 30, workingDays = [1, 2, 3, 4, 5, 6] } = institute.examTimings || {}
+    const course = await Course.findById(courseId)
+    if (!course) return NextResponse.json({ error: 'Course not found' }, { status: 404 })
+
+    // Get exam configuration from course if available
+    // Find the appropriate exam configuration (default to first one if exists)
+    const examConfig = course.examConfigurations?.[0]
+    const courseExamDuration = examConfig?.duration || null
+
+    const { openingTime = '09:00', closingTime = '18:00', sectionDuration = courseExamDuration || 180, breakBetweenSections = 30, workingDays = [1, 2, 3, 4, 5, 6] } = institute.examTimings || {}
 
     const students = await User.find({ instituteId, role: 'student', 'courses.courseId': courseId })
-    const availableSystems = institute.systems?.filter((s: any) => s.status === 'Available') || []
+    // Accept both 'Available' and 'Active' status systems
+    const availableSystems = institute.systems?.filter((s: any) => s.status === 'Available' || s.status === 'Active') || []
 
     if (availableSystems.length === 0) return NextResponse.json({ error: 'No systems available' }, { status: 400 })
 
@@ -130,7 +139,7 @@ export async function POST(req: Request) {
       status: 'Scheduled'
     })
 
-    const course = await Course.findById(courseId)
+    // course is already fetched at the beginning of the function
     for (const section of sections) {
       for (let i = 0; i < section.systemAssignments.length; i++) {
         const assignment = section.systemAssignments[i]
