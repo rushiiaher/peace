@@ -66,26 +66,8 @@ interface ProvisionalCertificateData {
 export const generateProvisionalCertificateHtml = (data: ProvisionalCertificateData) => {
   const maskedAadhaar = maskAadhaar(data.aadhaarNo)
   const totalInWords = numberToWords(data.totalMarks)
-
-  // Determine result color
   const resultColor = data.result === 'PASS' ? '#28a745' : '#dc3545'
   const gradeColor = data.result === 'PASS' ? '#d32f2f' : '#dc3545'
-
-  // Generate evaluation rows (max 4 components)
-  const evalRows = data.evaluationComponents.slice(0, 4).map(comp => `
-    <tr>
-      <td style="padding: 8px; text-align: left; font-size: 14px;">${comp.name}</td>
-      <td style="padding: 8px; text-align: center; font-weight: bold; color: #d32f2f; font-size: 14px;">${comp.marksObtained}</td>
-      <td style="padding: 8px; text-align: center; font-size: 14px;">${comp.maxMarks}</td>
-      <td style="padding: 8px; text-align: center; font-size: 14px;" rowspan="${data.evaluationComponents.length + 2}">
-        <strong style="color: ${resultColor}; font-size: 18px;">${data.result}</strong>
-      </td>
-    </tr>
-  `).join('')
-
-  // Check if final exam passed (35+ questions correct)
-  const finalExamResult = data.finalExamCorrect >= 35 ? 'PASS' : 'FAIL'
-  const finalExamColor = finalExamResult === 'PASS' ? '#28a745' : '#dc3545'
 
   return `
 <!DOCTYPE html>
@@ -96,198 +78,82 @@ export const generateProvisionalCertificateHtml = (data: ProvisionalCertificateD
     @page { size: A4; margin: 0; }
     body { 
       font-family: 'Times New Roman', serif; 
-      margin: 0; 
-      padding: 0;
-      background: url('/Provisional-PNG.png') no-repeat center center;
-      background-size: contain;
-      width: 210mm;
-      height: 297mm;
+      margin: 0; padding: 0;
+      width: 210mm; height: 297mm;
       position: relative;
     }
-    .content {
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      padding: 85mm 20mm 20mm 20mm;
-      box-sizing: border-box;
+    .bg-img {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: -1;
     }
-    .field {
-      font-size: 14px;
+    .absolute-text {
+      position: absolute;
       color: #d32f2f;
       font-weight: bold;
+      font-size: 14px;
       text-transform: uppercase;
     }
-    .roll-no {
-      position: absolute;
-      top: 82mm;
-      right: 25mm;
-      font-size: 15px;
-      color: #d32f2f;
-      font-weight: bold;
-    }
-    .info-table {
-      width: 100%;
-      margin-top: 8mm;
-      margin-bottom: 5mm;
-    }
-    .info-row {
-      display: flex;
-      margin-bottom: 3mm;
-    }
-    .info-label {
-      width: 35mm;
-      font-size: 13px;
-      color: #000;
-    }
-    .info-value {
-      flex: 1;
-      font-size: 14px;
-      color: #d32f2f;
-      font-weight: bold;
-      text-transform: uppercase;
-    }
-    .marks-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 5mm;
-      margin-bottom: 5mm;
-    }
-    .marks-table th {
-      background-color: transparent ;
-      padding: 8px;
-      border: 1px solid #000;
-      font-size: 13px;
-      text-align: center;
-    }
-    .marks-table td {
-      border: 1px solid #000;
-      padding: 8px;
-      font-size: 14px;
-    }
-    .total-row {
-      background-color: transparent;
-      font-weight: bold;
-    }
-    .uid {
-      margin-top: 5mm;
-      font-size: 14px;
-    }
-    .uid-label {
-      color: #000;
-    }
-    .uid-value {
-      color: #d32f2f;
-      font-weight: bold;
-    }
-    .date-footer {
-      position: absolute;
-      bottom: 35mm;
-      right: 25mm;
-      font-size: 12px;
-      color: #d32f2f;
-      font-weight: bold;
-    }
+    .roll-no { top: 81mm; left: 165mm; font-size: 15px; }
+    
+    .lbl-cand { top: 98mm; left: 80mm; }
+    .lbl-moth { top: 105mm; left: 80mm; }
+    .lbl-code { top: 112mm; left: 80mm; }
+    .lbl-name { top: 119mm; left: 80mm; }
+    .lbl-center { top: 126mm; left: 80mm; }
+
+    /* Final Exam Row */
+    .row-final-title { top: 151mm; left: 20mm; font-size: 13px; color: #000; width: 70mm;}
+    .row-final-marks { top: 151mm; left: 95mm; text-align: center; width: 20mm; }
+    .row-final-max { top: 151mm; left: 125mm; text-align: center; width: 20mm; color: #000; }
+    .row-final-result { top: 175mm; left: 155mm; text-align: center; width: 40mm; font-size: 24px; }
+
+    /* Grand Total */
+    .row-total-marks { top: 210mm; left: 95mm; text-align: center; width: 20mm; font-size: 16px; }
+    .row-total-max { top: 210mm; left: 125mm; text-align: center; width: 20mm; color: #000; font-size: 15px; }
+    .row-grade { top: 210mm; left: 175mm; font-size: 18px; }
+
+    .row-words { top: 220mm; left: 65mm; color: #d32f2f; font-size: 13px; font-weight: bold; }
+
+    .uid-val { top: 245mm; left: 45mm; }
+    .date-val { bottom: 35mm; left: 165mm; font-size: 12px; }
+
   </style>
 </head>
 <body>
-  <div class="content">
-    <!-- Roll Number (Top Right) -->
-    <div class="roll-no">Roll No: ${data.rollNo}</div>
-    
-    <!-- Student Information -->
-    <div class="info-table">
-      <div class="info-row">
-        <div class="info-label">Candidate Name</div>
-        <div class="info-value">: ${data.candidateName}</div>
-      </div>
-      <div class="info-row">
-        <div class="info-label">Mother's Name</div>
-        <div class="info-value">: ${data.motherName}</div>
-      </div>
-      <div class="info-row">
-        <div class="info-label">Course Code</div>
-        <div class="info-value">: ${data.courseCode}</div>
-      </div>
-      <div class="info-row">
-        <div class="info-label">Course Name</div>
-        <div class="info-value">: ${data.courseName}</div>
-      </div>
-      <div class="info-row">
-        <div class="info-label">Exam Center</div>
-        <div class="info-value">: ${data.examCenter}</div>
-      </div>
-    </div>
+  <img src="/Provisional-JPG-JPEG-BLANK.jpg" class="bg-img" />
 
-    <!-- Marks Table -->
-    <table class="marks-table">
-      <thead>
-        <tr>
-          <th style="width: 40%;">Exam Title</th>
-          <th style="width: 20%;">Marks</th>
-          <th style="width: 20%;">Marks Out Of</th>
-          <th style="width: 20%;">Result</th>
-        </tr>
-      </thead>
-      <tbody>
-        <!-- Final Exam Row -->
-        <tr>
-          <td style="padding: 8px; text-align: left; font-size: 14px; font-weight: bold;">${data.courseName}-Online</td>
-          <td style="padding: 8px; text-align: center; font-weight: bold; color: #d32f2f; font-size: 14px;">${data.finalExamMarks}</td>
-          <td style="padding: 8px; text-align: center; font-size: 14px;">${data.finalExamMaxMarks}</td>
-          <td style="padding: 8px; text-align: center; font-size: 14px; color: ${finalExamColor};" rowspan="${data.evaluationComponents.length + 2}">
-            <strong style="font-size: 18px;">${data.result}</strong>
-          </td>
-        </tr>
-        
-        <!-- Internal Assessment Header -->
-        <tr>
-          <td colspan="3" style="padding: 8px; text-align: center; font-weight: bold; background-color: transparent; font-size: 13px;">
-            Internal Assessment
-          </td>
-        </tr>
-        
-        <!-- Evaluation Components -->
-        ${data.evaluationComponents.slice(0, 4).map((comp, idx) => `
-        <tr>
-          <td style="padding: 8px; text-align: left; font-size: 14px; padding-left: 24px;">${comp.name}</td>
-          <td style="padding: 8px; text-align: center; font-weight: bold; color: #d32f2f; font-size: 14px;">${comp.marksObtained}</td>
-          <td style="padding: 8px; text-align: center; font-size: 14px;">${comp.maxMarks}</td>
-        </tr>
-        `).join('')}
-        
-        <!-- Grand Total Row -->
-        <tr class="total-row">
-          <td style="padding: 10px; text-align: left; font-size: 15px; font-weight: bold;">Grand Total</td>
-          <td style="padding: 10px; text-align: center; font-size: 16px; font-weight: bold; color: #d32f2f;">${data.totalMarks}</td>
-          <td style="padding: 10px; text-align: center; font-size: 15px; font-weight: bold;">${data.totalMaxMarks}</td>
-          <td style="padding: 10px; text-align: center; font-size: 14px;">Grade: <span style="color: ${gradeColor}; font-size: 18px; font-weight: bold;">${data.grade}</span></td>
-        </tr>
-        
-        <!-- Total in Words -->
-        <tr>
-          <td colspan="4" style="padding: 8px; text-align: left; font-size: 13px;">
-            Grand Total in words: <strong style="color: #d32f2f; font-size: 14px;">${totalInWords}</strong>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+  <div class="absolute-text roll-no">${data.rollNo}</div>
 
-    <!-- UID (Aadhaar) -->
-    <div class="uid">
-      <span class="uid-label">UID NO:</span>
-      <span class="uid-value">${maskedAadhaar}</span>
-    </div>
+  <div class="absolute-text lbl-cand">${data.candidateName}</div>
+  <div class="absolute-text lbl-moth">${data.motherName}</div>
+  <div class="absolute-text lbl-code">${data.courseCode}</div>
+  <div class="absolute-text lbl-name">${data.courseName}</div>
+  <div class="absolute-text lbl-center">${data.examCenter}</div>
 
-    <!-- Date Footer -->
-    <div class="date-footer">
-      Date: ${data.issueDate}
-    </div>
-  </div>
+  <!-- Final Exam -->
+  <div class="absolute-text row-final-title">${data.courseName}-Online</div>
+  <div class="absolute-text row-final-marks">${data.finalExamMarks}</div>
+  <div class="absolute-text row-final-max">${data.finalExamMaxMarks}</div>
+  <div class="absolute-text row-final-result" style="color: ${resultColor}">${data.result}</div>
+
+  <!-- Internals (Loop) -->
+  ${data.evaluationComponents.slice(0, 4).map((comp, i) => `
+    <div class="absolute-text" style="top: ${172 + (i * 7)}mm; left: 30mm; font-size: 13px; color: #000; width: 60mm;">${comp.name}</div>
+    <div class="absolute-text" style="top: ${172 + (i * 7)}mm; left: 95mm; text-align: center; width: 20mm;">${comp.marksObtained}</div>
+    <div class="absolute-text" style="top: ${172 + (i * 7)}mm; left: 125mm; text-align: center; width: 20mm; color: #000;">${comp.maxMarks}</div>
+  `).join('')}
+
+  <!-- Grand Total -->
+  <div class="absolute-text row-total-marks">${data.totalMarks}</div>
+  <div class="absolute-text row-total-max">${data.totalMaxMarks}</div>
+  <div class="absolute-text row-grade" style="color: ${gradeColor}">${data.grade}</div>
+
+  <div class="absolute-text row-words">${totalInWords}</div>
+
+  <div class="absolute-text uid-val">${maskedAadhaar}</div>
+  <div class="absolute-text date-val">${data.issueDate}</div>
   
   <script>
-    window.onload = function() { 
-      setTimeout(() => window.print(), 500); 
-    }
+    window.onload = function() { setTimeout(() => window.print(), 500); }
   </script>
 </body>
 </html>
