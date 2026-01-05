@@ -8,9 +8,10 @@ import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
-import { Save, Send, AlertCircle, CheckCircle2, ArrowLeft } from "lucide-react"
+import { Save, Send, AlertCircle, CheckCircle2, ArrowLeft, Download } from "lucide-react"
 import Loader from "@/components/ui/loader"
 import Link from 'next/link'
+import { generateProvisionalCertificateHtml, calculateGrade, calculateResult, maskAadhaar } from '@/utils/generate-provisional-certificate'
 
 export default function BatchResultEntryPage() {
     const params = useParams()
@@ -29,6 +30,7 @@ export default function BatchResultEntryPage() {
     const [finalExamMetadata, setFinalExamMetadata] = useState<any>(null)
 
     const [instituteId, setInstituteId] = useState<string | null>(null)
+    const [institute, setInstitute] = useState<any>(null)
 
     // Derived State for Components including dynamically fetched Final Exam
     // Derived State for Components including dynamically fetched Final Exam
@@ -137,6 +139,13 @@ export default function BatchResultEntryPage() {
             const resultsData = await resultsRes.json()
             setExistingResults(resultsData)
 
+            // 4.1 Fetch Institute Data for Certificate
+            try {
+                const instituteRes = await fetch(`/api/institutes/${instituteId}`)
+                const instituteData = await instituteRes.json()
+                setInstitute(instituteData)
+            } catch (e) { console.error("Institute fetch error", e) }
+
             // 5. Initialize Marks Map
             const initialMarks: any = {}
             resultsData.forEach((res: any) => {
@@ -210,6 +219,76 @@ export default function BatchResultEntryPage() {
         const maxTotal = dynamicComponents.reduce((sum: number, c: any) => sum + c.maxMarks, 0)
         if (maxTotal === 0) return 0
         return Math.round((total / maxTotal) * 100)
+    }
+
+    // Download Provisional Certificate
+    const handleDownloadCertificate = (student: any) => {
+        if (!course || !batch || !institute) {
+            toast.error('Missing required data for certificate')
+            return
+        }
+
+        const studentMarks = marksMap[student._id] || {}
+        const total = calculateTotal(student._id)
+        const maxTotal = dynamicComponents.reduce((sum: number, c: any) => sum + c.maxMarks, 0)
+        const percentage = calculatePercentage(total)
+
+        // Get evaluation marks (exclude Final Exam)
+        const evaluationComponents = dynamicComponents
+            .filter((comp: any) => !comp.name.toLowerCase().includes('final'))
+            .slice(0, 4) // Max 4 components
+            .map((comp: any) => ({
+                name: comp.name,
+                marksObtained: studentMarks[comp.name] || 0,
+                maxMarks: comp.maxMarks
+            }))
+
+        // Get Final Exam data
+        const finalExamMarks = studentMarks['Final Exam'] || 0
+        const finalExamConfig = dynamicComponents.find((c: any) => c.name === 'Final Exam')
+        const finalExamMaxMarks = finalExamConfig?.maxMarks || (finalExamMetadata?.questions?.length * 2) || 100
+
+        // Calculate correct answers (2 marks per question)
+        const finalExamCorrect = Math.floor(finalExamMarks / 2)
+        const finalExamQuestions = finalExamMetadata?.questions?.length || 50
+
+        // Calculate result (35+ questions correct + 40%+ overall)
+        const result = calculateResult(finalExamCorrect, total, maxTotal)
+        const grade = calculateGrade(percentage)
+
+        const certificateData = {
+            candidateName: student.name || '',
+            motherName: student.motherName || '',
+            courseCode: course.code || course.courseCode || '1000',
+            courseName: course.name || '',
+            examCenter: institute.name || '',
+            rollNo: student.rollNo || 'N/A',
+            aadhaarNo: student.aadhaarNo || student.documents?.aadhaarNo || '',
+            evaluationComponents,
+            finalExamMarks,
+            finalExamMaxMarks,
+            finalExamQuestions,
+            finalExamCorrect,
+            totalMarks: total,
+            totalMaxMarks: maxTotal,
+            percentage,
+            grade,
+            result,
+            issueDate: new Date().toLocaleDateString('en-IN', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            })
+        }
+
+        const html = generateProvisionalCertificateHtml(certificateData)
+        const newWindow = window.open('', '_blank')
+        if (newWindow) {
+            newWindow.document.write(html)
+            newWindow.document.close()
+        } else {
+            toast.error('Please allow pop-ups to download certificate')
+        }
     }
 
     const handleSave = async () => {
@@ -297,6 +376,7 @@ export default function BatchResultEntryPage() {
                             <TableHead className="text-center w-[100px]">Total<br />(/{totalMaxMarks})</TableHead>
                             <TableHead className="text-center w-[80px]">%</TableHead>
                             <TableHead className="text-center">Status</TableHead>
+                            <TableHead className="text-center w-[120px]">Certificate</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -361,6 +441,18 @@ export default function BatchResultEntryPage() {
                                         ) : (
                                             <Badge variant="outline" className="text-orange-600 border-orange-200 bg-orange-50">Pending</Badge>
                                         )}
+                                    </TableCell>
+                                    <TableCell className="text-center">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => handleDownloadCertificate(student)}
+                                            className="gap-1 h-8 text-xs"
+                                            disabled={!marksMap[student._id]?.['Final Exam'] || marksMap[student._id]?.['Final Exam'] === -1}
+                                        >
+                                            <Download className="w-3 h-3" />
+                                            Certificate
+                                        </Button>
                                     </TableCell>
                                 </TableRow>
                             )

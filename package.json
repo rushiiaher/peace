@@ -51,6 +51,7 @@
     "formidable": "^3.5.4",
     "framer-motion": "^12.23.25",
     "jsonwebtoken": "^9.0.2",
+    "jszip": "^3.10.1",
     "lucide-react": "^0.454.0",
     "mongoose": "^8.19.2",
     "next": "15.2.4",

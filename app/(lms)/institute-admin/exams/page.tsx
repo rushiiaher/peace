@@ -45,6 +45,9 @@ export default function InstituteExamsPage() {
   const [selectedBatchId, setSelectedBatchId] = useState<string>('')
   const [allCourseStudents, setAllCourseStudents] = useState<any[]>([])
 
+  // Institute data for checking systems configuration
+  const [institData, setInstitData] = useState<any>(null)
+
   // ... existing effects ...
 
   // Helper to check exam status
@@ -173,6 +176,12 @@ export default function InstituteExamsPage() {
     fetchAdmitCards()
     fetchStudents()
     fetchCourses()
+
+    // Fetch institute data to check systems configuration
+    fetch(`/api/institutes/${instituteId}`)
+      .then(res => res.json())
+      .then(data => setInstitData(data))
+      .catch(err => console.error('Failed to fetch institute:', err))
   }, [instituteId])
 
   const handleDownloadAdmitCard = (card: any) => {
@@ -457,6 +466,23 @@ export default function InstituteExamsPage() {
                 <CardDescription>Set up a new final exam</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* Critical Warning: No Systems Configured */}
+                {institData && (!institData.systems || institData.systems.length === 0) && (
+                  <div className="p-4 bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800 rounded-lg space-y-2">
+                    <div className="flex items-start gap-2">
+                      <Ban className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <h4 className="text-sm font-bold text-red-700 dark:text-red-300">No Exam Systems Configured!</h4>
+                        <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                          You cannot schedule exams without configuring exam systems first.
+                        </p>
+                        <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                          Please go to <Link href="/institute-admin/settings" className="font-bold underline hover:text-red-800 dark:hover:text-red-200">Settings → Exam Systems</Link> and add your computer terminals.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Select Course</label>
                   <Select value={selectedCourseId} onValueChange={setSelectedCourseId}>
@@ -514,7 +540,13 @@ export default function InstituteExamsPage() {
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Date</label>
                     <Input type="date" value={scheduleDate} onChange={(e) => setScheduleDate(e.target.value)} min={new Date(Date.now() + 6 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]} />
-                    <p className="text-[10px] text-muted-foreground">Please select a date at least 6 days from today.</p>
+                    {/* Enhanced, more visible date notification */}
+                    <div className="flex items-start gap-2 p-2 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-md">
+                      <AlertTriangle className="w-4 h-4 text-orange-600 dark:text-orange-400 shrink-0 mt-0.5" />
+                      <p className="text-sm font-medium text-orange-700 dark:text-orange-300">
+                        Exams must be scheduled at least <span className="font-bold">6 days</span> in advance.
+                      </p>
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Start Time</label>
@@ -544,7 +576,11 @@ export default function InstituteExamsPage() {
                   </div>
                 </div>
 
-                <Button className="w-full bg-primary hover:bg-primary/90" onClick={handleScheduleExam} disabled={scheduling || selectedStudentIds.length === 0}>
+                <Button
+                  className="w-full bg-primary hover:bg-primary/90"
+                  onClick={handleScheduleExam}
+                  disabled={scheduling || selectedStudentIds.length === 0 || !institData?.systems || institData.systems.length === 0}
+                >
                   {scheduling ? 'Scheduling...' : 'Schedule Exam'}
                 </Button>
               </CardContent>

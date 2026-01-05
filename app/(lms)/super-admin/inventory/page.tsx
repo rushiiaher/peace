@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { toast } from "sonner"
-import { Package, Truck, Download, BookOpen, ScrollText, Filter, Search, Trash2, Mail, Phone, Users } from "lucide-react"
+import { Package, Truck, Download, BookOpen, ScrollText, Filter, Search, Trash2, Mail, Phone, Users, Image } from "lucide-react"
 
 export default function InventoryPage() {
     const [institutes, setInstitutes] = useState<any[]>([])
@@ -335,6 +335,133 @@ export default function InventoryPage() {
         toast.success('CSV exported successfully')
     }
 
+    // Download Photos as ZIP
+    const handleDownloadPhotos = async () => {
+        if (filteredResults.length === 0) {
+            toast.error('No students to download photos for')
+            return
+        }
+
+        const studentsWithPhotos = filteredResults.filter(res => res.studentId?.documents?.photo)
+
+        if (studentsWithPhotos.length === 0) {
+            toast.error('No student photos available')
+            return
+        }
+
+        toast.info(`Preparing to download ${studentsWithPhotos.length} photos...`)
+
+        try {
+            // Dynamically import JSZip
+            const JSZip = (await import('jszip')).default
+            const zip = new JSZip()
+
+            let successCount = 0
+            let failedStudents: string[] = []
+            const usedFilenames = new Set<string>()
+
+            // Fetch and add each photo to ZIP
+            const photoPromises = studentsWithPhotos.map(async (res, index) => {
+                const student = res.studentId
+                const photoUrl = student.documents?.photo
+
+                if (!photoUrl) {
+                    failedStudents.push(student.name)
+                    return
+                }
+
+                try {
+                    // Fetch with timeout
+                    const controller = new AbortController()
+                    const timeoutId = setTimeout(() => controller.abort(), 15000)
+                    const response = await fetch(photoUrl, { signal: controller.signal })
+                    clearTimeout(timeoutId)
+
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`)
+                    const blob = await response.blob()
+
+                    // Verify image type
+                    if (!blob.type.startsWith('image/')) {
+                        failedStudents.push(student.name)
+                        return
+                    }
+
+                    // Clean filename
+                    let studentName = student.name.trim()
+                        .replace(/[^a-zA-Z0-9\s]/g, '')
+                        .replace(/\s+/g, '_')
+                        .substring(0, 50)
+                    const rollNo = (student.rollNo || `Student${index + 1}`).replace(/[^a-zA-Z0-9]/g, '_')
+
+                    // Get proper extension
+                    let ext = 'jpg'
+                    if (blob.type === 'image/png') ext = 'png'
+                    else if (blob.type === 'image/jpeg') ext = 'jpg'
+                    else if (blob.type === 'image/webp') ext = 'webp'
+
+                    // Handle duplicate filenames
+                    let filename = `${studentName}_${rollNo}.${ext}`
+                    let counter = 1
+                    while (usedFilenames.has(filename)) {
+                        filename = `${studentName}_${rollNo}_${counter}.${ext}`
+                        counter++
+                    }
+                    usedFilenames.add(filename)
+
+                    zip.file(filename, blob)
+                    successCount++
+                } catch (err) {
+                    console.error(`Failed: ${student.name}`, err)
+                    failedStudents.push(student.name)
+                }
+            })
+
+            await Promise.all(photoPromises)
+
+            if (successCount === 0) {
+                toast.error('Failed to download any photos')
+                return
+            }
+
+            // Generate ZIP with compression
+            const zipBlob = await zip.generateAsync({
+                type: 'blob',
+                compression: 'DEFLATE',
+                compressionOptions: { level: 6 }
+            })
+
+            // Download ZIP
+            const link = document.createElement('a')
+            const url = URL.createObjectURL(zipBlob)
+            link.setAttribute('href', url)
+
+            const selectedInst = institutes.find((i: any) => i._id === selectedInstitute)
+            const selectedCrs = courses.find((c: any) => (c.courseId?._id || c.courseId) === selectedCourse)
+            const instituteName = (selectedInst?.name || 'All_Institutes').replace(/[^a-zA-Z0-9]/g, '_')
+            const courseName = (selectedCrs?.courseId?.name || selectedCrs?.name || 'All_Courses').replace(/[^a-zA-Z0-9]/g, '_')
+
+            const filename = `${instituteName}_${courseName}_Photos_${new Date().toISOString().split('T')[0]}.zip`
+            link.setAttribute('download', filename)
+
+            link.style.visibility = 'hidden'
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+            URL.revokeObjectURL(url)
+
+            // Show detailed result
+            if (failedStudents.length > 0) {
+                toast.warning(`Downloaded ${successCount} of ${studentsWithPhotos.length} photos. ${failedStudents.length} failed.`)
+                console.log('Failed students:', failedStudents)
+            } else {
+                toast.success(`Successfully downloaded all ${successCount} photos!`)
+            }
+        } catch (error) {
+            console.error('Error creating ZIP:', error)
+            toast.error('Failed to create photo archive')
+        }
+    }
+
     // Client-side filtering for Search Query
     const filteredStudents = students.filter(student =>
         student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -531,6 +658,9 @@ export default function InventoryPage() {
                             <div className="flex justify-end gap-2">
                                 <Button variant="outline" className="gap-2" onClick={handleExportCSV}>
                                     <Download className="w-4 h-4" /> Export CSV
+                                </Button>
+                                <Button variant="outline" className="gap-2 bg-purple-50 text-purple-600 hover:bg-purple-100 border-purple-200" onClick={handleDownloadPhotos}>
+                                    <Image className="w-4 h-4" /> Download Photos
                                 </Button>
                                 <Button variant="outline" onClick={() => handleDispatch('certificate')} className="gap-2 bg-blue-50 text-blue-600 hover:bg-blue-100 border-blue-200">
                                     <Truck className="w-4 h-4" /> Mark {selectedIds.length} Dispatched
