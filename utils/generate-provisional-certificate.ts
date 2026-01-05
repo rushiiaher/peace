@@ -69,96 +69,134 @@ export const generateProvisionalCertificateHtml = (data: ProvisionalCertificateD
   const resultColor = data.result === 'PASS' ? '#28a745' : '#dc3545'
   const gradeColor = data.result === 'PASS' ? '#d32f2f' : '#dc3545'
 
+  // Data payload for client-side rendering
+  const certData = JSON.stringify({
+    ...data,
+    maskedAadhaar,
+    totalInWords,
+    resultColor,
+    gradeColor
+  })
+
   return `
 <!DOCTYPE html>
 <html>
 <head>
   <title>Provisional Marksheet - ${data.candidateName}</title>
   <style>
-    @page { size: A4; margin: 0; }
-    body { 
-      font-family: 'Times New Roman', serif; 
-      margin: 0; padding: 0;
-      width: 210mm; height: 297mm;
-      position: relative;
+    body { margin: 0; padding: 0; display: flex; justify-content: center; background: #555; }
+    canvas { 
+      background: white; 
+      box-shadow: 0 0 10px rgba(0,0,0,0.5); 
+      max-width: 100%; 
+      height: auto;
     }
-    .bg-img {
-      position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: -1;
+    @media print {
+      body { background: none; display: block; }
+      canvas { box-shadow: none; width: 100%; max-width: none; }
     }
-    .absolute-text {
-      position: absolute;
-      color: #d32f2f;
-      font-weight: bold;
-      font-size: 13px; /* Slightly smaller for better fit */
-      text-transform: uppercase;
-    }
-    .roll-no { top: 84mm; left: 172mm; font-size: 14px; } /* Aligned right of label */
-    
-    /* Candidate Info - Shifted Up */
-    .lbl-cand { top: 96mm; left: 80mm; }
-    .lbl-moth { top: 103mm; left: 80mm; }
-    .lbl-code { top: 110mm; left: 80mm; }
-    .lbl-name { top: 117mm; left: 80mm; }
-    .lbl-center { top: 124mm; left: 80mm; }
-
-    /* Final Exam Row */
-    .row-final-title { top: 150mm; left: 20mm; font-size: 11px; color: #000; width: 75mm; line-height: 1.1; }
-    .row-final-marks { top: 150mm; left: 82mm; text-align: center; width: 20mm; } /* Adjusted Left */
-    .row-final-max { top: 150mm; left: 110mm; text-align: center; width: 20mm; color: #000; } /* Adjusted Left */
-    .row-final-result { top: 162mm; left: 140mm; text-align: center; width: 50mm; font-size: 20px; } /* Vertically centered in wide box */
-
-    /* Grand Total Numbers */
-    .row-total-marks { top: 193mm; left: 82mm; text-align: center; width: 20mm; font-size: 15px; } /* Moved Up */
-    .row-total-max { top: 193mm; left: 110mm; text-align: center; width: 20mm; color: #000; font-size: 15px; } /* Moved Up */
-    .row-grade { top: 193mm; left: 155mm; font-size: 16px; } /* Moved Up */
-
-    /* Grand Total Words */
-    .row-words { top: 200mm; left: 65mm; color: #d32f2f; font-size: 11px; font-weight: bold; } /* Correctly in last row */
-
-    /* UID & Date */
-    .uid-val { top: 210mm; left: 45mm; font-size: 12px; } /* Aligned with UID NO label */
-    .date-val { bottom: 38mm; left: 170mm; font-size: 12px; }
-
   </style>
 </head>
 <body>
-  <img src="/Provisional-JPG-JPEG-BLANK.jpg" class="bg-img" />
+  <canvas id="certCanvas"></canvas>
 
-  <!-- Roll No -->
-  <div class="absolute-text roll-no">${data.rollNo}</div>
-
-  <!-- Candidate Details -->
-  <div class="absolute-text lbl-cand">${data.candidateName}</div>
-  <div class="absolute-text lbl-moth">${data.motherName}</div>
-  <div class="absolute-text lbl-code">${data.courseCode}</div>
-  <div class="absolute-text lbl-name">${data.courseName}</div>
-  <div class="absolute-text lbl-center">${data.examCenter}</div>
-
-  <!-- Final Exam -->
-  <div class="absolute-text row-final-title">${data.courseName}-Online</div>
-  <div class="absolute-text row-final-marks">${data.finalExamMarks}</div>
-  <div class="absolute-text row-final-max">${data.finalExamMaxMarks}</div>
-  <div class="absolute-text row-final-result" style="color: ${resultColor}">${data.result}</div>
-
-  <!-- Internals (Loop) -->
-  ${data.evaluationComponents.slice(0, 4).map((comp, i) => `
-    <div class="absolute-text" style="top: ${171 + (i * 7)}mm; left: 30mm; font-size: 11px; color: #000; width: 60mm;">${comp.name}</div>
-    <div class="absolute-text" style="top: ${171 + (i * 7)}mm; left: 82mm; text-align: center; width: 20mm;">${comp.marksObtained}</div>
-    <div class="absolute-text" style="top: ${171 + (i * 7)}mm; left: 110mm; text-align: center; width: 20mm; color: #000;">${comp.maxMarks}</div>
-  `).join('')}
-
-  <!-- Grand Total -->
-  <div class="absolute-text row-total-marks">${data.totalMarks}</div>
-  <div class="absolute-text row-total-max">${data.totalMaxMarks}</div>
-  <div class="absolute-text row-grade" style="color: ${gradeColor}">${data.grade}</div>
-
-  <div class="absolute-text row-words">${totalInWords}</div>
-
-  <div class="absolute-text uid-val">${maskedAadhaar}</div>
-  <div class="absolute-text date-val">${data.issueDate}</div>
-  
   <script>
-    window.onload = function() { setTimeout(() => window.print(), 500); }
+    const data = ${certData};
+    const canvas = document.getElementById('certCanvas');
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    img.src = '/Provisional-JPG-JPEG-BLANK.jpg';
+    
+    // Coordinates in mm
+    const coords = {
+      rollNo: { x: 172, y: 84 },
+      candidateName: { x: 80, y: 96 },
+      motherName: { x: 80, y: 103 },
+      courseCode: { x: 80, y: 110 },
+      courseName: { x: 80, y: 117 },
+      examCenter: { x: 80, y: 124 },
+      
+      finalTitle: { x: 20, y: 150 },
+      finalMarks: { x: 87, y: 150 }, 
+      finalMax: { x: 115, y: 150 }, 
+      finalResult: { x: 165, y: 162 },
+      
+      totalMarks: { x: 87, y: 193 },
+      totalMax: { x: 115, y: 193 },
+      grade: { x: 160, y: 193 },
+      words: { x: 65, y: 200 },
+      uid: { x: 45, y: 210 },
+      date: { x: 175, y: 259 } // Approx 297 - 38
+    };
+
+    img.onload = () => {
+      // Set canvas size to match image native resolution for high quality
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+
+      // Draw Background
+      ctx.drawImage(img, 0, 0);
+
+      // Scale Factor: px per mm (A4 width 210mm)
+      // If image is low res (e.g. screen width), text will scale down match.
+      // If image is high res (print), text will scale up to match.
+      const scale = canvas.width / 210;
+
+      // Helper to draw text
+      const draw = (text, x_mm, y_mm, size_pt = 12, color = '#d32f2f', align = 'left', weight = 'bold', maxWidth_mm = 0) => {
+        // Convert pt to px height: 1pt approx 0.352mm
+        const sizePx = size_pt * 0.352 * scale;
+        ctx.font = \`\${weight} \${sizePx}px "Times New Roman", serif\`;
+        ctx.fillStyle = color;
+        ctx.textAlign = align;
+        const x = x_mm * scale;
+        const y = y_mm * scale;
+        
+        if (maxWidth_mm > 0) {
+           ctx.fillText(text, x, y, maxWidth_mm * scale);
+        } else {
+           ctx.fillText(text, x, y);
+        }
+      };
+
+      // Draw Fields
+      draw(data.rollNo, coords.rollNo.x, coords.rollNo.y, 14, '#d32f2f', 'left');
+      
+      draw(data.candidateName, coords.candidateName.x, coords.candidateName.y, 13);
+      draw(data.motherName, coords.motherName.x, coords.motherName.y, 13);
+      draw(data.courseCode, coords.courseCode.x, coords.courseCode.y, 13);
+      draw(data.courseName, coords.courseName.x, coords.courseName.y, 13);
+      draw(data.examCenter, coords.examCenter.x, coords.examCenter.y, 13);
+
+      // Final Exam
+      draw(data.courseName + '-Online', coords.finalTitle.x, coords.finalTitle.y, 11, '#000000', 'left', 'bold', 75);
+      draw(data.finalExamMarks, coords.finalMarks.x, coords.finalMarks.y, 13, '#d32f2f', 'center');
+      draw(data.finalExamMaxMarks, coords.finalMax.x, coords.finalMax.y, 13, '#000000', 'center');
+      draw(data.result, coords.finalResult.x, coords.finalResult.y, 20, data.resultColor, 'center');
+
+      // Internals
+      data.evaluationComponents.slice(0, 4).forEach((comp, i) => {
+        const yBase = 171 + (i * 7);
+        draw(comp.name, 30, yBase, 11, '#000000', 'left');
+        draw(comp.marksObtained, 87, yBase, 11, '#d32f2f', 'center');
+        draw(comp.maxMarks, 115, yBase, 11, '#000000', 'center');
+      });
+
+      // Grand Total
+      draw(data.totalMarks, coords.totalMarks.x, coords.totalMarks.y, 15, '#d32f2f', 'center');
+      draw(data.totalMaxMarks, coords.totalMax.x, coords.totalMax.y, 15, '#000000', 'center');
+      draw(data.grade, coords.grade.x, coords.grade.y, 16, data.gradeColor, 'left');
+
+      // Words
+      draw(data.totalInWords, coords.words.x, coords.words.y, 11, '#d32f2f', 'left');
+
+      // UID & Date
+      draw(data.maskedAadhaar, coords.uid.x, coords.uid.y, 12, '#d32f2f', 'left');
+      draw(data.issueDate, coords.date.x, coords.date.y, 12, '#d32f2f', 'left');
+
+      // Wait a moment for fonts/rendering then print
+      setTimeout(() => window.print(), 500);
+    };
   </script>
 </body>
 </html>
