@@ -112,17 +112,17 @@ export const generateProvisionalCertificateHtml = (data: ProvisionalCertificateD
       courseName: { x: 70, y: 124.5 }, 
       examCenter: { x: 70, y: 134 }, 
       
-      finalTitle: { x: 40, y: 156 }, // Rightward
+      finalTitle: { x: 44, y: 156 }, // Rightward
       finalMarks: { x: 87, y: 157 }, // Rightward/Centered
-      finalMax: { x: 115, y: 157 }, // Rightward/Centered
-      finalResult: { x: 150, y: 166 }, // Leftward from previous
+      finalMax: { x: 116, y: 157 }, // Rightward/Centered
+      finalResult: { x: 152, y: 166 }, // Leftward from previous
       
       totalMarks: { x: 92, y: 189 }, 
       totalMax: { x: 120, y: 189 }, 
-      grade: { x: 152, y: 188 }, // Little low and left
-      words: { x: 80, y: 198 }, 
-      uid: { x: 65, y: 210 }, // Low and left
-      date: { x: 140, y: 245 } 
+      grade: { x: 152, y: 190 }, // Little low and left
+      words: { x: 78, y: 196 }, 
+      uid: { x: 45, y: 208 }, // Low and left
+      date: { x: 145, y: 248 } 
     };
 
     img.onload = () => {
