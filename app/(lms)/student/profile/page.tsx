@@ -144,36 +144,41 @@ export default function ProfilePage() {
       ctx.fillStyle = '#ffffff'
       ctx.fillRect(0, 0, canvas.width, canvas.height)
 
-      // --- Header System ---
-      // Use consistent font family
-      const fontFamily = '"Segoe UI", Arial, sans-serif'
+      // --- Theme & Fonts ---
+      const fontFamily = '"Segoe UI", Roboto, Helvetica, Arial, sans-serif'
+      const labelColor = '#0891b2'
+      const valueColor = '#1e293b'
+      const accentColor = '#ea580c'
 
+      // --- Header System ---
       const headerGradient = ctx.createLinearGradient(0, 0, canvas.width, 0)
       headerGradient.addColorStop(0, '#f8fafc')
       headerGradient.addColorStop(1, '#f1f5f9')
       ctx.fillStyle = headerGradient
-      ctx.fillRect(20, 20, canvas.width - 40, 185)
+      ctx.fillRect(20, 20, canvas.width - 40, 190)
 
-      // ID CARD Pill
+      // ID CARD Pill - More refined
       ctx.fillStyle = '#ffffff'
-      ctx.shadowBlur = 15
-      ctx.shadowColor = 'rgba(0,0,0,0.08)'
+      ctx.shadowBlur = 20
+      ctx.shadowColor = 'rgba(0,0,0,0.06)'
       const pillX = canvas.width - 320
-      const pillY = 40
+      const pillY = 45
       const pillW = 280
-      const pillH = 75
+      const pillH = 70
       if (ctx.roundRect) {
-        ctx.roundRect(pillX, pillY, pillW, pillH, 37.5)
+        ctx.roundRect(pillX, pillY, pillW, pillH, 35)
       } else {
         ctx.fillRect(pillX, pillY, pillW, pillH)
       }
       ctx.fill()
       ctx.shadowBlur = 0
 
-      ctx.fillStyle = '#111827'
-      ctx.font = `bold 38px ${fontFamily}`
+      ctx.fillStyle = valueColor
+      ctx.font = `bold 34px ${fontFamily}`
       ctx.textAlign = 'center'
-      ctx.fillText('ID CARD', pillX + pillW / 2, pillY + 52)
+      ctx.letterSpacing = '2px'
+      ctx.fillText('ID CARD', pillX + pillW / 2, pillY + 48)
+      ctx.letterSpacing = '0px'
 
       // --- Identity & Logo ---
       const logoImg = new Image()
@@ -194,116 +199,125 @@ export default function ProfilePage() {
         }
       } catch (e) { console.warn("Logo drawing failed") }
 
-      // Content Box Padding
-      const contentLeft = 210
+      const contentLeft = 215
 
       // Institute Header
-      ctx.fillStyle = '#ea580c'
+      ctx.fillStyle = accentColor
       ctx.textAlign = 'left'
-      ctx.font = `bold 32px ${fontFamily}`
+      ctx.font = `bold 30px ${fontFamily}`
       const instName = student.instituteId?.name || 'PEACEXPERTS ACADEMY'
-      ctx.fillText(instName.toUpperCase(), contentLeft, 65)
+      ctx.fillText(instName.toUpperCase(), contentLeft, 70)
 
-      ctx.fillStyle = '#4b5563'
-      ctx.font = `bold 16px ${fontFamily}`
-      ctx.fillText("Affiliated with Ministry of Corporate Affairs (Govt. of India) &", contentLeft, 95)
-      ctx.fillText("An ISO:9001:2015 Certified Company", contentLeft, 118)
-      ctx.font = `bold 20px ${fontFamily}`
-      ctx.fillText("Reg. Office: Nashik", contentLeft, 150)
+      ctx.fillStyle = '#475569'
+      ctx.font = `600 15px ${fontFamily}`
+      ctx.fillText("Affiliated with Ministry of Corporate Affairs (Govt. of India) &", contentLeft, 100)
+      ctx.fillText("An ISO:9001:2015 Certified Company", contentLeft, 122)
+
+      ctx.font = `bold 18px ${fontFamily}`
+      ctx.fillText("Reg. Office: Nashik", contentLeft, 155)
 
       const instContact = `Ph: ${student.instituteId?.phone || ''} | Email: ${student.instituteId?.email || ''}`
-      ctx.font = `italic 16px ${fontFamily}`
-      ctx.fillText(instContact.substring(0, 65), contentLeft, 180)
+      ctx.font = `italic 15px ${fontFamily}`
+      ctx.fillStyle = '#64748b'
+      ctx.fillText(instContact.substring(0, 70), contentLeft, 185)
 
       // --- Student Details ---
-      const startX = 60
-      let curY = 250
-      const lineHeight = 54
-      const labelColor = '#0891b2'
-      const valueColor = '#111827'
+      const startX = 65
+      let curY = 260
+      const lineHeight = 55
 
-      // Helper for labels with constraints
-      const drawDetail = (label: string, value: string, x: number, y: number, maxWidth = 0, vColor = valueColor, boldValue = true) => {
+      // Helper for details with consistent font sizes
+      const drawDetail = (label: string, value: string, x: number, y: number, maxWidth = 0, vColor = valueColor) => {
         ctx.fillStyle = labelColor
-        ctx.font = `bold 24px ${fontFamily}`
+        ctx.font = `bold 20px ${fontFamily}`
         ctx.textAlign = 'left'
         ctx.fillText(label, x, y)
         const labelWidth = ctx.measureText(label).width
 
         ctx.fillStyle = vColor
-        ctx.font = `${boldValue ? 'bold' : ''} 26px ${fontFamily}`
+        ctx.font = `bold 22px ${fontFamily}`
         const valX = x + labelWidth + 20
+        const textToDraw = value || 'N/A'
+
         if (maxWidth > 0) {
-          ctx.fillText(value || 'N/A', valX, y, maxWidth - labelWidth - 20)
+          ctx.fillText(textToDraw, valX, y, maxWidth - labelWidth - 20)
         } else {
-          ctx.fillText(value || 'N/A', valX, y)
+          ctx.fillText(textToDraw, valX, y)
         }
       }
 
       const drawMultiLineDetail = (label: string, value: string, x: number, y: number, maxWidth: number) => {
         ctx.fillStyle = labelColor
-        ctx.font = `bold 24px ${fontFamily}`
+        ctx.font = `bold 20px ${fontFamily}`
         ctx.textAlign = 'left'
         ctx.fillText(label, x, y)
         const labelWidth = ctx.measureText(label).width
 
         ctx.fillStyle = valueColor
-        ctx.font = `bold 26px ${fontFamily}`
+        ctx.font = `bold 22px ${fontFamily}`
         const valX = x + labelWidth + 15
         const actualValue = value || 'N/A'
 
-        // Simple wrap test
         if (ctx.measureText(actualValue).width > maxWidth - labelWidth - 15) {
           const words = actualValue.split(' ')
           let line = ''
           let lineCount = 0
           for (let n = 0; n < words.length; n++) {
             let testLine = line + words[n] + ' '
-            let testWidth = ctx.measureText(testLine).width
-            if (testWidth > maxWidth - labelWidth - 15 && n > 0) {
-              ctx.fillText(line.trim(), valX, y + (lineCount * 28))
+            if (ctx.measureText(testLine).width > maxWidth - labelWidth - 15 && n > 0) {
+              ctx.fillText(line.trim(), valX, y + (lineCount * 26))
               line = words[n] + ' '
               lineCount++
             } else {
               line = testLine
             }
           }
-          ctx.fillText(line.trim(), valX, y + (lineCount * 28))
-          return lineCount * 28
+          ctx.fillText(line.trim(), valX, y + (lineCount * 26))
+          return lineCount * 26
         } else {
           ctx.fillText(actualValue, valX, y)
           return 0
         }
       }
 
+      // Reg No
       drawDetail('Reg No.:', student.rollNo, startX, curY)
       curY += lineHeight
 
-      // Name - Emphasis
+      // Name - Dynamic sizing for consistency
       ctx.fillStyle = labelColor
-      ctx.font = `bold 24px ${fontFamily}`
+      ctx.font = `bold 20px ${fontFamily}`
       ctx.fillText('Name:', startX, curY)
-      ctx.fillStyle = valueColor
-      ctx.font = `bold 38px ${fontFamily}`
-      ctx.fillText((student.name || 'N/A').toUpperCase(), startX + 100, curY, 600)
-      curY += lineHeight + 5
 
-      // Institute - Wrapping or Shrinking
+      const name = (student.name || 'N/A').toUpperCase()
+      const maxNameWidth = 600
+      let nameFontSize = 38
+      ctx.font = `bold ${nameFontSize}px ${fontFamily}`
+      // Reduce size if name is too wide
+      while (ctx.measureText(name).width > maxNameWidth && nameFontSize > 24) {
+        nameFontSize -= 2
+        ctx.font = `bold ${nameFontSize}px ${fontFamily}`
+      }
+      ctx.fillStyle = valueColor
+      ctx.fillText(name, startX + 100, curY + (nameFontSize > 34 ? 0 : 5))
+      curY += lineHeight + (nameFontSize > 34 ? 5 : 0)
+
+      // Training Institute
       const instExtraSpace = drawMultiLineDetail('Training Institute:', student.instituteId?.name, startX, curY, 650)
       if (student.instituteId?.address) {
-        curY += 30 + instExtraSpace
+        curY += 28 + instExtraSpace
         ctx.font = `italic 18px ${fontFamily}`
-        ctx.fillStyle = '#6b7280'
-        ctx.fillText(student.instituteId.address.substring(0, 70), startX + 220, curY, 430)
+        ctx.fillStyle = '#64748b'
+        ctx.fillText(student.instituteId.address.split(',').slice(0, 2).join(','), startX + 225, curY, 420)
       }
       curY += lineHeight
 
       // Course and Blood Group
       const courseStr = student.courses?.[0]?.courseId?.name || 'N/A'
-      // Use limited width for course to avoid overlap with photo or B Group
-      drawDetail('Course:', courseStr, startX, curY, 650)
+      drawDetail('Course:', courseStr, startX, curY, 500)
 
       if (student.bloodGroup) {
+        // Keep B.G aligned to a fixed point to look clean
         drawDetail('B. G:', student.bloodGroup, 580, curY, 0, '#be123c')
       }
       curY += lineHeight
@@ -329,19 +343,19 @@ export default function ProfilePage() {
           })
 
           if (photoImg.complete && photoImg.naturalWidth > 0) {
-            const photoX = canvas.width - 280
-            const photoY = 230
-            const photoW = 230
-            const photoH = 290
+            const photoX = canvas.width - 290
+            const photoY = 240
+            const photoW = 240
+            const photoH = 300
 
-            // Decorative Border
-            ctx.strokeStyle = '#0891b2'
-            ctx.lineWidth = 6
-            ctx.strokeRect(photoX - 4, photoY - 4, photoW + 8, photoH + 8)
+            // Modern Border
+            ctx.strokeStyle = labelColor
+            ctx.lineWidth = 4
+            ctx.strokeRect(photoX - 6, photoY - 6, photoW + 12, photoH + 12)
 
             ctx.strokeStyle = '#ffffff'
-            ctx.lineWidth = 1.5
-            ctx.strokeRect(photoX - 1, photoY - 1, photoW + 2, photoH + 2)
+            ctx.lineWidth = 2
+            ctx.strokeRect(photoX - 2, photoY - 2, photoW + 4, photoH + 4)
 
             ctx.drawImage(photoImg, photoX, photoY, photoW, photoH)
           }
@@ -349,11 +363,12 @@ export default function ProfilePage() {
       }
 
       // --- Footer ---
-      ctx.fillStyle = '#111827'
+      ctx.fillStyle = '#0f172a'
       ctx.fillRect(0, canvas.height - 40, canvas.width, 40)
       ctx.fillStyle = '#ffffff'
-      ctx.font = `bold 14px ${fontFamily}`
+      ctx.font = `600 14px ${fontFamily}`
       ctx.textAlign = 'center'
+      ctx.letterSpacing = '1px'
       ctx.fillText('VALID IDENTITY CARD - PEACEXPERTS INDIA', canvas.width / 2, canvas.height - 15)
 
       // Download
