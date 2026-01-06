@@ -117,12 +117,12 @@ export const generateProvisionalCertificateHtml = (data: ProvisionalCertificateD
       finalMax: { x: 116, y: 157 }, // Rightward/Centered
       finalResult: { x: 152, y: 166 }, // Leftward from previous
       
-      totalMarks: { x: 92, y: 189 }, 
+      totalMarks: { x: 87, y: 189 }, 
       totalMax: { x: 120, y: 189 }, 
-      grade: { x: 152, y: 189 }, // Little low and left
+      grade: { x: 116, y: 189 }, // Little low and left
       words: { x: 78, y: 197 }, 
       uid: { x: 45, y: 209 }, // Low and left
-      date: { x: 150, y: 248 } 
+      date: { x: 154, y: 248 } 
     };
 
     img.onload = () => {
@@ -161,12 +161,12 @@ export const generateProvisionalCertificateHtml = (data: ProvisionalCertificateD
       draw(data.finalExamMaxMarks, coords.finalMax.x, coords.finalMax.y, 13, '#000000', 'center');
       draw(data.result, coords.finalResult.x, coords.finalResult.y, 20, data.resultColor, 'center');
 
-      // 4. Internal Assessment (Gap reduced, moved slightly up)
+      // 4. Internal Assessment (Gap reduced, moved slightly up, centered horizontally)
       data.evaluationComponents.slice(0, 4).forEach((comp, i) => {
-        const yBase = 168 + (i * 5.5); // Reduced gap and moved up
-        draw(comp.name, 38, yBase, 8.5, '#000000', 'left'); 
-        draw(comp.marksObtained, 92, yBase, 9, '#d32f2f', 'center'); 
-        draw(comp.maxMarks, 120, yBase, 9, '#000000', 'center'); 
+        const yBase = 168 + (i * 5.5); 
+        draw(comp.name, 45, yBase, 8.5, '#000000', 'left'); // Shifted +7 (38 -> 45)
+        draw(comp.marksObtained, 89, yBase, 9, '#d32f2f', 'center'); // Shifted -3 (92 -> 89)
+        draw(comp.maxMarks, 117, yBase, 9, '#000000', 'center'); // Shifted -3 (120 -> 117)
       });
 
       // 5. Grand Total
