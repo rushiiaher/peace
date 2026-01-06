@@ -28,11 +28,11 @@ export const numberToWords = (num: number): string => {
 
 // Mask Aadhaar number (show only last 4 digits)
 export const maskAadhaar = (aadhaar: string): string => {
-  if (!aadhaar) return 'XXXX XXXX XXXX'
+  if (!aadhaar) return 'xxxx xxxx xxxx'
   const cleaned = aadhaar.replace(/\s/g, '')
-  if (cleaned.length < 4) return 'XXXX XXXX ' + cleaned
+  if (cleaned.length < 4) return 'xxxx xxxx ' + (cleaned || 'xxxx')
   const lastFour = cleaned.slice(-4)
-  return `XXXX XXXX ${lastFour}`
+  return `xxxx xxxx ${lastFour}`
 }
 
 interface EvaluationComponent {

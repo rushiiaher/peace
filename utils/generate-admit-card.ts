@@ -29,87 +29,177 @@ export const generateAdmitCardHtml = (data: AdmitCardData) => {
     <title>Candidate Admit Card - ${data.candidateName}</title>
     <style>
         @page { size: A4; margin: 10mm; }
-        body { font-family: 'Times New Roman', serif; margin: 0; padding: 20px; color: #000; }
-        .container { width: 100%; max-width: 800px; margin: 0 auto; border: 1px solid #000; padding: 5px; }
+        body { font-family: 'Times New Roman', serif; margin: 0; padding: 10px; color: #000; background: #fff; }
+        .container { width: 100%; max-width: 800px; margin: 0 auto; border: 2px solid #000; padding: 15px; box-sizing: border-box; }
         
-        .header { text-align: center; margin-bottom: 5px; position: relative; }
-        .header h1 { margin: 0; font-size: 24px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
-        .header h3 { margin: 5px 0; font-size: 12px; font-weight: normal; }
-        .header h2 { margin: 10px 0 5px 0; font-size: 18px; font-weight: bold; text-decoration: underline; text-transform: uppercase; }
-        
-        .photo-box {
-            position: absolute;
-            top: 10px;
-            right: 20px;
-            width: 130px;
-            height: 150px;
-            border: 1px solid #000;
-            overflow: hidden;
-            background-color: #fff;
+        /* New Flex Header to prevent overlap */
+        .header-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 2px solid #000;
+            padding-bottom: 15px;
+            margin-bottom: 15px;
         }
-        .photo-box img { width: 100%; height: 100%; object-fit: cover; object-position: top center; }
-        
-        .candidate-name { text-align: center; font-size: 14px; margin-bottom: 20px; }
 
-        table { width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 14px; }
-        table, th, td { border: 1px solid #000; }
-        th, td { padding: 6px 10px; text-align: left; vertical-align: middle; }
+        .logo-section {
+            width: 120px;
+            flex-shrink: 0;
+        }
+        .logo-section img {
+            width: 100px;
+            height: auto;
+        }
+
+        .institute-details {
+            flex-grow: 1;
+            text-align: center;
+            padding: 0 15px;
+        }
+        .institute-details h1 {
+            margin: 0;
+            font-size: 22px;
+            font-weight: bold;
+            text-transform: uppercase;
+            line-height: 1.2;
+        }
+        .institute-details h3 {
+            margin: 4px 0;
+            font-size: 11px;
+            font-weight: normal;
+        }
+
+        .photo-section {
+            width: 130px;
+            height: 160px;
+            border: 1px solid #000;
+            flex-shrink: 0;
+            background: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        .photo-section img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .admit-card-title {
+            text-align: center;
+            margin: 10px 0;
+        }
+        .admit-card-title h2 {
+            margin: 0;
+            font-size: 20px;
+            font-weight: bold;
+            text-decoration: underline;
+            text-transform: uppercase;
+        }
         
-        .label { font-weight: bold; width: 20%; background-color: #f9f9f9; }
+        .candidate-guidance {
+            text-align: center;
+            font-size: 13px;
+            margin-bottom: 15px;
+            font-style: italic;
+        }
+
+        table { width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 15px; }
+        table, th, td { border: 1.5px solid #000; }
+        th, td { padding: 8px 12px; text-align: left; vertical-align: middle; }
+        
+        .label { font-weight: bold; width: 22%; background-color: #f2f2f2; }
         .value { font-weight: bold; text-transform: uppercase; }
 
-        .batch-header { text-align: center; font-weight: bold; font-size: 16px; margin: 15px 0 5px 0; text-transform: uppercase; }
+        .section-divider {
+            text-align: center;
+            font-weight: bold;
+            font-size: 18px;
+            margin: 20px 0 10px 0;
+            text-transform: uppercase;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 5px;
+        }
 
-        .instructions { font-size: 12px; line-height: 1.5; padding: 10px; border: 1px solid #000; margin-top: 10px; }
-        .instructions h4 { margin: 0 0 5px 0; text-decoration: underline; }
+        .instructions {
+            font-size: 12.5px;
+            line-height: 1.4;
+            padding: 12px;
+            border: 1.5px solid #000;
+            margin-top: 15px;
+            background: #fdfdfd;
+        }
+        .instructions h4 { margin: 0 0 8px 0; text-decoration: underline; font-size: 14px; }
         
-        .footer { display: flex; justify-content: space-between; margin-top: 50px; font-weight: bold; font-size: 14px; padding: 0 20px; }
+        .footer {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 60px;
+            font-weight: bold;
+            font-size: 15px;
+            padding: 0 10px;
+        }
+        .sign-area {
+            text-align: center;
+            width: 180px;
+            border-top: 1px solid #000;
+            padding-top: 5px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <img src="/Peacexperts_LOGO.png" alt="PEACE Logo" style="height: 80px; margin-bottom: 15px; display: block; margin-left: auto; margin-right: auto;" />
-            <h1>${data.instituteName}</h1>
-            <h3>Reg. Under Ministry of Corporate Affairs (Govt. of India)</h3>
-            <h3>PEACEXPERTS ACADEMY-MH2022PTC376485 & An ISO:9001:2015 Certified</h3>
-            
-            <h2>CANDIDATE ADMIT CARD</h2>
-            
-            <div class="photo-box">
-                ${data.photoUrl ? `<img src="${data.photoUrl}" alt="Photo" />` : '<div style="display:flex;align-items:center;justify-content:center;height:100%;">PHOTO</div>'}
+        <header class="header-top">
+            <div class="logo-section">
+                <img src="/Peacexperts_LOGO.png" alt="PEACE Logo" />
             </div>
+            
+            <div class="institute-details">
+                <h1>${data.instituteName}</h1>
+                <h3>Reg. Under Ministry of Corporate Affairs (Govt. of India)</h3>
+                <h3>PEACEXPERTS ACADEMY-MH2022PTC376485</h3>
+                <h3>An ISO:9001:2015 Certified Organization</h3>
+            </div>
+
+            <div class="photo-section">
+                ${data.photoUrl ? `<img src="${data.photoUrl}" alt="Photo" />` : '<div style="font-size:12px;color:#666;">PHOTO</div>'}
+            </div>
+        </header>
+
+        <div class="admit-card-title">
+            <h2>CANDIDATE ADMIT CARD</h2>
         </div>
 
-        <div class="candidate-name">
-            Name of the Candidate ( As Filled By the Candidate In Institute Window)
+        <div class="candidate-guidance">
+            Name of the Candidate (As Filled By the Candidate In Institute Window)
         </div>
 
         <table>
             <tr>
                 <td class="label">Allocated System</td>
-                <td class="value" style="width: 30%;">${data.systemName}</td>
+                <td class="value" style="width: 28%;">${data.systemName || '---'}</td>
                 <td class="label">Roll No.</td>
                 <td class="value">${data.rollNo}</td>
             </tr>
             <tr>
                 <td class="label">Student Name</td>
-                <td class="value" colspan="3">${data.studentName}</td>
+                <td class="value" colspan="3" style="font-size: 18px;">${data.studentName}</td>
             </tr>
             <tr>
                 <td class="label">Mother's Name</td>
-                <td class="value">${data.motherName}</td>
+                <td class="value">${data.motherName || '---'}</td>
                 <td class="label">Aadhaar Card</td>
-                <td class="value">${data.aadhaarCard}</td>
+                <td class="value">${data.aadhaarCard || '---'}</td>
             </tr>
             <tr>
-                <td colspan="4" style="text-align: center; font-weight: bold; padding: 4px; font-size: 12px;">
+                <td colspan="4" style="text-align: center; font-weight: bold; padding: 6px; font-size: 13px; color: #333;">
                     VALID FOR — EXAMINATION ONLY
                 </td>
             </tr>
         </table>
 
-        <div class="batch-header">BATCH SCHEDULE</div>
+        <div class="section-divider">BATCH SCHEDULE</div>
 
         <table>
             <tr>
@@ -122,7 +212,7 @@ export const generateAdmitCardHtml = (data: AdmitCardData) => {
                 <td class="label">Batch</td>
                 <td class="value">${data.batch}</td>
                 <td class="label">Reporting Time</td>
-                <td class="value">${data.reportingTime}</td>
+                <td class="value" style="color: #c2410c;">${data.reportingTime}</td>
             </tr>
             <tr>
                 <td class="label">Gate Closing Time</td>
@@ -136,7 +226,7 @@ export const generateAdmitCardHtml = (data: AdmitCardData) => {
             </tr>
             <tr>
                 <td class="label">Exam Centre Name & Address</td>
-                <td class="value" colspan="3">
+                <td class="value" colspan="3" style="font-size: 14px;">
                     <strong>${data.examCentreName}</strong><br/>
                     ${data.examCentreAddress}
                 </td>
@@ -144,20 +234,21 @@ export const generateAdmitCardHtml = (data: AdmitCardData) => {
         </table>
 
         <div class="instructions">
-            <h4>IMPORTANT:—</h4>
-            a) Carry this admit card along with a Adhar Card/ School ID/ PAN Card.<br/>
-            b) Reach the examination center at least 30 minutes before the scheduled time.<br/>
-            c) Mobile phones, calculators, and electronic devices are not allowed in exam Hall.<br/>
-            <br/>
-            <div style="text-align: center; font-weight: bold; margin-top: 5px;">
-                INSTRUCTIONS TO BE FOLLOWED BY CANDIDATES AT THE EXAMINATION CENTRE
+            <h4>IMPORTANT INSTRUCTIONS:</h4>
+            1. Carry this admit card along with a valid Govt. ID (Aadhaar/PAN/Voter ID).<br/>
+            2. Reach the examination center at least 30 minutes before the Reporting Time.<br/>
+            3. Mobile phones, calculators, and electronic gadgets are strictly prohibited in the Exam Hall.<br/>
+            4. No candidate will be allowed to enter the hall after the Gate Closing Time.<br/>
+            
+            <div style="text-align: center; font-weight: bold; margin-top: 10px; text-decoration: underline;">
+                CANDIDATE MUST SIGN IN THE PRESENCE OF THE INVIGILATOR
             </div>
         </div>
 
         <div class="footer">
-            <div>Candidate Sign</div>
-            <div>Seal</div>
-            <div>Sign Head of Institute</div>
+            <div class="sign-area">Candidate's Signature</div>
+            <div style="align-self: flex-end; padding-bottom: 10px;">(Institute Seal)</div>
+            <div class="sign-area">Head of Institute Sign</div>
         </div>
     </div>
     <script>

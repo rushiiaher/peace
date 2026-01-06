@@ -263,7 +263,7 @@ export default function BatchResultEntryPage() {
             courseName: course.name || '',
             examCenter: institute.name || '',
             rollNo: student.rollNo || 'N/A',
-            aadhaarNo: student.aadhaarNo || student.documents?.aadhaarNo || '',
+            aadhaarNo: student.aadhaarCardNo || '',
             evaluationComponents,
             finalExamMarks,
             finalExamMaxMarks,
