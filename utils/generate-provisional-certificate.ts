@@ -117,9 +117,9 @@ export const generateProvisionalCertificateHtml = (data: ProvisionalCertificateD
       finalMax: { x: 116, y: 157 }, // Rightward/Centered
       finalResult: { x: 152, y: 166 }, // Leftward from previous
       
-      totalMarks: { x: 87, y: 189 }, 
-      totalMax: { x: 120, y: 189 }, 
-      grade: { x: 116, y: 189 }, // Little low and left
+      totalMarks: { x: 88, y: 189 }, 
+      totalMax: { x: 116, y: 189 }, 
+      grade: { x: 155, y: 189 }, // Little low and left
       words: { x: 78, y: 197 }, 
       uid: { x: 45, y: 209 }, // Low and left
       date: { x: 154, y: 248 } 
@@ -164,7 +164,7 @@ export const generateProvisionalCertificateHtml = (data: ProvisionalCertificateD
       // 4. Internal Assessment (Gap reduced, moved slightly up, centered horizontally)
       data.evaluationComponents.slice(0, 4).forEach((comp, i) => {
         const yBase = 168 + (i * 5.5); 
-        draw(comp.name, 45, yBase, 8.5, '#000000', 'left'); // Shifted +7 (38 -> 45)
+        draw(comp.name, 44, yBase, 8.5, '#000000', 'left'); // Shifted +7 (38 -> 45)
         draw(comp.marksObtained, 89, yBase, 9, '#d32f2f', 'center'); // Shifted -3 (92 -> 89)
         draw(comp.maxMarks, 117, yBase, 9, '#000000', 'center'); // Shifted -3 (120 -> 117)
       });
