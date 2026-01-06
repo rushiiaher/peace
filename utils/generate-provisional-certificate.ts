@@ -112,16 +112,16 @@ export const generateProvisionalCertificateHtml = (data: ProvisionalCertificateD
       courseName: { x: 70, y: 124.5 }, 
       examCenter: { x: 70, y: 134 }, 
       
-      finalTitle: { x: 35, y: 156 }, // Rightward
-      finalMarks: { x: 87, y: 156 }, // Rightward/Centered
-      finalMax: { x: 115, y: 156 }, // Rightward/Centered
-      finalResult: { x: 158, y: 165 }, // Leftward from previous
+      finalTitle: { x: 40, y: 156 }, // Rightward
+      finalMarks: { x: 87, y: 157 }, // Rightward/Centered
+      finalMax: { x: 115, y: 157 }, // Rightward/Centered
+      finalResult: { x: 150, y: 166 }, // Leftward from previous
       
       totalMarks: { x: 92, y: 189 }, 
       totalMax: { x: 120, y: 189 }, 
-      grade: { x: 155, y: 191 }, // Little low and left
-      words: { x: 85, y: 196 }, 
-      uid: { x: 55, y: 215 }, // Low and left
+      grade: { x: 152, y: 188 }, // Little low and left
+      words: { x: 80, y: 198 }, 
+      uid: { x: 65, y: 210 }, // Low and left
       date: { x: 140, y: 245 } 
     };
 
