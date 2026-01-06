@@ -105,23 +105,23 @@ export const generateProvisionalCertificateHtml = (data: ProvisionalCertificateD
     
     // COORDINATE ADJUSTMENTS:
     const coords = {
-      rollNo: { x: 175, y: 88 }, // Up and Rightward
+      rollNo: { x: 168, y: 90 }, // Leftward and slightly down from previous
       candidateName: { x: 70, y: 96 },
       motherName: { x: 70, y: 105.5 }, 
       courseCode: { x: 70, y: 115 }, 
       courseName: { x: 70, y: 124.5 }, 
       examCenter: { x: 70, y: 134 }, 
       
-      finalTitle: { x: 32, y: 156 }, // Rightwards
-      finalMarks: { x: 84, y: 156 }, // Leftward (to center)
-      finalMax: { x: 112, y: 156 }, // Leftward (to center)
-      finalResult: { x: 168, y: 165 }, // Rightwards
+      finalTitle: { x: 35, y: 156 }, // Rightward
+      finalMarks: { x: 87, y: 156 }, // Rightward/Centered
+      finalMax: { x: 115, y: 156 }, // Rightward/Centered
+      finalResult: { x: 158, y: 165 }, // Leftward from previous
       
-      totalMarks: { x: 89, y: 189 }, // Leftwards (to center)
-      totalMax: { x: 117, y: 189 }, // Leftwards (to center)
-      grade: { x: 155, y: 187 }, 
+      totalMarks: { x: 92, y: 189 }, 
+      totalMax: { x: 120, y: 189 }, 
+      grade: { x: 155, y: 191 }, // Little low and left
       words: { x: 85, y: 196 }, 
-      uid: { x: 65, y: 204 }, // Moved Leftward to match label
+      uid: { x: 55, y: 215 }, // Low and left
       date: { x: 140, y: 245 } 
     };
 
@@ -148,25 +148,25 @@ export const generateProvisionalCertificateHtml = (data: ProvisionalCertificateD
       // 1. Roll No
       draw(data.rollNo, coords.rollNo.x, coords.rollNo.y, 11, '#d32f2f', 'left');
       
-      // 2. Candidate Details (Locked)
+      // 2. Candidate Details (Locked per previous instruction)
       draw(data.candidateName, coords.candidateName.x, coords.candidateName.y, 13);
       draw(data.motherName, coords.motherName.x, coords.motherName.y, 13);
       draw(data.courseCode, coords.courseCode.x, coords.courseCode.y, 13);
       draw(data.courseName, coords.courseName.x, coords.courseName.y, 13);
       draw(data.examCenter, coords.examCenter.x, coords.examCenter.y, 13);
 
-      // 3. Final Exam
+      // 3. Final Exam Row
       draw("Final exam", coords.finalTitle.x, coords.finalTitle.y, 9, '#000000', 'left', 'bold', 55);
       draw(data.finalExamMarks, coords.finalMarks.x, coords.finalMarks.y, 13, '#d32f2f', 'center');
       draw(data.finalExamMaxMarks, coords.finalMax.x, coords.finalMax.y, 13, '#000000', 'center');
       draw(data.result, coords.finalResult.x, coords.finalResult.y, 20, data.resultColor, 'center');
 
-      // 4. Internal Assessment
+      // 4. Internal Assessment (Gap reduced, moved slightly up)
       data.evaluationComponents.slice(0, 4).forEach((comp, i) => {
-        const yBase = 171 + (i * 6); 
+        const yBase = 168 + (i * 5.5); // Reduced gap and moved up
         draw(comp.name, 38, yBase, 8.5, '#000000', 'left'); 
-        draw(comp.marksObtained, 89, yBase, 9, '#d32f2f', 'center'); // Leftwards
-        draw(comp.maxMarks, 117, yBase, 9, '#000000', 'center'); // Leftwards
+        draw(comp.marksObtained, 92, yBase, 9, '#d32f2f', 'center'); 
+        draw(comp.maxMarks, 120, yBase, 9, '#000000', 'center'); 
       });
 
       // 5. Grand Total
