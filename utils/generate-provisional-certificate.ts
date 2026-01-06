@@ -119,10 +119,10 @@ export const generateProvisionalCertificateHtml = (data: ProvisionalCertificateD
       
       totalMarks: { x: 92, y: 189 }, 
       totalMax: { x: 120, y: 189 }, 
-      grade: { x: 152, y: 190 }, // Little low and left
-      words: { x: 78, y: 196 }, 
-      uid: { x: 45, y: 208 }, // Low and left
-      date: { x: 145, y: 248 } 
+      grade: { x: 152, y: 189 }, // Little low and left
+      words: { x: 78, y: 197 }, 
+      uid: { x: 45, y: 209 }, // Low and left
+      date: { x: 150, y: 248 } 
     };
 
     img.onload = () => {
