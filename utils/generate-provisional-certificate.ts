@@ -66,8 +66,8 @@ interface ProvisionalCertificateData {
 export const generateProvisionalCertificateHtml = (data: ProvisionalCertificateData) => {
   const maskedAadhaar = maskAadhaar(data.aadhaarNo)
   const totalInWords = numberToWords(data.totalMarks)
-  const resultColor = data.result === 'PASS' ? '#28a745' : '#dc3545'
-  const gradeColor = data.result === 'PASS' ? '#d32f2f' : '#dc3545'
+  const resultColor = '#000000'
+  const gradeColor = '#000000'
 
   // Data payload for client-side rendering
   const certData = JSON.stringify({
@@ -119,7 +119,7 @@ export const generateProvisionalCertificateHtml = (data: ProvisionalCertificateD
       
       totalMarks: { x: 88, y: 189 }, 
       totalMax: { x: 116, y: 189 }, 
-      grade: { x: 155, y: 189 }, // Little low and left
+      grade: { x: 152, y: 189 }, // Little low and left
       words: { x: 78, y: 197 }, 
       uid: { x: 45, y: 209 }, // Low and left
       date: { x: 154, y: 248 } 
@@ -131,7 +131,7 @@ export const generateProvisionalCertificateHtml = (data: ProvisionalCertificateD
       ctx.drawImage(img, 0, 0);
       const scale = canvas.width / 210; 
 
-      const draw = (text, x_mm, y_mm, size_pt = 12, color = '#d32f2f', align = 'left', weight = 'bold', maxWidth_mm = 0) => {
+      const draw = (text, x_mm, y_mm, size_pt = 12, color = '#000000', align = 'left', weight = 'bold', maxWidth_mm = 0) => {
         const sizePx = size_pt * 0.352 * scale;
         ctx.font = \`\${weight} \${sizePx}px "Times New Roman", serif\`;
         ctx.fillStyle = color;
@@ -146,7 +146,7 @@ export const generateProvisionalCertificateHtml = (data: ProvisionalCertificateD
       };
 
       // 1. Roll No
-      draw(data.rollNo, coords.rollNo.x, coords.rollNo.y, 11, '#d32f2f', 'left');
+      draw(data.rollNo, coords.rollNo.x, coords.rollNo.y, 11, '#000000', 'left');
       
       // 2. Candidate Details (Locked per previous instruction)
       draw(data.candidateName, coords.candidateName.x, coords.candidateName.y, 13);
@@ -157,7 +157,7 @@ export const generateProvisionalCertificateHtml = (data: ProvisionalCertificateD
 
       // 3. Final Exam Row
       draw("Final exam", coords.finalTitle.x, coords.finalTitle.y, 9, '#000000', 'left', 'bold', 55);
-      draw(data.finalExamMarks, coords.finalMarks.x, coords.finalMarks.y, 13, '#d32f2f', 'center');
+      draw(data.finalExamMarks, coords.finalMarks.x, coords.finalMarks.y, 13, '#000000', 'center');
       draw(data.finalExamMaxMarks, coords.finalMax.x, coords.finalMax.y, 13, '#000000', 'center');
       draw(data.result, coords.finalResult.x, coords.finalResult.y, 20, data.resultColor, 'center');
 
@@ -165,23 +165,23 @@ export const generateProvisionalCertificateHtml = (data: ProvisionalCertificateD
       data.evaluationComponents.slice(0, 4).forEach((comp, i) => {
         const yBase = 168 + (i * 5.5); 
         draw(comp.name, 44, yBase, 8.5, '#000000', 'left'); // Shifted +7 (38 -> 45)
-        draw(comp.marksObtained, 89, yBase, 9, '#d32f2f', 'center'); // Shifted -3 (92 -> 89)
+        draw(comp.marksObtained, 89, yBase, 9, '#000000', 'center'); // Shifted -3 (92 -> 89)
         draw(comp.maxMarks, 117, yBase, 9, '#000000', 'center'); // Shifted -3 (120 -> 117)
       });
 
       // 5. Grand Total
-      draw(data.totalMarks, coords.totalMarks.x, coords.totalMarks.y, 14, '#d32f2f', 'center');
+      draw(data.totalMarks, coords.totalMarks.x, coords.totalMarks.y, 14, '#000000', 'center');
       draw(data.totalMaxMarks, coords.totalMax.x, coords.totalMax.y, 14, '#000000', 'center');
       draw(data.grade, coords.grade.x, coords.grade.y, 12, data.gradeColor, 'left');
 
       // 6. Words
-      draw(data.totalInWords, coords.words.x, coords.words.y, 10, '#d32f2f', 'left');
+      draw(data.totalInWords, coords.words.x, coords.words.y, 10, '#000000', 'left');
 
       // 7. UID
-      draw(data.maskedAadhaar, coords.uid.x, coords.uid.y, 12, '#d32f2f', 'left');
+      draw(data.maskedAadhaar, coords.uid.x, coords.uid.y, 12, '#000000', 'left');
       
       // 8. Date 
-      draw(data.issueDate, coords.date.x, coords.date.y, 12, '#d32f2f', 'left');
+      draw(data.issueDate, coords.date.x, coords.date.y, 12, '#000000', 'left');
 
       setTimeout(() => window.print(), 500);
     };

@@ -138,178 +138,128 @@ export default function ProfilePage() {
       canvas.height = 638 // (2.125 inch * 300 dpi)
       const ctx = canvas.getContext('2d')!
 
-      // --- Fonts ---
-      // We'll use standard fonts, approximating the look
-      const fontBold = 'bold 28px Arial, sans-serif'
-      const fontRegular = '26px Arial, sans-serif'
-      const fontSmall = '18px Arial, sans-serif'
-      const fontTitle = 'bold 36px Arial, sans-serif'
-      const fontHeader = 'bold 22px Arial, sans-serif'
-
       // --- Background ---
       ctx.fillStyle = '#ffffff'
       ctx.fillRect(0, 0, canvas.width, canvas.height)
 
-      // Rounded Corners for the card itself (optional if printing, but looks nice digital)
-      // We represent the card within the canvas
-
       // --- Header System ---
-      // Beige Background
-      ctx.fillStyle = '#E8E0D5'
-      ctx.fillRect(20, 20, canvas.width - 40, 160)
-
-      // Blue Brand Tab (Top Right)
-      ctx.fillStyle = '#008AC5' // Cyan-Blue
-      ctx.fillRect(canvas.width - 320, 20, 300, 60)
+      // Premium Background Gradient
+      const headerGradient = ctx.createLinearGradient(0, 0, canvas.width, 0)
+      headerGradient.addColorStop(0, '#fdfbfb')
+      headerGradient.addColorStop(1, '#ebedee')
+      ctx.fillStyle = headerGradient
+      ctx.fillRect(20, 20, canvas.width - 40, 180)
 
       // White ID CARD Pill
       ctx.fillStyle = '#ffffff'
-      ctx.beginPath()
-      // roundRect is not supported in all envs, using arcTo or simplified rect
-      ctx.roundRect ? ctx.roundRect(canvas.width - 300, 100, 260, 50, 10) : ctx.fillRect(canvas.width - 300, 100, 260, 50)
+      ctx.shadowBlur = 10
+      ctx.shadowColor = 'rgba(0,0,0,0.1)'
+      const pillX = canvas.width - 280
+      const pillY = 40
+      const pillW = 240
+      const pillH = 60
+      if (ctx.roundRect) {
+        ctx.roundRect(pillX, pillY, pillW, pillH, 30)
+      } else {
+        ctx.fillRect(pillX, pillY, pillW, pillH)
+      }
       ctx.fill()
+      ctx.shadowBlur = 0
 
       // "ID CARD" Text
-      ctx.fillStyle = '#D97706' // Orange-ish
-      ctx.font = 'bold 32px Arial, sans-serif'
+      ctx.fillStyle = '#1e293b'
+      ctx.font = 'bold 32px "Segoe UI", Arial, sans-serif'
       ctx.textAlign = 'center'
-      ctx.fillText('ID CARD', canvas.width - 170, 137)
-
-      // "PEACE India | 1010" Text Removed as per request
+      ctx.fillText('ID CARD', pillX + pillW / 2, pillY + 42)
 
       // --- Identity & Logo ---
-      // Load Logo
       const logoImg = new Image()
       logoImg.crossOrigin = 'anonymous'
       logoImg.src = '/Peacexperts_LOGO.png'
 
       try {
-        await new Promise((resolve, reject) => {
+        await new Promise((resolve) => {
           logoImg.onload = resolve;
-          logoImg.onerror = (e) => { console.warn("Logo load failed", e); resolve(null) } // Continue even if logo fails
+          logoImg.onerror = () => resolve(null)
         })
         if (logoImg.complete && logoImg.naturalHeight !== 0) {
-          ctx.drawImage(logoImg, 40, 30, 140, 140)
+          ctx.beginPath()
+          ctx.arc(110, 110, 80, 0, Math.PI * 2)
+          ctx.fillStyle = '#fff'
+          ctx.fill()
+          ctx.drawImage(logoImg, 40, 40, 140, 140)
         }
       } catch (e) { console.warn("Logo drawing skipped") }
 
       // Institute Header Text
-      ctx.fillStyle = '#D97706' // Orange Title
+      ctx.fillStyle = '#c2410c'
       ctx.textAlign = 'left'
-      ctx.font = 'bold 22px Arial, sans-serif'
-      // Use institute name if available, else fallback
+      ctx.font = 'bold 28px "Segoe UI", Arial, sans-serif'
       const instName = student.instituteId?.name || 'Professional Education Academy'
-      ctx.fillText(instName, 200, 60)
+      ctx.fillText(instName.toUpperCase(), 200, 65)
 
-      ctx.fillStyle = '#555555' // Subtitle Gray
-      ctx.font = '16px Arial, sans-serif'
-      ctx.fillText('For Computer Experts', 200, 85)
+      // AFFILIATION TEXT
+      ctx.fillStyle = '#475569'
+      ctx.font = 'bold 12px "Segoe UI", Arial, sans-serif'
+      const affilText1 = "Affiliated with Ministry of Corporate Affairs (Govt. of India) &"
+      const affilText2 = "An ISO:9001:2015 Certified Company"
+      const regOffice = "Reg. Office: Nashik"
 
-      const instAddress = student.instituteId?.address || 'Affiliated with Ministry of Corporate Affairs'
-      ctx.font = '14px Arial, sans-serif'
-      ctx.fillText(instAddress.substring(0, 60), 200, 110) // Truncate if too long
+      ctx.fillText(affilText1, 200, 92)
+      ctx.fillText(affilText2, 200, 110)
+      ctx.font = 'bold 15px "Segoe UI", Arial, sans-serif'
+      ctx.fillText(regOffice, 200, 135)
 
       const instContact = `Ph: ${student.instituteId?.phone || ''} | Email: ${student.instituteId?.email || ''}`
-      ctx.fillText(instContact.substring(0, 60), 200, 130)
-
-      // --- Separator Line ---
-      ctx.strokeStyle = '#D1D5DB'
-      ctx.lineWidth = 2
-      // ctx.beginPath()
-      // ctx.moveTo(20, 180); ctx.lineTo(canvas.width - 20, 180); ctx.stroke()
+      ctx.font = 'italic 13px "Segoe UI", Arial, sans-serif'
+      ctx.fillText(instContact, 200, 165)
 
       // --- Student Details ---
       const startX = 50
-      let startY = 240
-      const lineHeight = 45
+      let startY = 260
+      const lineHeight = 55
 
-      ctx.textAlign = 'left'
+      // Helper for labels
+      const drawLabel = (label: string, value: string, x: number, y: number, valueColor = '#000') => {
+        ctx.fillStyle = '#0891b2'
+        ctx.font = 'bold 22px "Segoe UI", Arial, sans-serif'
+        ctx.fillText(label, x, y)
+        const metrics = ctx.measureText(label)
+        ctx.fillStyle = valueColor
+        ctx.font = 'bold 24px "Segoe UI", Arial, sans-serif'
+        ctx.fillText(value, x + metrics.width + 15, y)
+      }
 
-      // Reg No
-      ctx.fillStyle = '#0CA5B0' // Teal Value
-      ctx.font = 'bold 26px Arial, sans-serif'
-      ctx.fillText('Student Reg. No.:', startX, startY)
-      ctx.fillStyle = '#000000'
-      ctx.fillText(student.rollNo || 'N/A', startX + 230, startY)
+      drawLabel('Reg No.:', student.rollNo || 'N/A', startX, startY)
+      startY += lineHeight
 
-      startY += lineHeight + 10
-
-      // Name
-      ctx.fillStyle = '#0CA5B0'
+      ctx.fillStyle = '#0891b2'
+      ctx.font = 'bold 22px "Segoe UI", Arial, sans-serif'
       ctx.fillText('Name:', startX, startY)
-      ctx.fillStyle = '#000000'
-      ctx.font = 'bold 30px Arial, sans-serif' // Name is bigger
-      ctx.fillText((student.name || '').toUpperCase(), startX + 100, startY)
+      ctx.fillStyle = '#1e293b'
+      ctx.font = 'bold 34px "Segoe UI", Arial, sans-serif'
+      ctx.fillText((student.name || '').toUpperCase(), startX + 90, startY)
+      startY += lineHeight + 5
 
-      startY += lineHeight + 15
-
-      // Training Institute
-      ctx.fillStyle = '#0CA5B0'
-      ctx.font = 'bold 26px Arial, sans-serif'
-      ctx.fillText('Training Institute:', startX, startY)
-      // Wrap institute name
-      ctx.fillStyle = '#000000'
-      ctx.font = 'bold 24px Arial, sans-serif'
-
-      const maxWidth = 500
-      const xOffset = startX + 230
-
-      const fullInstName = student.instituteId?.name || 'Vision IT Professional Education Institute'
-      // Simple Split if too long
-      if (fullInstName.length > 30) {
-        const mid = Math.floor(fullInstName.length / 2)
-        const splitIdx = fullInstName.indexOf(' ', mid)
-        if (splitIdx !== -1) {
-          ctx.fillText(fullInstName.substring(0, splitIdx), xOffset, startY)
-          ctx.fillText(fullInstName.substring(splitIdx + 1), xOffset, startY + 30)
-          startY += 30
-        } else {
-          ctx.fillText(fullInstName, xOffset, startY)
-        }
-      } else {
-        ctx.fillText(fullInstName, xOffset, startY)
-      }
-
-      const instituteCity = (student.instituteId?.address || '').split(',').pop()?.trim() || ''
-      if (instituteCity) {
-        ctx.fillText(instituteCity, xOffset, startY + 30)
+      drawLabel('Training Institute:', student.instituteId?.name || 'N/A', startX, startY)
+      if (student.instituteId?.address) {
         startY += 30
+        ctx.font = 'italic 18px "Segoe UI", Arial, sans-serif'
+        ctx.fillStyle = '#64748b'
+        ctx.fillText(student.instituteId.address.substring(0, 60), startX + 210, startY)
       }
+      startY += lineHeight
 
-      startY += lineHeight + 15
-
-      // Course & Blood Group Row
-      const courseName = student.courses?.[0]?.courseId?.code || student.courses?.[0]?.courseId?.name || 'N/A'
-
-      ctx.fillStyle = '#0CA5B0'
-      ctx.font = 'bold 26px Arial, sans-serif'
-      ctx.fillText('Course Code:', startX, startY)
-      ctx.fillStyle = '#000000'
-      ctx.fillText(courseName, startX + 185, startY)
-
-      // Blood Group
+      drawLabel('Course:', student.courses?.[0]?.courseId?.name || 'N/A', startX, startY)
       if (student.bloodGroup) {
-        ctx.fillStyle = '#0CA5B0'
-        ctx.fillText('B. Group:', startX + 350, startY)
-        ctx.fillStyle = '#000000'
-        ctx.fillText(student.bloodGroup, startX + 480, startY)
+        drawLabel('B. Group:', student.bloodGroup, startX + 450, startY, '#be123c')
       }
+      startY += lineHeight
 
-      startY += lineHeight + 10
+      drawLabel('DOB:', student.dateOfBirth ? new Date(student.dateOfBirth).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : 'N/A', startX, startY)
+      startY += lineHeight
 
-      // DOB
-      ctx.fillStyle = '#0CA5B0'
-      ctx.fillText('DOB:', startX, startY)
-      ctx.fillStyle = '#000000'
-      ctx.fillText(student.dateOfBirth ? new Date(student.dateOfBirth).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : 'N/A', startX + 80, startY)
-
-      startY += lineHeight + 10
-
-      // Mobile
-      ctx.fillStyle = '#0CA5B0'
-      ctx.fillText('Mobile No.:', startX, startY)
-      ctx.fillStyle = '#000000'
-      ctx.fillText(student.phone || 'N/A', startX + 150, startY)
+      drawLabel('Mobile No.:', student.phone || 'N/A', startX, startY)
 
       // --- Student Photo (Right Side) ---
       if (student.documents?.photo) {
@@ -320,28 +270,31 @@ export default function ProfilePage() {
         try {
           await new Promise((resolve) => { photoImg.onload = resolve; photoImg.onerror = resolve })
 
-          // Draw Photo Box
-          const photoX = canvas.width - 250
-          const photoY = 220
-          const photoW = 200
-          const photoH = 240
+          const photoX = canvas.width - 260
+          const photoY = 230
+          const photoW = 210
+          const photoH = 260
 
-          ctx.save()
-          ctx.beginPath()
-          ctx.rect(photoX, photoY, photoW, photoH)
-          ctx.clip()
+          // Premium Border
+          ctx.strokeStyle = '#0891b2'
+          ctx.lineWidth = 6
+          ctx.strokeRect(photoX - 5, photoY - 5, photoW + 10, photoH + 10)
+
+          ctx.strokeStyle = '#ffffff'
+          ctx.lineWidth = 2
+          ctx.strokeRect(photoX - 1, photoY - 1, photoW + 2, photoH + 2)
+
           ctx.drawImage(photoImg, photoX, photoY, photoW, photoH)
-          ctx.restore()
-
-          ctx.lineWidth = 1
-          ctx.strokeStyle = '#ddd'
-          ctx.strokeRect(photoX, photoY, photoW, photoH)
         } catch (e) { console.warn("Photo drawing failed") }
       }
 
-      // --- Separator Line (Bottom) ---
-      ctx.fillStyle = '#E8E0D5'
-      ctx.fillRect(20, canvas.height - 40, canvas.width - 40, 20)
+      // --- Footer Bar ---
+      ctx.fillStyle = '#1e293b'
+      ctx.fillRect(0, canvas.height - 30, canvas.width, 30)
+      ctx.fillStyle = '#ffffff'
+      ctx.font = 'bold 12px Arial'
+      ctx.textAlign = 'center'
+      ctx.fillText('VALID IDENTITY CARD - PROFESSIONAL EDUCATION ACADEMY', canvas.width / 2, canvas.height - 10)
 
       // Download
       const link = document.createElement('a')
