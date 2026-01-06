@@ -133,9 +133,11 @@ export default function ProfilePage() {
 
   const downloadIdCard = async () => {
     try {
+      if (!student) return;
+
       const canvas = document.createElement('canvas')
-      canvas.width = 1011 // approx credit card ratio width (3.37 inch * 300 dpi)
-      canvas.height = 638 // (2.125 inch * 300 dpi)
+      canvas.width = 1011
+      canvas.height = 638
       const ctx = canvas.getContext('2d')!
 
       // --- Background ---
@@ -143,34 +145,32 @@ export default function ProfilePage() {
       ctx.fillRect(0, 0, canvas.width, canvas.height)
 
       // --- Header System ---
-      // Premium Background Gradient
       const headerGradient = ctx.createLinearGradient(0, 0, canvas.width, 0)
-      headerGradient.addColorStop(0, '#fdfbfb')
-      headerGradient.addColorStop(1, '#ebedee')
+      headerGradient.addColorStop(0, '#f8fafc')
+      headerGradient.addColorStop(1, '#f1f5f9')
       ctx.fillStyle = headerGradient
       ctx.fillRect(20, 20, canvas.width - 40, 180)
 
-      // White ID CARD Pill
+      // ID CARD Pill
       ctx.fillStyle = '#ffffff'
-      ctx.shadowBlur = 10
-      ctx.shadowColor = 'rgba(0,0,0,0.1)'
-      const pillX = canvas.width - 280
+      ctx.shadowBlur = 15
+      ctx.shadowColor = 'rgba(0,0,0,0.08)'
+      const pillX = canvas.width - 300
       const pillY = 40
-      const pillW = 240
-      const pillH = 60
+      const pillW = 260
+      const pillH = 70
       if (ctx.roundRect) {
-        ctx.roundRect(pillX, pillY, pillW, pillH, 30)
+        ctx.roundRect(pillX, pillY, pillW, pillH, 35)
       } else {
         ctx.fillRect(pillX, pillY, pillW, pillH)
       }
       ctx.fill()
       ctx.shadowBlur = 0
 
-      // "ID CARD" Text
-      ctx.fillStyle = '#1e293b'
-      ctx.font = 'bold 32px "Segoe UI", Arial, sans-serif'
+      ctx.fillStyle = '#0f172a'
+      ctx.font = 'bold 36px "Segoe UI", Arial, sans-serif'
       ctx.textAlign = 'center'
-      ctx.fillText('ID CARD', pillX + pillW / 2, pillY + 42)
+      ctx.fillText('ID CARD', pillX + pillW / 2, pillY + 48)
 
       // --- Identity & Logo ---
       const logoImg = new Image()
@@ -189,122 +189,129 @@ export default function ProfilePage() {
           ctx.fill()
           ctx.drawImage(logoImg, 40, 40, 140, 140)
         }
-      } catch (e) { console.warn("Logo drawing skipped") }
+      } catch (e) { console.warn("Logo drawing failed") }
 
-      // Institute Header Text
-      ctx.fillStyle = '#c2410c'
+      // Institute Header
+      ctx.fillStyle = '#ea580c'
       ctx.textAlign = 'left'
-      ctx.font = 'bold 28px "Segoe UI", Arial, sans-serif'
-      const instName = student.instituteId?.name || 'Professional Education Academy'
+      ctx.font = 'bold 30px "Segoe UI", Arial, sans-serif'
+      const instName = student.instituteId?.name || 'PEACEXPERTS ACADEMY'
       ctx.fillText(instName.toUpperCase(), 200, 65)
 
-      // AFFILIATION TEXT
       ctx.fillStyle = '#475569'
-      ctx.font = 'bold 12px "Segoe UI", Arial, sans-serif'
-      const affilText1 = "Affiliated with Ministry of Corporate Affairs (Govt. of India) &"
-      const affilText2 = "An ISO:9001:2015 Certified Company"
-      const regOffice = "Reg. Office: Nashik"
-
-      ctx.fillText(affilText1, 200, 92)
-      ctx.fillText(affilText2, 200, 110)
       ctx.font = 'bold 15px "Segoe UI", Arial, sans-serif'
-      ctx.fillText(regOffice, 200, 135)
+      ctx.fillText("Affiliated with Ministry of Corporate Affairs (Govt. of India) &", 200, 95)
+      ctx.fillText("An ISO:9001:2015 Certified Company", 200, 115)
+      ctx.font = 'bold 18px "Segoe UI", Arial, sans-serif'
+      ctx.fillText("Reg. Office: Nashik", 200, 145)
 
       const instContact = `Ph: ${student.instituteId?.phone || ''} | Email: ${student.instituteId?.email || ''}`
-      ctx.font = 'italic 13px "Segoe UI", Arial, sans-serif'
-      ctx.fillText(instContact, 200, 165)
+      ctx.font = 'italic 16px "Segoe UI", Arial, sans-serif'
+      ctx.fillText(instContact, 200, 175)
 
       // --- Student Details ---
-      const startX = 50
-      let startY = 260
-      const lineHeight = 55
+      const startX = 60
+      let startY = 270
+      const lineHeight = 60
 
-      // Helper for labels
-      const drawLabel = (label: string, value: string, x: number, y: number, valueColor = '#000') => {
+      const drawDetail = (label: string, value: string, x: number, y: number, valueColor = '#0f172a') => {
         ctx.fillStyle = '#0891b2'
-        ctx.font = 'bold 22px "Segoe UI", Arial, sans-serif'
-        ctx.fillText(label, x, y)
-        const metrics = ctx.measureText(label)
-        ctx.fillStyle = valueColor
         ctx.font = 'bold 24px "Segoe UI", Arial, sans-serif'
-        ctx.fillText(value, x + metrics.width + 15, y)
+        ctx.textAlign = 'left'
+        ctx.fillText(label, x, y)
+        const labelWidth = ctx.measureText(label).width
+        ctx.fillStyle = valueColor
+        ctx.font = 'bold 26px "Segoe UI", Arial, sans-serif'
+        ctx.fillText(value || 'N/A', x + labelWidth + 20, y)
       }
 
-      drawLabel('Reg No.:', student.rollNo || 'N/A', startX, startY)
+      drawDetail('Reg No.:', student.rollNo, startX, startY)
       startY += lineHeight
 
+      // Name - Larger
       ctx.fillStyle = '#0891b2'
-      ctx.font = 'bold 22px "Segoe UI", Arial, sans-serif'
+      ctx.font = 'bold 24px "Segoe UI", Arial, sans-serif'
       ctx.fillText('Name:', startX, startY)
-      ctx.fillStyle = '#1e293b'
-      ctx.font = 'bold 34px "Segoe UI", Arial, sans-serif'
-      ctx.fillText((student.name || '').toUpperCase(), startX + 90, startY)
-      startY += lineHeight + 5
+      ctx.fillStyle = '#0f172a'
+      ctx.font = 'bold 40px "Segoe UI", Arial, sans-serif'
+      ctx.fillText((student.name || 'N/A').toUpperCase(), startX + 100, startY)
+      startY += lineHeight + 10
 
-      drawLabel('Training Institute:', student.instituteId?.name || 'N/A', startX, startY)
+      drawDetail('Training Institute:', student.instituteId?.name, startX, startY)
       if (student.instituteId?.address) {
         startY += 30
-        ctx.font = 'italic 18px "Segoe UI", Arial, sans-serif'
+        ctx.font = 'italic 20px "Segoe UI", Arial, sans-serif'
         ctx.fillStyle = '#64748b'
-        ctx.fillText(student.instituteId.address.substring(0, 60), startX + 210, startY)
+        ctx.fillText(student.instituteId.address.split(',').splice(0, 2).join(','), startX + 220, startY)
       }
       startY += lineHeight
 
-      drawLabel('Course:', student.courses?.[0]?.courseId?.name || 'N/A', startX, startY)
+      const courseName = student.courses?.[0]?.courseId?.name || 'N/A'
+      drawDetail('Course:', courseName, startX, startY)
+
       if (student.bloodGroup) {
-        drawLabel('B. Group:', student.bloodGroup, startX + 450, startY, '#be123c')
+        drawDetail('B. Group:', student.bloodGroup, startX + 480, startY, '#be123c')
       }
       startY += lineHeight
 
-      drawLabel('DOB:', student.dateOfBirth ? new Date(student.dateOfBirth).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : 'N/A', startX, startY)
+      const dob = student.dateOfBirth ? new Date(student.dateOfBirth).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : 'N/A'
+      drawDetail('DOB:', dob, startX, startY)
       startY += lineHeight
 
-      drawLabel('Mobile No.:', student.phone || 'N/A', startX, startY)
+      drawDetail('Mobile No.:', student.phone, startX, startY)
 
-      // --- Student Photo (Right Side) ---
+      // --- Student Photo ---
       if (student.documents?.photo) {
         const photoImg = new Image()
-        photoImg.crossOrigin = 'anonymous'
+        // Only set crossOrigin if it's an absolute URL
+        if (student.documents.photo.startsWith('http')) {
+          photoImg.crossOrigin = 'anonymous'
+        }
         photoImg.src = student.documents.photo
 
         try {
-          await new Promise((resolve) => { photoImg.onload = resolve; photoImg.onerror = resolve })
+          await new Promise((resolve) => {
+            photoImg.onload = resolve;
+            photoImg.onerror = () => { console.error("Photo load error"); resolve(null) }
+          })
 
-          const photoX = canvas.width - 260
-          const photoY = 230
-          const photoW = 210
-          const photoH = 260
+          if (photoImg.complete && photoImg.naturalWidth > 0) {
+            const photoX = canvas.width - 280
+            const photoY = 240
+            const photoW = 220
+            const photoH = 280
 
-          // Premium Border
-          ctx.strokeStyle = '#0891b2'
-          ctx.lineWidth = 6
-          ctx.strokeRect(photoX - 5, photoY - 5, photoW + 10, photoH + 10)
+            // Premium Double Border
+            ctx.strokeStyle = '#0891b2'
+            ctx.lineWidth = 8
+            ctx.strokeRect(photoX - 6, photoY - 6, photoW + 12, photoH + 12)
 
-          ctx.strokeStyle = '#ffffff'
-          ctx.lineWidth = 2
-          ctx.strokeRect(photoX - 1, photoY - 1, photoW + 2, photoH + 2)
+            ctx.strokeStyle = '#ffffff'
+            ctx.lineWidth = 2
+            ctx.strokeRect(photoX - 1, photoY - 1, photoW + 2, photoH + 2)
 
-          ctx.drawImage(photoImg, photoX, photoY, photoW, photoH)
-        } catch (e) { console.warn("Photo drawing failed") }
+            ctx.drawImage(photoImg, photoX, photoY, photoW, photoH)
+          }
+        } catch (e) { console.warn("Photo draw fail", e) }
       }
 
-      // --- Footer Bar ---
-      ctx.fillStyle = '#1e293b'
-      ctx.fillRect(0, canvas.height - 30, canvas.width, 30)
+      // --- Footer ---
+      ctx.fillStyle = '#0f172a'
+      ctx.fillRect(0, canvas.height - 40, canvas.width, 40)
       ctx.fillStyle = '#ffffff'
-      ctx.font = 'bold 12px Arial'
+      ctx.font = 'bold 14px "Segoe UI", Arial, sans-serif'
       ctx.textAlign = 'center'
-      ctx.fillText('VALID IDENTITY CARD - PROFESSIONAL EDUCATION ACADEMY', canvas.width / 2, canvas.height - 10)
+      ctx.fillText('VALID IDENTITY CARD - PEACEXPERTS INDIA', canvas.width / 2, canvas.height - 15)
 
       // Download
       const link = document.createElement('a')
-      link.download = `ID_CARD_${student.rollNo || 'student'}.png`
+      link.download = `ID_CARD_${student.rollNo || 'STUDENT'}.png`
       link.href = canvas.toDataURL('image/png')
       link.click()
       toast.success('ID Card downloaded')
 
     } catch (error) {
-      console.error("ID Card Generation Error", error)
+      console.error("ID Card Error", error)
       toast.error('Failed to generate ID Card')
     }
   }
