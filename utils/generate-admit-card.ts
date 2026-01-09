@@ -59,7 +59,7 @@ export const generateAdmitCardHtml = (data: AdmitCardData) => {
 
         /* Details Table */
         .details-table { width: 100%; border-collapse: collapse; table-layout: fixed; border: 1.5px solid #000; }
-        .details-table td { border: 1.5px solid #000; padding: 6px 10px; vertical-align: middle; height: 32px; font-size: 13px; }
+        .details-table td { border: 1.5px solid #000; padding: 4px 10px; vertical-align: middle; height: 26px; font-size: 12px; }
         .details-table .label { font-weight: normal; width: 33%; }
         .details-table .value { font-weight: bold; text-transform: uppercase; text-align: left; }
         .photo-cell { width: 25%; text-align: center; }
@@ -77,7 +77,7 @@ export const generateAdmitCardHtml = (data: AdmitCardData) => {
 
         /* Schedule Table */
         .schedule-table { width: 100%; border-collapse: collapse; border: 1.5px solid #000; margin-top: -1.5px; }
-        .schedule-table th, .schedule-table td { border: 1.5px solid #000; padding: 6px 10px; vertical-align: middle; height: 32px; font-size: 13px; }
+        .schedule-table th, .schedule-table td { border: 1.5px solid #000; padding: 4px 10px; vertical-align: middle; height: 26px; font-size: 12px; }
         .schedule-table .head { font-weight: bold; text-align: center; text-transform: uppercase; background: #fff; }
         .schedule-table .exam-centre-content { font-size: 12px; line-height: 1.4; padding: 8px; }
         .schedule-table .schedule-label { font-weight: normal; width: 33%; text-align: left; }

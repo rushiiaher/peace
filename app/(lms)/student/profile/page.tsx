@@ -223,11 +223,11 @@ export default function ProfilePage() {
 
       // --- Student Details ---
       const startX = 65
-      let curY = 260
-      const lineHeight = 55
-      const labelFontSize = 20
-      const valueFontSize = 21 // Slightly larger than label for hierarchy
-      const valueAlignX = startX + 235 // Fixed alignment for all values
+      let curY = 245
+      const lineHeight = 48
+      const labelFontSize = 22
+      const valueFontSize = 23 // Slightly larger than label for hierarchy
+      const valueAlignX = startX + 220 // Fixed alignment for all values
 
       // Helper for details with consistent font sizes
       const drawDetail = (label: string, value: string, x: number, y: number, maxWidth = 0, vColor = valueColor) => {
@@ -265,15 +265,15 @@ export default function ProfilePage() {
           for (let n = 0; n < words.length; n++) {
             let testLine = line + words[n] + ' '
             if (ctx.measureText(testLine).width > valMaxWidth && n > 0) {
-              ctx.fillText(line.trim(), valueAlignX, y + (lineCount * 26))
+              ctx.fillText(line.trim(), valueAlignX, y + (lineCount * 30))
               line = words[n] + ' '
               lineCount++
             } else {
               line = testLine
             }
           }
-          ctx.fillText(line.trim(), valueAlignX, y + (lineCount * 26))
-          return lineCount * 26
+          ctx.fillText(line.trim(), valueAlignX, y + (lineCount * 30))
+          return lineCount * 30
         } else {
           ctx.fillText(actualValue, valueAlignX, y)
           return 0
@@ -290,11 +290,11 @@ export default function ProfilePage() {
       ctx.fillText('Name:', startX, curY)
 
       const name = (student.name || 'N/A').toUpperCase()
-      const maxNameWidth = 400
+      const maxNameWidth = 420
       ctx.font = `bold ${valueFontSize}px ${fontFamily}`
 
       let currentNameFontSize = valueFontSize
-      while (ctx.measureText(name).width > maxNameWidth && currentNameFontSize > 14) {
+      while (ctx.measureText(name).width > maxNameWidth && currentNameFontSize > 16) {
         currentNameFontSize -= 1
         ctx.font = `bold ${currentNameFontSize}px ${fontFamily}`
       }
@@ -314,19 +314,16 @@ export default function ProfilePage() {
       }
       curY += lineHeight
 
-      // Course and Blood Group
+      // Course
       const courseStr = student.courses?.[0]?.courseId?.name || 'N/A'
       drawDetail('Course:', courseStr, startX, curY, 520)
-
-      if (student.bloodGroup) {
-        ctx.fillStyle = labelColor
-        ctx.font = `bold ${labelFontSize}px ${fontFamily}`
-        ctx.fillText('B. G:', 610, curY)
-        ctx.fillStyle = '#be123c'
-        ctx.font = `bold ${valueFontSize}px ${fontFamily}`
-        ctx.fillText(student.bloodGroup, 670, curY)
-      }
       curY += lineHeight
+
+      // Blood Group - Separate line
+      if (student.bloodGroup) {
+        drawDetail('B. G:', student.bloodGroup, startX, curY, 0, '#be123c')
+        curY += lineHeight
+      }
 
       const dobStr = student.dateOfBirth ? new Date(student.dateOfBirth).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : 'N/A'
       drawDetail('DOB:', dobStr, startX, curY)
