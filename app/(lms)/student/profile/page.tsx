@@ -372,7 +372,7 @@ export default function ProfilePage() {
       ctx.font = `600 14px ${fontFamily}`
       ctx.textAlign = 'center'
       ctx.letterSpacing = '1px'
-      ctx.fillText('VALID IDENTITY CARD - PEACEXPERTS INDIA', canvas.width / 2, canvas.height - 15)
+      ctx.fillText('Valid ID card- Peacexperts Academy, Nashik', canvas.width / 2, canvas.height - 15)
 
       // Download
       const link = document.createElement('a')
