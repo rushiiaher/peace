@@ -284,21 +284,23 @@ export default function ProfilePage() {
       drawDetail('Reg No.:', student.rollNo, startX, curY)
       curY += lineHeight
 
-      // Name - Consistent label size, slightly larger value for prominence
+      // Name - Standardized font size and width to prevent photo overlap
       ctx.fillStyle = labelColor
       ctx.font = `bold ${labelFontSize}px ${fontFamily}`
       ctx.fillText('Name:', startX, curY)
 
       const name = (student.name || 'N/A').toUpperCase()
-      const maxNameWidth = 450
-      let nameFontSize = 32
-      ctx.font = `bold ${nameFontSize}px ${fontFamily}`
-      while (ctx.measureText(name).width > maxNameWidth && nameFontSize > 22) {
-        nameFontSize -= 2
-        ctx.font = `bold ${nameFontSize}px ${fontFamily}`
+      const maxNameWidth = 400
+      ctx.font = `bold ${valueFontSize}px ${fontFamily}`
+
+      let currentNameFontSize = valueFontSize
+      while (ctx.measureText(name).width > maxNameWidth && currentNameFontSize > 14) {
+        currentNameFontSize -= 1
+        ctx.font = `bold ${currentNameFontSize}px ${fontFamily}`
       }
+
       ctx.fillStyle = valueColor
-      ctx.fillText(name, valueAlignX, curY + 5)
+      ctx.fillText(name, valueAlignX, curY)
       curY += lineHeight
 
       // Training Institute
