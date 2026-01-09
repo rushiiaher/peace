@@ -46,7 +46,6 @@ export default function AdmitCardsPage() {
         return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }).toLowerCase()
       }
 
-      const batchName = card.examTitle?.includes('-') ? card.examTitle.split('-').pop().trim() : 'Regular Batch'
 
       const data = {
         instituteName: "PEACEXperts Academy, Nashik", // Hardcoded as per image header preference
@@ -58,7 +57,7 @@ export default function AdmitCardsPage() {
         motherName: card.studentId?.motherName || '__________',
         aadhaarCard: card.studentId?.aadhaarCardNo || '__________',
         examCentreCode: 'DLC-IT' + (card.rollNo?.substring(0, 4) || '1081'),
-        batch: batchName,
+        batch: card.batchName || 'Regular Batch',
         examDate: new Date(card.examDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-'),
         reportingTime: adjustTime(card.startTime, 30),
         gateClosingTime: adjustTime(card.startTime, 5),

@@ -6,6 +6,7 @@ const AdmitCardSchema = new mongoose.Schema({
   rollNo: { type: String, required: true },
   studentName: { type: String, required: true },
   courseName: { type: String, required: true },
+  batchName: { type: String, required: true, default: 'Regular Batch' },
   examTitle: { type: String, required: true },
   examNumber: { type: Number },
   examDate: { type: Date, required: true },

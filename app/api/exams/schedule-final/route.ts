@@ -6,11 +6,12 @@ import Institute from '@/lib/models/Institute'
 import User from '@/lib/models/User'
 import AdmitCard from '@/lib/models/AdmitCard'
 import Course from '@/lib/models/Course'
+import Batch from '@/lib/models/Batch'
 
 export async function POST(req: Request) {
   try {
     await connectDB()
-    const { courseId, instituteId, title, date, startTime, studentIds, examNumber } = await req.json()
+    const { courseId, instituteId, title, date, startTime, studentIds, examNumber, batchId } = await req.json()
 
     const examDateTime = new Date(`${date}T${startTime}`)
 
@@ -19,6 +20,12 @@ export async function POST(req: Request) {
 
     const course = await Course.findById(courseId).populate('examConfigurations.questionBanks')
     if (!course) return NextResponse.json({ error: 'Course not found' }, { status: 404 })
+
+    let batchName = 'Regular Batch'
+    if (batchId) {
+      const batch = await Batch.findById(batchId)
+      if (batch) batchName = batch.name
+    }
 
     const targetExamNumber = examNumber || 1
     const examConfig = course.examConfigurations?.find((c: any) => c.examNumber === targetExamNumber)
@@ -181,6 +188,7 @@ export async function POST(req: Request) {
         rollNo: student.rollNo,
         studentName: student.name,
         courseName: course?.name || 'Course',
+        batchName: batchName,
         examTitle: finalTitle,
         examDate: examDateTime,
         startTime,
