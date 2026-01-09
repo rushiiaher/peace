@@ -5,6 +5,7 @@ import Institute from '@/lib/models/Institute'
 import User from '@/lib/models/User'
 import AdmitCard from '@/lib/models/AdmitCard'
 import Course from '@/lib/models/Course'
+import Batch from '@/lib/models/Batch'
 
 function parseTime(time: string) {
   const [h, m] = time.split(':').map(Number)
@@ -218,12 +219,17 @@ export async function POST(req: Request) {
             await existingAdmitCard.save()
             console.log('Updated admit card:', existingAdmitCard._id, 'with date:', examDate, 'time:', currentStartTime)
           } else {
+            // Fetch batch
+            const batch = await Batch.findOne({ students: studentId, courseId: exam.courseId, status: 'Active' })
+            const batchName = batch ? batch.name : 'Regular Batch'
+
             const newAdmitCard = await AdmitCard.create({
               examId,
               studentId,
               studentName: student?.name,
               rollNo: student?.rollNo,
               courseName: course?.name,
+              batchName: batchName,
               examTitle: exam.title,
               examDate,
               startTime: currentStartTime,
@@ -285,6 +291,10 @@ export async function POST(req: Request) {
       const student = await User.findById(rs.studentId)
       const course = await Course.findById(exam.courseId)
 
+      // Fetch batch
+      const batch = await Batch.findOne({ students: rs.studentId, courseId: exam.courseId, status: 'Active' })
+      const batchName = batch ? batch.name : 'Regular Batch'
+
       // Create new admit card for rescheduled exam
       await AdmitCard.create({
         examId: rescheduledExam._id,
@@ -292,6 +302,7 @@ export async function POST(req: Request) {
         studentName: student?.name,
         rollNo: student?.rollNo,
         courseName: course?.name,
+        batchName: batchName,
         examTitle: rescheduledExam.title,
         examDate: rs.date,
         startTime: rs.time,

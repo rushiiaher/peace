@@ -6,6 +6,7 @@ import Institute from '@/lib/models/Institute'
 import AdmitCard from '@/lib/models/AdmitCard'
 import User from '@/lib/models/User'
 import Course from '@/lib/models/Course'
+import Batch from '@/lib/models/Batch'
 
 // Helper helpers
 const timeToMinutes = (time: string) => {
@@ -70,7 +71,7 @@ export async function POST(req: Request) {
                 return acc
             }, {})
 
-            let newExam = null
+            let newExam: any = null
 
             try {
                 // Fetch course to get exam configuration
@@ -190,12 +191,21 @@ export async function POST(req: Request) {
                     const req = groupRequests.find(r => r.studentId._id.toString() === assign.studentId.toString())
                     const student = studentMap[assign.studentId.toString()]
 
+                    // Fetch student's batch for this course
+                    const batch = await Batch.findOne({
+                        students: assign.studentId,
+                        courseId: originalExam.courseId,
+                        status: 'Active'
+                    })
+                    const batchName = batch ? batch.name : 'Regular Batch'
+
                     return AdmitCard.create({
                         examId: newExam._id,
                         studentId: assign.studentId,
                         studentName: student.name,
                         rollNo: student.rollNo || 'N/A',
                         courseName: sampleReq.courseId.name,
+                        batchName: batchName,
                         examTitle: newTitle,
                         examDate: finalSection.date,
                         startTime: finalSection.startTime,

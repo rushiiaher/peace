@@ -5,6 +5,7 @@ import Institute from '@/lib/models/Institute'
 import User from '@/lib/models/User'
 import Course from '@/lib/models/Course'
 import AdmitCard from '@/lib/models/AdmitCard'
+import Batch from '@/lib/models/Batch'
 
 // Helper to parse time string "HH:MM" to minutes from midnight
 const timeToMinutes = (time: string) => {
@@ -168,14 +169,24 @@ export async function POST(req: Request) {
 
         // 5. Generate Admit Cards
         const admitCardPromises = sections.flatMap((section: any) =>
-            section.systemAssignments.map((assignment: any) => {
+            section.systemAssignments.map(async (assignment: any) => {
                 const student = studentMap[assignment.studentId.toString()]
+
+                // Fetch student batch
+                const batch = await Batch.findOne({
+                    students: assignment.studentId,
+                    courseId: courseId,
+                    status: 'Active'
+                })
+                const batchName = batch ? batch.name : 'Regular Batch'
+
                 return AdmitCard.create({
                     examId: newExam._id,
                     studentId: assignment.studentId,
                     studentName: student?.name || 'Unknown',
                     rollNo: student?.rollNo || 'N/A',
                     courseName: course.name,
+                    batchName: batchName,
                     examTitle: finalTitle,
                     examDate: section.date,
                     startTime: section.startTime,

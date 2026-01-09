@@ -6,6 +6,7 @@ import User from '@/lib/models/User'
 import AdmitCard from '@/lib/models/AdmitCard'
 import Course from '@/lib/models/Course'
 import QuestionBank from '@/lib/models/QuestionBank'
+import Batch from '@/lib/models/Batch'
 
 function parseTime(time: string) {
   const [h, m] = time.split(':').map(Number)
@@ -143,12 +144,23 @@ export async function POST(req: Request) {
     for (const section of sections) {
       for (let i = 0; i < section.systemAssignments.length; i++) {
         const assignment = section.systemAssignments[i]
+        const student = students.find(s => s._id.equals(assignment.studentId))
+
+        // Fetch batch name for the student
+        const batch = await Batch.findOne({
+          students: assignment.studentId,
+          courseId: courseId,
+          status: 'Active'
+        })
+        const batchName = batch ? batch.name : 'Regular Batch'
+
         await AdmitCard.create({
           examId: exam._id,
           studentId: assignment.studentId,
-          rollNo: students.find(s => s._id.equals(assignment.studentId))?.rollNo,
-          studentName: students.find(s => s._id.equals(assignment.studentId))?.name,
+          rollNo: student?.rollNo,
+          studentName: student?.name,
           courseName: course?.name || 'Course',
+          batchName: batchName,
           examTitle: title,
           examDate: section.date,
           startTime: section.startTime,

@@ -58,7 +58,7 @@ export const generateAdmitCardHtml = (data: AdmitCardData) => {
         .title-area .subtext { font-size: 11px; font-style: italic; margin-top: 2px; }
 
         /* Details Table */
-        .details-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        .details-table { width: 100%; border-collapse: collapse; table-layout: fixed; border: 1.5px solid #000; }
         .details-table td { border: 1.5px solid #000; padding: 6px 10px; vertical-align: middle; height: 32px; }
         .details-table .label { font-weight: normal; width: 25%; }
         .details-table .value { font-weight: bold; text-transform: uppercase; }
@@ -76,7 +76,7 @@ export const generateAdmitCardHtml = (data: AdmitCardData) => {
         }
 
         /* Schedule Table */
-        .schedule-table { width: 100%; border-collapse: collapse; }
+        .schedule-table { width: 100%; border-collapse: collapse; border: 1.5px solid #000; }
         .schedule-table th, .schedule-table td { border: 1.5px solid #000; padding: 6px 10px; }
         .schedule-table .head { font-weight: bold; text-align: center; text-transform: uppercase; background: #fff; }
         .schedule-table .exam-centre-content { font-size: 12px; line-height: 1.5; padding: 10px; }
@@ -188,8 +188,8 @@ export const generateAdmitCardHtml = (data: AdmitCardData) => {
                 <td class="schedule-value">${data.examStartTime}</td>
             </tr>
             <tr>
-                <td class="schedule-label" style="border-bottom: none;">Exam Duration</td>
-                <td class="schedule-value" style="border-bottom: none;">${data.examDuration}</td>
+                <td class="schedule-label">Exam Duration</td>
+                <td class="schedule-value">${data.examDuration}</td>
             </tr>
         </table>
 
