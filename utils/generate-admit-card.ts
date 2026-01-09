@@ -16,7 +16,8 @@ interface AdmitCardData {
     reportingTime: string; // 30 mins before
     gateClosingTime: string; // 20 mins before? Or 5 mins before
     examStartTime: string;
-    examDuration: string; // "60 Minutes"
+    examDuration: string;
+    courseName: string;
     examCentreName: string;
     examCentreAddress: string;
 }
@@ -28,227 +29,189 @@ export const generateAdmitCardHtml = (data: AdmitCardData) => {
 <head>
     <title>Candidate Admit Card - ${data.candidateName}</title>
     <style>
-        @page { size: A4; margin: 10mm; }
-        body { font-family: 'Times New Roman', serif; margin: 0; padding: 10px; color: #000; background: #fff; }
-        .container { width: 100%; max-width: 800px; margin: 0 auto; border: 2px solid #000; padding: 15px; box-sizing: border-box; }
+        @page { size: A4; margin: 5mm; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 5px; color: #000; background: #fff; font-size: 13px; }
+        .container { width: 100%; max-width: 800px; margin: 0 auto; border: 1.5px solid #000; padding: 0; box-sizing: border-box; }
         
-        /* New Flex Header to prevent overlap */
-        .header-top {
+        /* Header */
+        .header-section {
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            border-bottom: 2px solid #000;
-            padding-bottom: 15px;
-            margin-bottom: 15px;
+            border-bottom: 1.5px solid #000;
+            padding: 10px;
         }
+        .logo-box { width: 15%; text-align: center; }
+        .logo-box img { width: 90px; height: auto; border-radius: 50%; }
+        .header-content { width: 85%; text-align: center; }
+        .header-content h1 { margin: 0; font-size: 18px; font-weight: bold; text-transform: uppercase; }
+        .header-content p { margin: 2px 0; font-size: 12px; }
+        .header-content .iso { font-size: 11px; }
 
-        .logo-section {
-            width: 120px;
-            flex-shrink: 0;
-        }
-        .logo-section img {
-            width: 100px;
-            height: auto;
-        }
-
-        .institute-details {
-            flex-grow: 1;
+        /* Title Area */
+        .title-area {
             text-align: center;
-            padding: 0 15px;
-        }
-        .institute-details h1 {
-            margin: 0;
-            font-size: 22px;
-            font-weight: bold;
-            text-transform: uppercase;
-            line-height: 1.2;
-        }
-        .institute-details h3 {
-            margin: 4px 0;
-            font-size: 11px;
-            font-weight: normal;
-        }
-
-        .photo-section {
-            width: 130px;
-            height: 160px;
-            border: 1px solid #000;
-            flex-shrink: 0;
+            border-bottom: 1.5px solid #000;
+            padding: 5px 0;
             background: #fff;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
         }
-        .photo-section img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
+        .title-area h2 { margin: 0; font-size: 16px; font-weight: bold; text-transform: uppercase; }
+        .title-area .subtext { font-size: 11px; font-style: italic; margin-top: 2px; }
 
-        .admit-card-title {
-            text-align: center;
-            margin: 10px 0;
-        }
-        .admit-card-title h2 {
-            margin: 0;
-            font-size: 20px;
-            font-weight: bold;
-            text-decoration: underline;
-            text-transform: uppercase;
-        }
-        
-        .candidate-guidance {
-            text-align: center;
-            font-size: 13px;
-            margin-bottom: 15px;
-            font-style: italic;
-        }
+        /* Details Table */
+        .details-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        .details-table td { border-bottom: 1.5px solid #000; border-right: 1.5px solid #000; padding: 6px 10px; vertical-align: middle; height: 32px; }
+        .details-table td:last-child { border-right: none; }
+        .details-table .label { font-weight: normal; width: 25%; }
+        .details-table .value { font-weight: bold; text-transform: uppercase; }
+        .photo-cell { width: 25%; text-align: center; border-bottom: none !important; }
+        .photo-img { width: 120px; height: 145px; border: 1px solid #000; object-fit: cover; }
 
-        table { width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 15px; }
-        table, th, td { border: 1.5px solid #000; }
-        th, td { padding: 8px 12px; text-align: left; vertical-align: middle; }
-        
-        .label { font-weight: bold; width: 22%; background-color: #f2f2f2; }
-        .value { font-weight: bold; text-transform: uppercase; }
-
-        .section-divider {
+        /* Batch Schedule Title */
+        .section-header {
             text-align: center;
             font-weight: bold;
-            font-size: 18px;
-            margin: 20px 0 10px 0;
+            font-size: 14px;
             text-transform: uppercase;
-            border-bottom: 1px solid #ccc;
-            padding-bottom: 5px;
+            padding: 5px 0;
+            border-bottom: 1.5px solid #000;
         }
 
-        .instructions {
-            font-size: 12.5px;
-            line-height: 1.4;
-            padding: 12px;
-            border: 1.5px solid #000;
-            margin-top: 15px;
-            background: #fdfdfd;
+        /* Schedule Table */
+        .schedule-table { width: 100%; border-collapse: collapse; }
+        .schedule-table th, .schedule-table td { border-bottom: 1.5px solid #000; border-right: 1.5px solid #000; padding: 6px 10px; }
+        .schedule-table td:last-child { border-right: none; }
+        .schedule-table .head { font-weight: bold; text-align: center; text-transform: uppercase; border-bottom: 1.5px solid #000; background: #fff; }
+        .schedule-table .exam-centre-content { font-size: 12px; line-height: 1.5; padding: 10px; }
+        .schedule-table .schedule-label { font-weight: normal; width: 35%; border-right: 1px solid #000; }
+        .schedule-table .schedule-value { font-weight: bold; text-align: center; }
+
+        /* Instructions */
+        .instructions-box {
+            padding: 10px;
+            font-size: 12px;
+            line-height: 1.5;
+            border-bottom: 1.5px solid #000;
         }
-        .instructions h4 { margin: 0 0 8px 0; text-decoration: underline; font-size: 14px; }
-        
-        .footer {
+        .instructions-box strong { display: block; margin-bottom: 5px; }
+        .instructions-footer { text-align: center; font-weight: bold; padding: 8px 0; border-bottom: 1.5px solid #000; text-transform: uppercase; font-size: 13px; }
+
+        /* Signature Area */
+        .sign-container {
             display: flex;
             justify-content: space-between;
-            margin-top: 60px;
-            font-weight: bold;
-            font-size: 15px;
-            padding: 0 10px;
+            align-items: flex-end;
+            padding: 40px 20px 10px;
+            height: 80px;
         }
-        .sign-area {
-            text-align: center;
-            width: 180px;
-            border-top: 1px solid #000;
-            padding-top: 5px;
-        }
+        .sign-box { text-align: center; font-size: 12px; }
     </style>
 </head>
 <body>
     <div class="container">
-        <header class="header-top">
-            <div class="logo-section">
-                <img src="/Peacexperts_LOGO.png" alt="PEACE Logo" />
+        <!-- Header -->
+        <div class="header-section">
+            <div class="logo-box">
+                <img src="/Peacexperts_LOGO.png" alt="Logo" />
             </div>
-            
-            <div class="institute-details">
-                <h1>${data.instituteName}</h1>
-                <h3>Reg. Under Ministry of Corporate Affairs (Govt. of India)</h3>
-                <h3>PEACEXPERTS ACADEMY-MH2022PTC376485</h3>
-                <h3>An ISO:9001:2015 Certified Organization</h3>
+            <div class="header-content">
+                <h1>PEACEXPERTS ACADEMY, NASHIK</h1>
+                <p>Reg. Under Ministry of Corporate Affairs (Govt. of India)</p>
+                <p>Peacexperts Academy-MH2022PTC376485</p>
+                <p class="iso">An ISO:9001:2015 Certified Orgnazation</p>
             </div>
+        </div>
 
-            <div class="photo-section">
-                ${data.photoUrl ? `<img src="${data.photoUrl}" alt="Photo" />` : '<div style="font-size:12px;color:#666;">PHOTO</div>'}
-            </div>
-        </header>
-
-        <div class="admit-card-title">
+        <!-- Title -->
+        <div class="title-area">
             <h2>CANDIDATE ADMIT CARD</h2>
+            <div class="subtext">Name of Candidate (As Filled By the Candidate In Institute Login Window)</div>
         </div>
 
-        <div class="candidate-guidance">
-            Name of the Candidate (As Filled By the Candidate In Institute Window)
-        </div>
-
-        <table>
+        <!-- Candidate Details -->
+        <table class="details-table">
             <tr>
                 <td class="label">Allocated System</td>
-                <td class="value" style="width: 28%;">${data.systemName || '---'}</td>
-                <td class="label">Roll No.</td>
+                <td class="value">${data.systemName || '---'}</td>
+                <td class="photo-cell" rowspan="5">
+                    ${data.photoUrl ? `<img src="${data.photoUrl}" class="photo-img" alt="Photo" />` : '<div style="width:120px;height:145px;border:1px solid #000;margin:0 auto;display:flex;align-items:center;justify-content:center;">PHOTO</div>'}
+                </td>
+            </tr>
+            <tr>
+                <td class="label">ROLL NO</td>
                 <td class="value">${data.rollNo}</td>
             </tr>
             <tr>
                 <td class="label">Student Name</td>
-                <td class="value" colspan="3" style="font-size: 18px;">${data.studentName}</td>
+                <td class="value">${data.studentName}</td>
             </tr>
             <tr>
-                <td class="label">Mother's Name</td>
+                <td class="label">Mother Name</td>
                 <td class="value">${data.motherName || '---'}</td>
-                <td class="label">Aadhaar Card</td>
+            </tr>
+            <tr>
+                <td class="label">UID</td>
                 <td class="value">${data.aadhaarCard || '---'}</td>
             </tr>
             <tr>
-                <td colspan="4" style="text-align: center; font-weight: bold; padding: 6px; font-size: 13px; color: #333;">
-                    VALID FOR — EXAMINATION ONLY
-                </td>
+                <td class="label">Course Name</td>
+                <td class="value" colspan="2">${data.courseName || '---'}</td>
             </tr>
         </table>
 
-        <div class="section-divider">BATCH SCHEDULE</div>
-
-        <table>
+        <!-- Batch Schedule -->
+        <div class="section-header">BATCH SCHEDULE</div>
+        <table class="schedule-table">
             <tr>
-                <td class="label">Exam Centre Code</td>
-                <td class="value">${data.examCentreCode}</td>
-                <td class="label">Exam Date</td>
-                <td class="value">${data.examDate}</td>
+                <td class="head" style="width: 40%;">EXAM CENTRE</td>
+                <td colspan="2" class="head">Schedule Details</td>
             </tr>
             <tr>
-                <td class="label">Batch</td>
-                <td class="value">${data.batch}</td>
-                <td class="label">Reporting Time</td>
-                <td class="value" style="color: #c2410c;">${data.reportingTime}</td>
-            </tr>
-            <tr>
-                <td class="label">Gate Closing Time</td>
-                <td class="value">${data.gateClosingTime}</td>
-                <td class="label">Exam Start Time</td>
-                <td class="value">${data.examStartTime}</td>
-            </tr>
-            <tr>
-                <td class="label">Exam Duration</td>
-                <td class="value" colspan="3">${data.examDuration}</td>
-            </tr>
-            <tr>
-                <td class="label">Exam Centre Name & Address</td>
-                <td class="value" colspan="3" style="font-size: 14px;">
-                    <strong>${data.examCentreName}</strong><br/>
-                    ${data.examCentreAddress}
+                <td rowspan="6" class="exam-centre-content" style="vertical-align: middle; text-align: center;">
+                    <div style="font-weight: bold; font-size: 14px; margin-bottom: 5px;">${data.examCentreName}</div>
+                    <div style="font-size: 12px; color: #444;">${data.examCentreAddress}</div>
                 </td>
+                <td class="schedule-label">Exam Date</td>
+                <td class="schedule-value">${data.examDate}</td>
+            </tr>
+            <tr>
+                <td class="schedule-label">Batch</td>
+                <td class="schedule-value">${data.batch}</td>
+            </tr>
+            <tr>
+                <td class="schedule-label">Reporting Time</td>
+                <td class="schedule-value">${data.reportingTime}</td>
+            </tr>
+            <tr>
+                <td class="schedule-label">Gate Closing Time</td>
+                <td class="schedule-value">${data.gateClosingTime}</td>
+            </tr>
+            <tr>
+                <td class="schedule-label">Exam Start Time</td>
+                <td class="schedule-value">${data.examStartTime}</td>
+            </tr>
+            <tr>
+                <td class="schedule-label" style="border-bottom: none;">Exam Duration</td>
+                <td class="schedule-value" style="border-bottom: none;">${data.examDuration}</td>
             </tr>
         </table>
 
-        <div class="instructions">
-            <h4>IMPORTANT INSTRUCTIONS:</h4>
+        <!-- Instructions -->
+        <div class="instructions-box">
+            <strong>IMPORTANT INSTRUCTIONS:</strong>
             1. Carry this admit card along with a valid Govt. ID (Aadhaar/PAN/Voter ID).<br/>
             2. Reach the examination center at least 30 minutes before the Reporting Time.<br/>
             3. Mobile phones, calculators, and electronic gadgets are strictly prohibited in the Exam Hall.<br/>
-            4. No candidate will be allowed to enter the hall after the Gate Closing Time.<br/>
-            
-            <div style="text-align: center; font-weight: bold; margin-top: 10px; text-decoration: underline;">
-                CANDIDATE MUST SIGN IN THE PRESENCE OF THE INVIGILATOR
-            </div>
+            4. No candidate will be allowed to enter the hall after the Gate Closing Time.
+        </div>
+        <div class="instructions-footer">
+            CANDIDATE MUST SIGN IN THE PRESENCE OF THE INVIGILATOR
         </div>
 
-        <div class="footer">
-            <div class="sign-area">Candidate's Signature</div>
-            <div style="align-self: flex-end; padding-bottom: 10px;">(Institute Seal)</div>
-            <div class="sign-area">Head of Institute Sign</div>
+        <!-- Signature Area -->
+        <div class="sign-container">
+            <div class="sign-box">Candidate Sign</div>
+            <div class="sign-box">Institute Seal</div>
+            <div class="sign-box">HOEI Sign</div>
         </div>
     </div>
     <script>
@@ -258,3 +221,4 @@ export const generateAdmitCardHtml = (data: AdmitCardData) => {
 </html>
     `;
 };
+

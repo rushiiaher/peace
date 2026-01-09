@@ -52,7 +52,8 @@ export default function AdmitCardsPage() {
         instituteName: "PEACEXperts Academy, Nashik", // Hardcoded as per image header preference
         candidateName: card.studentName,
         photoUrl: card.studentId?.documents?.photo,
-        seatNo: card.rollNo,
+        systemName: card.systemName,
+        rollNo: card.rollNo,
         studentName: card.studentName,
         motherName: card.studentId?.motherName || '__________',
         aadhaarCard: card.studentId?.aadhaarCardNo || '__________',
@@ -63,6 +64,7 @@ export default function AdmitCardsPage() {
         gateClosingTime: adjustTime(card.startTime, 5),
         examStartTime: adjustTime(card.startTime, 0),
         examDuration: `${card.duration} Minutes`,
+        courseName: card.courseName,
         examCentreName: card.instituteName,
         examCentreAddress: "Exam Center Address will be provided by Institute." // Placeholder as address is not in text
       }

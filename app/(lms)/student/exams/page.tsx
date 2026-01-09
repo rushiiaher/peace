@@ -91,6 +91,7 @@ export default function StudentExamsPage() {
         gateClosingTime: adjustTime(card.startTime, 5),
         examStartTime: adjustTime(card.startTime, 0),
         examDuration: `${card.duration} Minutes`,
+        courseName: card.courseName,
         examCentreName: card.instituteName,
         examCentreAddress: "Exam Center Address will be provided by Institute."
       }
