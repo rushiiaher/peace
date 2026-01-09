@@ -225,57 +225,57 @@ export default function ProfilePage() {
       const startX = 65
       let curY = 260
       const lineHeight = 55
+      const labelFontSize = 20
+      const valueFontSize = 21 // Slightly larger than label for hierarchy
+      const valueAlignX = startX + 235 // Fixed alignment for all values
 
       // Helper for details with consistent font sizes
       const drawDetail = (label: string, value: string, x: number, y: number, maxWidth = 0, vColor = valueColor) => {
         ctx.fillStyle = labelColor
-        ctx.font = `bold 20px ${fontFamily}`
+        ctx.font = `bold ${labelFontSize}px ${fontFamily}`
         ctx.textAlign = 'left'
         ctx.fillText(label, x, y)
-        const labelWidth = ctx.measureText(label).width
 
         ctx.fillStyle = vColor
-        ctx.font = `bold 22px ${fontFamily}`
-        const valX = x + labelWidth + 20
+        ctx.font = `bold ${valueFontSize}px ${fontFamily}`
         const textToDraw = value || 'N/A'
 
         if (maxWidth > 0) {
-          ctx.fillText(textToDraw, valX, y, maxWidth - labelWidth - 20)
+          ctx.fillText(textToDraw, valueAlignX, y, maxWidth - (valueAlignX - startX))
         } else {
-          ctx.fillText(textToDraw, valX, y)
+          ctx.fillText(textToDraw, valueAlignX, y)
         }
       }
 
       const drawMultiLineDetail = (label: string, value: string, x: number, y: number, maxWidth: number) => {
         ctx.fillStyle = labelColor
-        ctx.font = `bold 20px ${fontFamily}`
+        ctx.font = `bold ${labelFontSize}px ${fontFamily}`
         ctx.textAlign = 'left'
         ctx.fillText(label, x, y)
-        const labelWidth = ctx.measureText(label).width
 
         ctx.fillStyle = valueColor
-        ctx.font = `bold 22px ${fontFamily}`
-        const valX = x + labelWidth + 15
+        ctx.font = `bold ${valueFontSize}px ${fontFamily}`
         const actualValue = value || 'N/A'
+        const valMaxWidth = maxWidth - (valueAlignX - startX)
 
-        if (ctx.measureText(actualValue).width > maxWidth - labelWidth - 15) {
+        if (ctx.measureText(actualValue).width > valMaxWidth) {
           const words = actualValue.split(' ')
           let line = ''
           let lineCount = 0
           for (let n = 0; n < words.length; n++) {
             let testLine = line + words[n] + ' '
-            if (ctx.measureText(testLine).width > maxWidth - labelWidth - 15 && n > 0) {
-              ctx.fillText(line.trim(), valX, y + (lineCount * 26))
+            if (ctx.measureText(testLine).width > valMaxWidth && n > 0) {
+              ctx.fillText(line.trim(), valueAlignX, y + (lineCount * 26))
               line = words[n] + ' '
               lineCount++
             } else {
               line = testLine
             }
           }
-          ctx.fillText(line.trim(), valX, y + (lineCount * 26))
+          ctx.fillText(line.trim(), valueAlignX, y + (lineCount * 26))
           return lineCount * 26
         } else {
-          ctx.fillText(actualValue, valX, y)
+          ctx.fillText(actualValue, valueAlignX, y)
           return 0
         }
       }
@@ -284,23 +284,22 @@ export default function ProfilePage() {
       drawDetail('Reg No.:', student.rollNo, startX, curY)
       curY += lineHeight
 
-      // Name - Dynamic sizing for consistency
+      // Name - Consistent label size, slightly larger value for prominence
       ctx.fillStyle = labelColor
-      ctx.font = `bold 20px ${fontFamily}`
+      ctx.font = `bold ${labelFontSize}px ${fontFamily}`
       ctx.fillText('Name:', startX, curY)
 
       const name = (student.name || 'N/A').toUpperCase()
-      const maxNameWidth = 600
-      let nameFontSize = 38
+      const maxNameWidth = 450
+      let nameFontSize = 32
       ctx.font = `bold ${nameFontSize}px ${fontFamily}`
-      // Reduce size if name is too wide
-      while (ctx.measureText(name).width > maxNameWidth && nameFontSize > 24) {
+      while (ctx.measureText(name).width > maxNameWidth && nameFontSize > 22) {
         nameFontSize -= 2
         ctx.font = `bold ${nameFontSize}px ${fontFamily}`
       }
       ctx.fillStyle = valueColor
-      ctx.fillText(name, startX + 100, curY + (nameFontSize > 34 ? 0 : 5))
-      curY += lineHeight + (nameFontSize > 34 ? 5 : 0)
+      ctx.fillText(name, valueAlignX, curY + 5)
+      curY += lineHeight
 
       // Training Institute
       const instExtraSpace = drawMultiLineDetail('Training Institute:', student.instituteId?.name, startX, curY, 650)
@@ -308,17 +307,22 @@ export default function ProfilePage() {
         curY += 28 + instExtraSpace
         ctx.font = `italic 18px ${fontFamily}`
         ctx.fillStyle = '#64748b'
-        ctx.fillText(student.instituteId.address.split(',').slice(0, 2).join(','), startX + 225, curY, 420)
+        const address = student.instituteId.address.replace(/Nahik/g, 'Nashik').split(',').slice(0, 2).join(',')
+        ctx.fillText(address, valueAlignX, curY, 400)
       }
       curY += lineHeight
 
       // Course and Blood Group
       const courseStr = student.courses?.[0]?.courseId?.name || 'N/A'
-      drawDetail('Course:', courseStr, startX, curY, 500)
+      drawDetail('Course:', courseStr, startX, curY, 520)
 
       if (student.bloodGroup) {
-        // Keep B.G aligned to a fixed point to look clean
-        drawDetail('B. G:', student.bloodGroup, 580, curY, 0, '#be123c')
+        ctx.fillStyle = labelColor
+        ctx.font = `bold ${labelFontSize}px ${fontFamily}`
+        ctx.fillText('B. G:', 610, curY)
+        ctx.fillStyle = '#be123c'
+        ctx.font = `bold ${valueFontSize}px ${fontFamily}`
+        ctx.fillText(student.bloodGroup, 670, curY)
       }
       curY += lineHeight
 
