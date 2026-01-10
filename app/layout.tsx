@@ -7,9 +7,9 @@ const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'Peace LMS',
-  description: 'Created by itzrushi',
-  generator: 'itzrushi.netlify.app',
+  title: 'Peace LMS - Peacexperts Academy',
+  description: 'Learning Management System for Peacexperts Academy',
+  generator: 'Peacexperts India',
 }
 
 export default function RootLayout({

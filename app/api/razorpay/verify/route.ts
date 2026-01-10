@@ -4,6 +4,7 @@ import connectDB from '@/lib/mongodb'
 import Payment from '@/lib/models/Payment'
 import Transaction from '@/lib/models/Transaction'
 import User from '@/lib/models/User'
+import { getEnv } from '@/lib/env'
 
 export async function POST(req: Request) {
     try {
@@ -19,7 +20,7 @@ export async function POST(req: Request) {
 
         const body = razorpay_order_id + '|' + razorpay_payment_id
         const expectedSignature = crypto
-            .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET!)
+            .createHmac('sha256', getEnv('RAZORPAY_KEY_SECRET'))
             .update(body.toString())
             .digest('hex')
 

@@ -4,7 +4,9 @@ import jwt from 'jsonwebtoken'
 import connectDB from '@/lib/mongodb'
 import User from '@/lib/models/User'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production'
+import { getEnv } from '@/lib/env'
+
+const JWT_SECRET = getEnv('JWT_SECRET')
 
 export async function POST(req: NextRequest) {
   try {

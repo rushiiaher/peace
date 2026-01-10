@@ -198,7 +198,11 @@ export default function InstitutePaymentsPage() {
             toast.error('Error verifying payment')
           }
         },
-        prefill: { name: "Institute Admin", email: "admin@example.com", contact: "9999999999" },
+        prefill: {
+          name: instituteName || "Institute Admin",
+          email: JSON.parse(localStorage.getItem('user') || '{}').email || "admin@example.com",
+          contact: "9999999999"
+        },
         theme: { color: "#3399cc" }
       }
 
