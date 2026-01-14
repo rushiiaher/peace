@@ -13,4 +13,6 @@ const ExamResultSchema = new mongoose.Schema({
   supersededBy: { type: mongoose.Schema.Types.ObjectId, ref: 'ExamResult' } // Points to new result
 })
 
+ExamResultSchema.index({ examId: 1, studentId: 1 })
+
 export default mongoose.models.ExamResult || mongoose.model('ExamResult', ExamResultSchema)

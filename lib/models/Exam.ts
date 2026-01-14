@@ -45,4 +45,7 @@ const ExamSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 })
 
+ExamSchema.index({ courseId: 1, instituteId: 1, type: 1 })
+ExamSchema.index({ instituteId: 1 })
+
 export default mongoose.models.Exam || mongoose.model('Exam', ExamSchema)
