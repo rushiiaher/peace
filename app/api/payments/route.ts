@@ -28,7 +28,9 @@ export async function GET(req: Request) {
     if (instituteId) {
 
 
-      const studentIds = payments.map((p: any) => p.studentId._id)
+      const validPayments = payments.filter((p: any) => p.studentId && p.courseId)
+      const studentIds = validPayments.map((p: any) => p.studentId._id)
+
       const feeRecords = await FeePayment.find({
         instituteId,
         studentId: { $in: studentIds }
@@ -61,6 +63,8 @@ export async function GET(req: Request) {
 
       // Augment payments
       const augmented = payments.map((p: any) => {
+        if (!p.studentId || !p.courseId) return p // Return as is if data missing
+
         const key = `${p.studentId._id}-${p.courseId._id}`
         const status = feeStatusMap[key]
         return {
