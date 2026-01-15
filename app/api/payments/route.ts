@@ -4,6 +4,7 @@ import Payment from '@/lib/models/Payment'
 import '@/lib/models/Institute' // Evaluate model registration
 import '@/lib/models/User' // Evaluate model registration
 import '@/lib/models/Course' // Evaluate model registration
+import FeePayment from '@/lib/models/FeePayment'
 
 export async function GET(req: Request) {
   try {
@@ -25,8 +26,7 @@ export async function GET(req: Request) {
 
     // Check student fee status (Student -> Institute)
     if (instituteId) {
-      // Import dynamically to avoid circular dep issues if any, though likely safe
-      const FeePayment = (await import('@/lib/models/FeePayment')).default
+
 
       const studentIds = payments.map((p: any) => p.studentId._id)
       const feeRecords = await FeePayment.find({
