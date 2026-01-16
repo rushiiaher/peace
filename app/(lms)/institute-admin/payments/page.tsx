@@ -188,9 +188,11 @@ export default function InstitutePaymentsPage() {
 
             const verifyData = await verifyRes.json()
             if (verifyData.success) {
-              toast.success('Payment successful! refreshing...')
-              // Force reload to ensure fresh data
-              window.location.reload()
+              toast.success('Payment successful! Refreshing...')
+              // Force reload to ensure fresh data, but delay to let UI cleanup
+              setTimeout(() => {
+                window.location.reload()
+              }, 1500)
             } else {
               toast.error('Payment verification failed')
             }

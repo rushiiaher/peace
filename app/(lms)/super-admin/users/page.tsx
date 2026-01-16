@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 // import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs" - Removed
 import { toast } from "sonner"
-import { Users, Building2, UserCog, GraduationCap, Plus, Edit, Trash2, Shield, Calendar } from "lucide-react"
+import { Users, Building2, UserCog, GraduationCap, Plus, Edit, Trash2, Shield, Calendar, Search, X, Eye, EyeOff } from "lucide-react"
 import { AnimatedTabsProfessional } from "@/components/lms/animated-tabs"
 import Loader from "@/components/ui/loader"
 
@@ -26,6 +26,9 @@ export default function UsersPage() {
   const [selectedRole, setSelectedRole] = useState<string>('')
   const [selectedInstituteId, setSelectedInstituteId] = useState<string>('')
   const [activeTab, setActiveTab] = useState("all")
+  const [searchQuery, setSearchQuery] = useState<string>('')
+  const [filterInstituteId, setFilterInstituteId] = useState<string>('all')
+  const [showPassword, setShowPassword] = useState<boolean>(false)
 
   useEffect(() => {
     fetchUsers()
@@ -173,6 +176,25 @@ export default function UsersPage() {
     return users.filter((u: any) => u.role === role)
   }
 
+  const getFilteredUsers = (userList: any[]) => {
+    let filtered = userList
+
+    // Filter by search query (name or email)
+    if (searchQuery.trim()) {
+      filtered = filtered.filter((u: any) =>
+        u.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        u.email?.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    }
+
+    // Filter by institute
+    if (filterInstituteId && filterInstituteId !== 'all') {
+      filtered = filtered.filter((u: any) => u.instituteId === filterInstituteId)
+    }
+
+    return filtered
+  }
+
   if (loading) return <div className="flex bg-muted/10 h-[calc(100vh-140px)] items-center justify-center"><Loader /></div>
 
   const totalUsers = users.length
@@ -305,6 +327,55 @@ export default function UsersPage() {
         </Dialog>
       </div>
 
+      {/* Search and Filter Section */}
+      <div className="flex flex-col md:flex-row gap-4 items-start md:items-center bg-card p-4 rounded-lg border shadow-sm">
+        <div className="relative flex-1 w-full">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+          <Input
+            placeholder="Search by name or email..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 pr-9 h-10"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+        <div className="w-full md:w-[280px]">
+          <Select value={filterInstituteId} onValueChange={setFilterInstituteId}>
+            <SelectTrigger className="h-10">
+              <SelectValue placeholder="Filter by Institute" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Institutes</SelectItem>
+              {institutes.map((inst: any) => (
+                <SelectItem key={inst._id} value={inst._id}>
+                  {inst.name} ({inst.code})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        {(searchQuery || filterInstituteId !== 'all') && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setSearchQuery('')
+              setFilterInstituteId('all')
+            }}
+            className="h-10"
+          >
+            Clear Filters
+          </Button>
+        )}
+      </div>
+
       <div className="grid gap-4 sm:grid-cols-4">
         <Card>
           <CardContent className="p-6">
@@ -374,7 +445,7 @@ export default function UsersPage() {
           />
         </div>
 
-        {(activeTab === 'all' ? users : filterByRole(activeTab)).map((user: any) => (
+        {getFilteredUsers(activeTab === 'all' ? users : filterByRole(activeTab)).map((user: any) => (
           <Card key={user._id} className="group hover:border-primary/50 transition-all duration-300 shadow-sm hover:shadow-md">
             <div className="p-5 flex flex-col md:flex-row gap-6">
 
@@ -482,7 +553,22 @@ export default function UsersPage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="edit-password" selection-start="0" className="font-semibold">Password (New)</Label>
-                    <Input id="edit-password" name="password" type="password" placeholder="Leave blank to keep current" className="h-10" />
+                    <div className="relative">
+                      <Input
+                        id="edit-password"
+                        name="password"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Leave blank to keep current"
+                        className="h-10 pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="edit-role" className="font-semibold">Role</Label>

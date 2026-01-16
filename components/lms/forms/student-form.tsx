@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { User, UserCircle2, BookOpen, Trash2, Edit } from "lucide-react"
+import { User, UserCircle2, BookOpen, Trash2, Edit, Eye, EyeOff } from "lucide-react"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 
@@ -43,6 +43,7 @@ export function StudentForm({
     const [editModeBatchId, setEditModeBatchId] = useState<string>('')
     const [editModeBooksIncluded, setEditModeBooksIncluded] = useState<string>('false')
     const [enrollLoading, setEnrollLoading] = useState(false)
+    const [showPassword, setShowPassword] = useState<boolean>(false)
 
     const handleEditModeAdd = async () => {
         if (editModeCourseId && editModeBatchId && onCourseAdd) {
@@ -246,13 +247,23 @@ export function StudentForm({
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="password">{isEdit ? "Password (New)" : "Password"} <span className={!isEdit ? "text-destructive" : "hidden"}>*</span></Label>
-                            <Input
-                                id="password"
-                                name="password"
-                                type="password"
-                                required={!isEdit}
-                                placeholder={isEdit ? "Leave blank to keep current" : "Set login password"}
-                            />
+                            <div className="relative">
+                                <Input
+                                    id="password"
+                                    name="password"
+                                    type={showPassword ? "text" : "password"}
+                                    required={!isEdit}
+                                    placeholder={isEdit ? "Leave blank to keep current" : "Set login password"}
+                                    className="pr-10"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                >
+                                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                </button>
+                            </div>
                             <p className="text-[11px] text-muted-foreground">These credentials will be used for student portal login.</p>
                         </div>
                         <div className="space-y-2">
