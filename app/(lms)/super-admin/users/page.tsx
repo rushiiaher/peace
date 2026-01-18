@@ -346,7 +346,7 @@ export default function UsersPage() {
             </button>
           )}
         </div>
-        <div className="w-full md:w-[280px]">
+        <div className="w-full md:w-[350px]">
           <Select value={filterInstituteId} onValueChange={setFilterInstituteId}>
             <SelectTrigger className="h-10">
               <SelectValue placeholder="Filter by Institute" />

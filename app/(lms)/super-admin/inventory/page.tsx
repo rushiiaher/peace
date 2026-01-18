@@ -525,7 +525,7 @@ export default function InventoryPage() {
 
                     <div className="flex flex-col sm:flex-row gap-3">
                         <Select value={selectedInstitute} onValueChange={setSelectedInstitute}>
-                            <SelectTrigger className="w-full sm:w-[200px] bg-background/50">
+                            <SelectTrigger className="w-full sm:w-[250px] bg-background/50">
                                 <SelectValue placeholder="Select Institute" />
                             </SelectTrigger>
                             <SelectContent>
@@ -535,7 +535,7 @@ export default function InventoryPage() {
                         </Select>
 
                         <Select value={selectedCourse} onValueChange={setSelectedCourse} disabled={selectedInstitute === 'all'}>
-                            <SelectTrigger className="w-full sm:w-[200px] bg-background/50">
+                            <SelectTrigger className="w-full sm:w-[250px] bg-background/50">
                                 <SelectValue placeholder="Select Course" />
                             </SelectTrigger>
                             <SelectContent>

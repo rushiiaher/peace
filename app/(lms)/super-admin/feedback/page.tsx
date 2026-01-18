@@ -158,11 +158,11 @@ export default function SuperAdminFeedbackPage() {
         </Card>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center bg-muted/40 p-4 rounded-lg border">
-        <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
-          <div className="w-[200px]">
+      <div className="flex flex-col lg:flex-row gap-4 justify-between items-start lg:items-center bg-muted/40 p-4 rounded-lg border">
+        <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto flex-wrap">
+          <div className="w-full sm:w-72">
             <Select value={filterInstitute} onValueChange={setFilterInstitute}>
-              <SelectTrigger className="bg-background">
+              <SelectTrigger className="bg-background w-full">
                 <SelectValue placeholder="All Institutes" />
               </SelectTrigger>
               <SelectContent>
@@ -173,9 +173,9 @@ export default function SuperAdminFeedbackPage() {
               </SelectContent>
             </Select>
           </div>
-          <div className="w-[200px]">
+          <div className="w-full sm:w-72">
             <Select value={filterCourse} onValueChange={setFilterCourse}>
-              <SelectTrigger className="bg-background">
+              <SelectTrigger className="bg-background w-full">
                 <SelectValue placeholder="All Courses" />
               </SelectTrigger>
               <SelectContent>
@@ -187,7 +187,7 @@ export default function SuperAdminFeedbackPage() {
             </Select>
           </div>
         </div>
-        <div className="text-sm text-muted-foreground">
+        <div className="text-sm text-muted-foreground whitespace-nowrap">
           Showing {filteredForms.length} forms
         </div>
       </div>
@@ -264,7 +264,7 @@ export default function SuperAdminFeedbackPage() {
               <div>
                 <Label htmlFor="instituteId">Institute</Label>
                 <Select name="instituteId" required>
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select institute" />
                   </SelectTrigger>
                   <SelectContent>
@@ -277,7 +277,7 @@ export default function SuperAdminFeedbackPage() {
               <div>
                 <Label htmlFor="courseId">Course</Label>
                 <Select name="courseId" required>
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select course" />
                   </SelectTrigger>
                   <SelectContent>
