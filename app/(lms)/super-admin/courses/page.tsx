@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "sonner"
-import { BookOpen, Plus, Edit, Trash2, IndianRupee, Building2, Clock, TrendingUp, FileText, Book, Truck, Award, Wallet } from "lucide-react"
+import { BookOpen, Plus, Edit, Trash2, IndianRupee, Building2, Clock, TrendingUp, FileText, Book, Truck, Award, Wallet, Search } from "lucide-react"
 
 import Link from 'next/link'
 import Loader from "@/components/ui/loader"
@@ -22,6 +22,7 @@ export default function CoursesPage() {
   const [loading, setLoading] = useState(true)
   const [editOpen, setEditOpen] = useState(false)
   const [selectedCourse, setSelectedCourse] = useState<any>(null)
+  const [searchQuery, setSearchQuery] = useState('')
 
   useEffect(() => {
     fetchCourses()
@@ -111,6 +112,15 @@ export default function CoursesPage() {
 
   if (loading) return <div className="flex bg-muted/10 h-[calc(100vh-140px)] items-center justify-center"><Loader /></div>
 
+  const filteredCourses = courses.filter((course: any) => {
+    const query = searchQuery.toLowerCase()
+    return (
+      course.name?.toLowerCase().includes(query) ||
+      course.code?.toLowerCase().includes(query) ||
+      course.category?.toLowerCase().includes(query)
+    )
+  })
+
   const totalCourses = courses.length
   const totalRevenue = courses.reduce((sum: number, c: any) => sum + ((c.baseFee || 0) + (c.examFee || 0)), 0)
   const avgPrice = totalCourses > 0 ? Math.round(totalRevenue / totalCourses) : 0
@@ -125,6 +135,16 @@ export default function CoursesPage() {
             Add New Course
           </Link>
         </Button>
+      </div>
+
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Input
+          placeholder="Search courses by name, code, or category..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-9 h-11"
+        />
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
@@ -170,7 +190,7 @@ export default function CoursesPage() {
       </div>
 
       <div className="grid gap-4">
-        {courses.map((course: any) => {
+        {filteredCourses.map((course: any) => {
           const totalFee = (course.baseFee || 0) + (course.examFee || 0) + (course.bookPrice || 0) + (course.deliveryCharge || 0) + (course.certificateCharge ?? 60)
           const instituteCount = getInstituteCount(course._id)
 

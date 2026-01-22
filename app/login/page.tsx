@@ -68,6 +68,9 @@ export default function LoginPage() {
           <p className="text-sm text-muted-foreground text-center">
             Sign in to continue to your dashboard
           </p>
+          <p className="text-xs text-muted-foreground text-center">
+            This login is for both institute admins and students
+          </p>
         </CardHeader>
         <CardContent className="space-y-6">
           <form onSubmit={handleLogin} className="space-y-5">
