@@ -69,7 +69,7 @@ export default function LoginPage() {
             Sign in to continue to your dashboard
           </p>
           <p className="text-xs text-muted-foreground text-center">
-            This login is for both institute admins and students
+            This login is for both <span className="font-semibold text-foreground">institute admins</span> and <span className="font-semibold text-foreground">students</span>
           </p>
         </CardHeader>
         <CardContent className="space-y-6">
