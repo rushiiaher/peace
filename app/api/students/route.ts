@@ -9,11 +9,26 @@ export async function GET(req: Request) {
     const userId = searchParams.get('userId')
 
     if (userId) {
+      // Validate userId format
+      if (!userId.match(/^[0-9a-fA-F]{24}$/)) {
+        return NextResponse.json({ error: 'Invalid user ID format' }, { status: 400 })
+      }
+
       const student = await User.findById(userId)
         .select('-password')
-        .populate('instituteId')
-        .populate('courses.courseId')
-      if (!student) return NextResponse.json({ error: 'Student not found' }, { status: 404 })
+        .populate('instituteId', 'name code')
+        .populate('courses.courseId', 'name code')
+        .lean() as any
+
+      if (!student) {
+        return NextResponse.json({ error: 'Student not found' }, { status: 404 })
+      }
+
+      // Ensure status field exists
+      if (!student.status) {
+        student.status = 'Active' // Default to Active if not set
+      }
+
       return NextResponse.json(student)
     }
 
@@ -22,10 +37,12 @@ export async function GET(req: Request) {
     const students = await User.find({ role: 'student' })
       .select('-password')
       .limit(limit)
-      .sort({ createdAt: -1 }) // Good practice to sort when limiting
+      .sort({ createdAt: -1 })
+      .lean()
 
     return NextResponse.json(students)
   } catch (error: any) {
+    console.error('Students API error:', error)
     return NextResponse.json({ error: error.message || 'Failed to fetch students' }, { status: 500 })
   }
 }

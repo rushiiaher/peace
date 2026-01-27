@@ -19,24 +19,72 @@ export default function StudentGuard({ children }: { children: React.ReactNode }
             const userStr = localStorage.getItem('user')
             if (!userStr) {
                 setLoading(false)
+                setIsActive(null) // Allow access if no user data (handled by auth guard)
                 return
             }
 
-            const user = JSON.parse(userStr)
+            let user
+            try {
+                user = JSON.parse(userStr)
+            } catch (parseError) {
+                console.error('Failed to parse user data:', parseError)
+                localStorage.removeItem('user') // Clear corrupted data
+                setLoading(false)
+                setIsActive(null)
+                return
+            }
+
             if (user.role !== 'student') {
                 setLoading(false)
+                setIsActive(null) // Allow access (role guard will handle)
                 return
             }
 
             // Fetch user details to check status
             const userId = user.id || user._id
-            const res = await fetch(`/api/students?userId=${userId}`)
-            if (res.ok) {
-                const data = await res.json()
-                setIsActive(data.status === 'Active')
+
+            if (!userId) {
+                console.error('No user ID found in localStorage')
+                setLoading(false)
+                setIsActive(null) // Allow access with warning logged
+                return
+            }
+
+            try {
+                const res = await fetch(`/api/students?userId=${userId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                })
+
+                if (res.ok) {
+                    const data = await res.json()
+                    if (data && typeof data.status === 'string') {
+                        setIsActive(data.status === 'Active')
+                    } else {
+                        // If no status field, assume active
+                        console.warn('Student data missing status field, assuming active')
+                        setIsActive(true)
+                    }
+                } else if (res.status === 404) {
+                    console.error('Student not found in database')
+                    // Allow access but log the issue
+                    setIsActive(true)
+                } else {
+                    console.error('Failed to fetch student status:', res.status)
+                    // On API error, allow access (fail open)
+                    setIsActive(true)
+                }
+            } catch (fetchError) {
+                console.error('Network error checking student status:', fetchError)
+                // On network error, allow access (fail open)
+                setIsActive(true)
             }
         } catch (error) {
-            console.error('Failed to check student status:', error)
+            console.error('Unexpected error in student guard:', error)
+            // On any unexpected error, allow access but log it
+            setIsActive(true)
         } finally {
             setLoading(false)
         }
