@@ -37,7 +37,10 @@ export default function UsersPage() {
 
   const fetchUsers = async () => {
     try {
-      const res = await fetch('/api/users?limit=100')
+      const res = await fetch('/api/users?limit=1000')
+      if (!res.ok) {
+        throw new Error('Failed to fetch users')
+      }
       const data = await res.json()
       setUsers(data)
     } catch (error) {
@@ -87,6 +90,9 @@ export default function UsersPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       })
+
+      const responseData = await res.json()
+
       if (res.ok) {
         toast.success('User created successfully')
         setAddOpen(false)
@@ -96,10 +102,12 @@ export default function UsersPage() {
         fetchUsers()
         e.currentTarget.reset()
       } else {
-        toast.error('Failed to create user')
+        // Display specific error message from backend
+        const errorMessage = responseData.error || 'Failed to create user'
+        toast.error(errorMessage)
       }
-    } catch (error) {
-      toast.error('Failed to create user')
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to create user')
     }
   }
 
@@ -123,15 +131,21 @@ export default function UsersPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       })
+
+      const responseData = await res.json()
+
       if (res.ok) {
         toast.success('User updated successfully')
         setEditOpen(false)
+        setShowPassword(false)
         fetchUsers()
       } else {
-        toast.error('Failed to update user')
+        // Display specific error message from backend
+        const errorMessage = responseData.error || 'Failed to update user'
+        toast.error(errorMessage)
       }
-    } catch (error) {
-      toast.error('Failed to update user')
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to update user')
     }
   }
 
