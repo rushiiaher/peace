@@ -4,6 +4,8 @@ import RescheduleRequest from '@/lib/models/RescheduleRequest'
 import Exam from '@/lib/models/Exam'
 import User from '@/lib/models/User' // For populating if needed
 
+export const dynamic = 'force-dynamic'
+
 export async function POST(req: Request) {
     try {
         await connectDB()

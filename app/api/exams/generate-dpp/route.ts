@@ -3,6 +3,8 @@ import connectDB from '@/lib/mongodb'
 import QuestionBank from '@/lib/models/QuestionBank'
 import Exam from '@/lib/models/Exam'
 
+export const dynamic = 'force-dynamic'
+
 export async function POST(req: Request) {
   try {
     await connectDB()

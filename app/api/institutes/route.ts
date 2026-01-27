@@ -3,6 +3,8 @@ import connectDB from '@/lib/mongodb'
 import Institute from '@/lib/models/Institute'
 import Payment from '@/lib/models/Payment'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(req: Request) {
   try {
     await connectDB()

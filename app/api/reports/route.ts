@@ -8,6 +8,8 @@ import Transaction from '@/lib/models/Transaction'
 import ExamResult from '@/lib/models/ExamResult'
 import Exam from '@/lib/models/Exam'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
   try {
     await connectDB()

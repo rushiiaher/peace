@@ -7,6 +7,8 @@ import Course from '@/lib/models/Course'
 import AdmitCard from '@/lib/models/AdmitCard'
 import Batch from '@/lib/models/Batch'
 
+export const dynamic = 'force-dynamic'
+
 // Helper to parse time string "HH:MM" to minutes from midnight
 const timeToMinutes = (time: string) => {
     const [h, m] = time.split(':').map(Number)

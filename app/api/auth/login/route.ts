@@ -6,6 +6,8 @@ import User from '@/lib/models/User'
 
 import { getEnv } from '@/lib/env'
 
+export const dynamic = 'force-dynamic'
+
 const JWT_SECRET = getEnv('JWT_SECRET')
 
 export async function POST(req: NextRequest) {

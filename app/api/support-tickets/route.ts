@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import connectDB from '@/lib/mongodb'
 import SupportTicket from '@/lib/models/SupportTicket'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(req: Request) {
   try {
     await connectDB()

@@ -8,6 +8,8 @@ import User from '@/lib/models/User'
 import Course from '@/lib/models/Course'
 import Batch from '@/lib/models/Batch'
 
+export const dynamic = 'force-dynamic'
+
 // Helper helpers
 const timeToMinutes = (time: string) => {
     const [h, m] = time.split(':').map(Number)

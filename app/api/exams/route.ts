@@ -6,6 +6,8 @@ import '@/lib/models/Course'
 import '@/lib/models/Institute'
 import '@/lib/models/User'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(req: Request) {
   try {
     await connectDB()

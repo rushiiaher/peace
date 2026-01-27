@@ -4,6 +4,8 @@ import QuestionBank from '@/lib/models/QuestionBank'
 
 import Course from '@/lib/models/Course'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(req: Request) {
   try {
     await connectDB()

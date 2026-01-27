@@ -4,6 +4,8 @@ import connectDB from '@/lib/mongodb'
 
 import { getEnv } from '@/lib/env'
 
+export const dynamic = 'force-dynamic'
+
 const razorpay = new Razorpay({
     key_id: getEnv('RAZORPAY_KEY_ID'),
     key_secret: getEnv('RAZORPAY_KEY_SECRET'),

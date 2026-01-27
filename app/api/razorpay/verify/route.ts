@@ -6,6 +6,8 @@ import Transaction from '@/lib/models/Transaction'
 import User from '@/lib/models/User'
 import { getEnv } from '@/lib/env'
 
+export const dynamic = 'force-dynamic'
+
 export async function POST(req: Request) {
     try {
         await connectDB()

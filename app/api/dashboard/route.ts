@@ -9,6 +9,8 @@ import Exam from '@/lib/models/Exam'
 import ExamResult from '@/lib/models/ExamResult'
 import SupportTicket from '@/lib/models/SupportTicket'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
   try {
     await connectDB()

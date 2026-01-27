@@ -7,6 +7,8 @@ import AdmitCard from '@/lib/models/AdmitCard'
 import Course from '@/lib/models/Course'
 import Batch from '@/lib/models/Batch'
 
+export const dynamic = 'force-dynamic'
+
 function parseTime(time: string) {
   const [h, m] = time.split(':').map(Number)
   return h * 60 + m

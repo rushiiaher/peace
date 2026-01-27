@@ -4,6 +4,8 @@ import User from '@/lib/models/User'
 import Course from '@/lib/models/Course'
 import Payment from '@/lib/models/Payment'
 
+export const dynamic = 'force-dynamic'
+
 export async function POST(req: Request) {
   try {
     await connectDB()

@@ -6,6 +6,8 @@ import '@/lib/models/Course' // Ensure Course model is registered
 import Batch from '@/lib/models/Batch'
 import Institute from '@/lib/models/Institute'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(req: Request) {
   try {
     await connectDB()

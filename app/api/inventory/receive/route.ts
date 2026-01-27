@@ -3,6 +3,8 @@ import connectDB from '@/lib/mongodb'
 import User from '@/lib/models/User'
 import FinalResult from '@/lib/models/FinalResult'
 
+export const dynamic = 'force-dynamic'
+
 export async function POST(req: Request) {
     try {
         await connectDB()

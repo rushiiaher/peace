@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import * as XLSX from 'xlsx'
 import { compareTwoStrings } from 'string-similarity'
 
+export const dynamic = 'force-dynamic'
+
 interface ParsedRow {
   srNo: number
   question: string

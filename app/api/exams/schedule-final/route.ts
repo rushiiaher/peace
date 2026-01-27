@@ -8,6 +8,8 @@ import AdmitCard from '@/lib/models/AdmitCard'
 import Course from '@/lib/models/Course'
 import Batch from '@/lib/models/Batch'
 
+export const dynamic = 'force-dynamic'
+
 export async function POST(req: Request) {
   try {
     await connectDB()

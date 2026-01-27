@@ -6,6 +6,8 @@ import '@/lib/models/User' // Evaluate model registration
 import '@/lib/models/Course' // Evaluate model registration
 import FeePayment from '@/lib/models/FeePayment'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(req: Request) {
   try {
     await connectDB()
