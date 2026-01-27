@@ -7,6 +7,7 @@ import User from '@/lib/models/User'
 import { getEnv } from '@/lib/env'
 
 export const dynamic = 'force-dynamic'
+export const maxDuration = 10
 
 const JWT_SECRET = getEnv('JWT_SECRET')
 
@@ -15,7 +16,9 @@ export async function POST(req: NextRequest) {
     await connectDB()
     const { email, password } = await req.json()
 
-    const user = await User.findOne({ email })
+    // Select only necessary fields initially to verify credentials quickly
+    const user = await User.findOne({ email }).select('+password +role +courses')
+
     if (!user) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
     }
@@ -36,12 +39,6 @@ export async function POST(req: NextRequest) {
     }
 
     // Single Session Enforcement Logic
-    // We generate a unique session token for every login.
-    // This invalidates any previous session for this user (unless super-admin).
-
-    // Note: We REMOVED the "active in last 2 minutes" block. 
-    // Now, logging in simply kicks the other device out.
-
     const sessionToken = crypto.randomUUID()
 
     // Update User with new session
@@ -80,8 +77,8 @@ export async function POST(req: NextRequest) {
         rollNo: user.rollNo,
         firstName: user.firstName,
         middleName: user.middleName,
-        lastName: user.lastName,
-        documents: user.documents // Include documents field with photo
+        lastName: user.lastName
+        // documents removed to prevent 504 Payload Too Large / Timeout
       }
     })
   } catch (error) {
