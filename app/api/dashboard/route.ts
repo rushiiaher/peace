@@ -10,95 +10,276 @@ import ExamResult from '@/lib/models/ExamResult'
 import SupportTicket from '@/lib/models/SupportTicket'
 
 export const dynamic = 'force-dynamic'
+export const maxDuration = 10 // Vercel timeout limit
 
 export async function GET() {
   try {
     await connectDB()
 
-    const [institutes, students, courses, payments, transactions, exams, examResults, supportTickets] = await Promise.all([
-      Institute.find({ status: 'Active' }),
-      User.find({ role: 'student', status: 'Active' }),
-      Course.find(),
-      Payment.find(),
-      Transaction.find(),
-      Exam.find(),
-      ExamResult.find(),
-      SupportTicket.find()
+    // Use countDocuments instead of finding all for better performance
+    const [
+      instituteCount,
+      studentCount,
+      courseCount,
+      examCount,
+      dppCount,
+      finalExamCount,
+      openTicketCount
+    ] = await Promise.all([
+      Institute.countDocuments({ status: 'Active' }),
+      User.countDocuments({ role: 'student', status: 'Active' }),
+      Course.countDocuments(),
+      Exam.countDocuments(),
+      Exam.countDocuments({ type: 'DPP' }),
+      Exam.countDocuments({ type: 'Final' }),
+      SupportTicket.countDocuments({ status: 'Open' })
     ])
 
-    const paidPayments = payments.filter(p => p.status === 'Paid')
-    const totalRevenue = paidPayments.reduce((sum, p) => sum + p.totalAmount, 0)
-    const pendingRevenue = payments.filter(p => p.status === 'Pending').reduce((sum, p) => sum + p.totalAmount, 0)
-    const totalIncome = transactions.filter(t => t.type === 'Income').reduce((sum, t) => sum + t.amount, 0)
-    const totalExpense = transactions.filter(t => t.type === 'Expense').reduce((sum, t) => sum + t.amount, 0)
-    const avgScore = examResults.length > 0 ? Math.round(examResults.reduce((sum, r) => sum + (r.percentage || 0), 0) / examResults.length) : 0
+    // Get only aggregated payment data (much faster than loading all payments)
+    const [revenueStats, recentPayments] = await Promise.all([
+      Payment.aggregate([
+        {
+          $group: {
+            _id: '$status',
+            total: { $sum: '$totalAmount' }
+          }
+        }
+      ]),
+      Payment.find({ status: 'Paid' })
+        .sort({ paidAt: -1 })
+        .limit(5)
+        .select('totalAmount paidAt instituteId')
+        .lean()
+    ])
 
+    const totalRevenue = revenueStats.find(s => s._id === 'Paid')?.total || 0
+    const pendingRevenue = revenueStats.find(s => s._id === 'Pending')?.total || 0
+
+    // Get transaction totals using aggregation
+    const [incomeStats, expenseStats] = await Promise.all([
+      Transaction.aggregate([
+        { $match: { type: 'Income' } },
+        { $group: { _id: null, total: { $sum: '$amount' } } }
+      ]),
+      Transaction.aggregate([
+        { $match: { type: 'Expense' } },
+        { $group: { _id: null, total: { $sum: '$amount' } } }
+      ])
+    ])
+
+    const totalIncome = incomeStats[0]?.total || 0
+    const totalExpense = expenseStats[0]?.total || 0
+
+    // Get average exam score using aggregation
+    const avgScoreResult = await ExamResult.aggregate([
+      { $group: { _id: null, avg: { $avg: '$percentage' } } }
+    ])
+    const avgScore = avgScoreResult[0]?.avg ? Math.round(avgScoreResult[0].avg) : 0
+
+    // Get revenue trend using aggregation (last 6 months)
+    const sixMonthsAgo = new Date()
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
+
+    const revenueTrendData = await Payment.aggregate([
+      {
+        $match: {
+          status: 'Paid',
+          paidAt: { $gte: sixMonthsAgo }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            year: { $year: '$paidAt' },
+            month: { $month: '$paidAt' }
+          },
+          revenue: { $sum: '$totalAmount' }
+        }
+      },
+      { $sort: { '_id.year': 1, '_id.month': 1 } }
+    ])
+
+    // Format revenue trend
     const revenueTrend = []
     for (let i = 5; i >= 0; i--) {
       const date = new Date()
       date.setMonth(date.getMonth() - i)
-      const monthStart = new Date(date.getFullYear(), date.getMonth(), 1)
-      const monthEnd = new Date(date.getFullYear(), date.getMonth() + 1, 0)
-      const monthPayments = paidPayments.filter(p => {
-        const paidDate = new Date(p.paidAt || p.createdAt)
-        return paidDate >= monthStart && paidDate <= monthEnd
-      })
+      const month = date.getMonth() + 1
+      const year = date.getFullYear()
+
+      const found = revenueTrendData.find(r => r._id.month === month && r._id.year === year)
       revenueTrend.push({
         month: date.toLocaleString('default', { month: 'short' }),
-        revenue: monthPayments.reduce((sum, p) => sum + p.totalAmount, 0)
+        revenue: found?.revenue || 0
       })
     }
 
+    // Get enrollment trend using aggregation
+    const enrollmentTrendData = await User.aggregate([
+      {
+        $match: {
+          role: 'student',
+          createdAt: { $gte: sixMonthsAgo }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            year: { $year: '$createdAt' },
+            month: { $month: '$createdAt' }
+          },
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { '_id.year': 1, '_id.month': 1 } }
+    ])
+
+    // Format enrollment trend with cumulative counts
     const enrollmentTrend = []
+    let cumulativeCount = 0
     for (let i = 5; i >= 0; i--) {
       const date = new Date()
       date.setMonth(date.getMonth() - i)
-      const monthEnd = new Date(date.getFullYear(), date.getMonth() + 1, 0)
-      const count = students.filter(s => new Date(s.createdAt) <= monthEnd).length
+      const month = date.getMonth() + 1
+      const year = date.getFullYear()
+
+      const found = enrollmentTrendData.find(r => r._id.month === month && r._id.year === year)
+      cumulativeCount += found?.count || 0
       enrollmentTrend.push({
         month: date.toLocaleString('default', { month: 'short' }),
-        students: count
+        students: cumulativeCount
       })
     }
 
-    const instituteData = await Promise.all(
-      institutes.map(async (inst) => {
-        const instStudents = students.filter(s => s.instituteId?.toString() === inst._id.toString()).length
-        const instPayments = paidPayments.filter(p => p.instituteId?.toString() === inst._id.toString())
-        const instRevenue = instPayments.reduce((sum, p) => sum + p.totalAmount, 0)
-        return { name: inst.name, students: instStudents, revenue: instRevenue, courses: inst.courses?.length || 0 }
-      })
-    )
+    // Get top 10 institutes by student count
+    const instituteData = await Institute.aggregate([
+      { $match: { status: 'Active' } },
+      {
+        $lookup: {
+          from: 'users',
+          let: { instId: '$_id' },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ['$instituteId', '$$instId'] },
+                    { $eq: ['$role', 'student'] },
+                    { $eq: ['$status', 'Active'] }
+                  ]
+                }
+              }
+            },
+            { $count: 'count' }
+          ],
+          as: 'studentCount'
+        }
+      },
+      {
+        $lookup: {
+          from: 'payments',
+          let: { instId: '$_id' },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ['$instituteId', '$$instId'] },
+                    { $eq: ['$status', 'Paid'] }
+                  ]
+                }
+              }
+            },
+            { $group: { _id: null, total: { $sum: '$totalAmount' } } }
+          ],
+          as: 'revenueData'
+        }
+      },
+      {
+        $project: {
+          name: 1,
+          students: { $ifNull: [{ $arrayElemAt: ['$studentCount.count', 0] }, 0] },
+          revenue: { $ifNull: [{ $arrayElemAt: ['$revenueData.total', 0] }, 0] },
+          courses: { $size: { $ifNull: ['$courses', []] } }
+        }
+      },
+      { $sort: { students: -1 } },
+      { $limit: 10 }
+    ])
 
-    const courseData = courses.map(course => ({
-      name: course.name,
-      students: students.filter(s => s.courses?.some((c: any) => c.courseId?.toString() === course._id.toString())).length
-    }))
+    // Get top courses by enrollment
+    const courseData = await Course.aggregate([
+      {
+        $lookup: {
+          from: 'users',
+          let: { courseId: '$_id' },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ['$role', 'student'] },
+                    { $eq: ['$status', 'Active'] },
+                    {
+                      $in: ['$$courseId', {
+                        $map: {
+                          input: '$courses',
+                          as: 'c',
+                          in: '$$c.courseId'
+                        }
+                      }]
+                    }
+                  ]
+                }
+              }
+            },
+            { $count: 'count' }
+          ],
+          as: 'studentCount'
+        }
+      },
+      {
+        $project: {
+          name: 1,
+          students: { $ifNull: [{ $arrayElemAt: ['$studentCount.count', 0] }, 0] }
+        }
+      },
+      { $sort: { students: -1 } },
+      { $limit: 10 }
+    ])
+
+    // Get recent students (last 5)
+    const recentStudents = await User.find({ role: 'student', status: 'Active' })
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .select('name email rollNo createdAt')
+      .lean()
 
     return NextResponse.json({
       overview: {
-        totalInstitutes: institutes.length,
-        totalStudents: students.length,
-        totalCourses: courses.length,
+        totalInstitutes: instituteCount,
+        totalStudents: studentCount,
+        totalCourses: courseCount,
         totalRevenue,
         pendingRevenue,
         totalIncome,
         totalExpense,
         netProfit: totalIncome - totalExpense,
-        totalDPPs: exams.filter(e => e.type === 'DPP').length,
-        totalFinalExams: exams.filter(e => e.type === 'Final').length,
+        totalDPPs: dppCount,
+        totalFinalExams: finalExamCount,
         avgScore,
-        openTickets: supportTickets.filter(t => t.status === 'Open').length
+        openTickets: openTicketCount
       },
       trends: { revenue: revenueTrend, enrollment: enrollmentTrend },
       institutes: instituteData,
       courses: courseData,
       recent: {
-        students: students.slice(-5).reverse(),
-        payments: paidPayments.slice(-5).reverse()
+        students: recentStudents,
+        payments: recentPayments
       }
     })
   } catch (error: any) {
+    console.error('Dashboard API Error:', error)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }
