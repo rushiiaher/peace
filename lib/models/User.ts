@@ -1,14 +1,14 @@
 import mongoose from 'mongoose'
 
 const UserSchema = new mongoose.Schema({
-  email: { type: String, required: true, unique: true },
+  email: { type: String, required: true, unique: true, index: true },
   password: { type: String, required: true },
   name: { type: String, required: true },
   firstName: { type: String }, // Structred Name Part 1
   middleName: { type: String }, // Structred Name Part 2
   lastName: { type: String }, // Structred Name Part 3
-  role: { type: String, enum: ['super-admin', 'institute-admin', 'student', 'faculty'], required: true },
-  instituteId: { type: mongoose.Schema.Types.ObjectId, ref: 'Institute' },
+  role: { type: String, enum: ['super-admin', 'institute-admin', 'student', 'faculty'], required: true, index: true },
+  instituteId: { type: mongoose.Schema.Types.ObjectId, ref: 'Institute', index: true },
   rollNo: { type: String, unique: true, sparse: true },
   courses: [{
     courseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Course' },
