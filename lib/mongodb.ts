@@ -29,19 +29,23 @@ async function connectDB() {
       maxIdleTimeMS: 10000,
     }
 
-    cached.promise = mongoose.connect(MONGODB_URI, opts).then((m) => {
-      return m
-    }).catch((error: any) => {
-      cached.promise = null
-      throw error
-    })
+    cached.promise = mongoose.connect(MONGODB_URI, opts)
+      .then((m) => {
+        console.log('MongoDB connected')
+        return m
+      })
+      .catch((error: any) => {
+        console.error('MongoDB connection failed:', error?.message)
+        cached.promise = null
+        throw new Error(`DB connection failed: ${error?.message}`)
+      })
   }
 
   try {
     cached.conn = await cached.promise
-  } catch (e) {
+  } catch (e: any) {
     cached.promise = null
-    throw e
+    throw new Error(`DB error: ${e?.message}`)
   }
 
   return cached.conn

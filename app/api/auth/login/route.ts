@@ -12,11 +12,18 @@ export const maxDuration = 30
 const JWT_SECRET = getEnv('JWT_SECRET')
 
 export async function POST(req: NextRequest) {
+  const startTime = Date.now()
+  
   try {
+    const dbStart = Date.now()
     await connectDB()
+    console.log(`DB connected in ${Date.now() - dbStart}ms`)
+    
     const { email, password } = await req.json()
 
+    const queryStart = Date.now()
     const user = await User.findOne({ email }).select('+password +role +courses').lean()
+    console.log(`User query in ${Date.now() - queryStart}ms`)
 
     if (!user || !(await bcrypt.compare(password, user.password))) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
@@ -47,6 +54,8 @@ export async function POST(req: NextRequest) {
 
     const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '7d' })
 
+    console.log(`Total login time: ${Date.now() - startTime}ms`)
+    
     return NextResponse.json({
       token,
       user: {
@@ -61,8 +70,11 @@ export async function POST(req: NextRequest) {
         lastName: user.lastName
       }
     })
-  } catch (error) {
-    console.error('Login error:', error)
-    return NextResponse.json({ error: 'Login failed' }, { status: 500 })
+  } catch (error: any) {
+    console.error('Login error:', error?.message || error)
+    return NextResponse.json({ 
+      error: 'Login failed', 
+      details: error?.message || 'Unknown error' 
+    }, { status: 500 })
   }
 }
