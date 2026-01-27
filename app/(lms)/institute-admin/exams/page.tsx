@@ -47,6 +47,8 @@ export default function InstituteExamsPage() {
 
   // Institute data for checking systems configuration
   const [institData, setInstitData] = useState<any>(null)
+  const [availableSystemsCount, setAvailableSystemsCount] = useState<number | null>(null)
+  const [checkingAvailability, setCheckingAvailability] = useState(false)
 
   // ... existing effects ...
 
@@ -313,6 +315,76 @@ export default function InstituteExamsPage() {
     }
   }
 
+  // Check system availability when date/time/studentIds change
+  useEffect(() => {
+    if (scheduleDate && startTime && selectedStudentIds.length > 0) {
+      checkSystemAvailability()
+    } else {
+      setAvailableSystemsCount(null)
+    }
+  }, [scheduleDate, startTime, selectedStudentIds.length])
+
+  const checkSystemAvailability = async () => {
+    if (!institData || !scheduleDate || !startTime) return
+
+    setCheckingAvailability(true)
+    try {
+      // Calculate available systems similar to backend logic
+      const hardwareAvailable = institData.systems?.filter((s: any) => s.status === 'Available') || []
+
+      if (hardwareAvailable.length === 0) {
+        setAvailableSystemsCount(0)
+        return
+      }
+
+      // Get exams on the same day
+      const startOfDay = new Date(scheduleDate)
+      startOfDay.setHours(0, 0, 0, 0)
+      const endOfDay = new Date(scheduleDate)
+      endOfDay.setHours(23, 59, 59, 999)
+
+      const res = await fetch(`/api/exams?instituteId=${instituteId}&date=${scheduleDate}`)
+      const existingExams = await res.json()
+
+      const busySystemNames = new Set<string>()
+      const examConfig = examConfigs.find((c: any) => c.examNumber.toString() === selectedExamNumber)
+      const duration = examConfig?.duration || 60
+      const bufferMinutes = institData.examTimings?.breakBetweenSections || 30
+
+      const getMinutes = (timeStr: string) => {
+        if (!timeStr) return 0
+        const [h, m] = timeStr.split(':').map(Number)
+        return h * 60 + m
+      }
+
+      const examStartMins = getMinutes(startTime)
+      const examEndMins = examStartMins + duration
+      const currentReservedEnd = examEndMins + bufferMinutes
+
+      existingExams.forEach((ex: any) => {
+        const exStart = getMinutes(ex.startTime)
+        let exEnd = getMinutes(ex.endTime)
+        if (!exEnd || exEnd <= exStart) exEnd = exStart + (ex.duration || 60)
+        const exReservedEnd = exEnd + bufferMinutes
+
+        // Check for overlap
+        if (examStartMins < exReservedEnd && currentReservedEnd > exStart) {
+          ex.systemAssignments?.forEach((sa: any) => {
+            if (sa.systemName) busySystemNames.add(sa.systemName)
+          })
+        }
+      })
+
+      const availableSystems = hardwareAvailable.filter((s: any) => !busySystemNames.has(s.name))
+      setAvailableSystemsCount(availableSystems.length)
+    } catch (error) {
+      console.error('Failed to check system availability:', error)
+      setAvailableSystemsCount(null)
+    } finally {
+      setCheckingAvailability(false)
+    }
+  }
+
   const handleScheduleExam = async () => {
     console.log('=== Schedule Exam Button Clicked ===')
     console.log('Selected Course ID:', selectedCourseId)
@@ -336,6 +408,12 @@ export default function InstituteExamsPage() {
     }
     if (!startTime) {
       toast.error('Please select a start time')
+      return
+    }
+
+    // Check system availability before scheduling
+    if (availableSystemsCount !== null && selectedStudentIds.length > availableSystemsCount) {
+      toast.error(`Not enough systems! You selected ${selectedStudentIds.length} students but only ${availableSystemsCount} systems are available for this time slot.`)
       return
     }
 
@@ -569,6 +647,12 @@ export default function InstituteExamsPage() {
                     <span className="font-bold">{selectedStudentIds.length}</span>
                   </div>
                   <div className="flex justify-between">
+                    <span className="text-muted-foreground">Available Systems:</span>
+                    <span className={`font-bold ${availableSystemsCount !== null && selectedStudentIds.length > availableSystemsCount ? 'text-red-600' : 'text-green-600'}`}>
+                      {checkingAvailability ? 'Checking...' : (availableSystemsCount !== null ? availableSystemsCount : 'Select date & time')}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
                     {/* Show estimated marks if possible, checking selected exam config */}
                     <span className="text-muted-foreground">Est. Total Marks:</span>
                     <span className="font-bold">
@@ -579,6 +663,24 @@ export default function InstituteExamsPage() {
                     </span>
                   </div>
                 </div>
+
+                {/* System Availability Warning */}
+                {availableSystemsCount !== null && selectedStudentIds.length > availableSystemsCount && (
+                  <div className="p-3 bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800 rounded-lg">
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <h4 className="text-sm font-bold text-red-700 dark:text-red-300">Not Enough Systems!</h4>
+                        <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                          You have selected <strong>{selectedStudentIds.length} students</strong> but only <strong>{availableSystemsCount} systems</strong> are available for this time slot.
+                        </p>
+                        <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                          Please deselect {selectedStudentIds.length - availableSystemsCount} student(s) or choose a different date/time.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <Button
                   className="w-full bg-primary hover:bg-primary/90"

@@ -12,10 +12,23 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url)
     const type = searchParams.get('type')
     const courseId = searchParams.get('courseId')
+    const instituteId = searchParams.get('instituteId')
+    const date = searchParams.get('date')
 
     let query: any = {}
     if (type) query.type = type
     if (courseId) query.courseId = courseId
+    if (instituteId) query.instituteId = instituteId
+
+    // Filter by date if provided
+    if (date) {
+      const startOfDay = new Date(date)
+      startOfDay.setHours(0, 0, 0, 0)
+      const endOfDay = new Date(date)
+      endOfDay.setHours(23, 59, 59, 999)
+      query.date = { $gte: startOfDay, $lte: endOfDay }
+      query.status = { $nin: ['Cancelled', 'Completed'] }
+    }
 
     const exams = await Exam.find(query)
       .populate('courseId', 'name code')
