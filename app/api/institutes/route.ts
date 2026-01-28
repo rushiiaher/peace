@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import connectDB from '@/lib/mongodb'
 import Institute from '@/lib/models/Institute'
 import Payment from '@/lib/models/Payment'
+import '@/lib/models/Course' // Ensure model is registered for populate
 
 export const dynamic = 'force-dynamic'
 
