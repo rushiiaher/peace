@@ -3,6 +3,8 @@ import connectDB from '@/lib/mongodb'
 import Institute from '@/lib/models/Institute'
 import '@/lib/models/Course'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(req: Request, props: { params: Promise<{ id: string }> }) {
   const params = await props.params
   try {
@@ -24,6 +26,7 @@ export async function PUT(req: Request, props: { params: Promise<{ id: string }>
     const data = await req.json()
     const institute = await Institute.findByIdAndUpdate(params.id, data, { new: true })
     if (!institute) return NextResponse.json({ error: 'Institute not found' }, { status: 404 })
+    await Institute.populate(institute, { path: 'courses.courseId' })
     return NextResponse.json(institute)
   } catch (error) {
     return NextResponse.json({ error: 'Failed to update institute' }, { status: 500 })
