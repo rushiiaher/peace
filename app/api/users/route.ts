@@ -9,6 +9,7 @@ export async function GET() {
   try {
     await connectDB()
     const users = await User.find()
+      .populate('instituteId', 'name code location')
       .select('-password')
       .sort({ createdAt: -1 })
     return NextResponse.json(users)
