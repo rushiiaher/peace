@@ -10,6 +10,7 @@ export async function GET() {
     await connectDB()
     const users = await User.find()
       .select('name email role instituteId status createdAt lastLogin rollNo')
+      .populate('instituteId', 'name code')
       .sort({ createdAt: -1 })
       .lean()
     return NextResponse.json(users)
