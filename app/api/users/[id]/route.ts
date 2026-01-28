@@ -4,10 +4,11 @@ import User from '@/lib/models/User'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     await connectDB()
-    const user = await User.findById(params.id).select('-password')
+    const { id } = await params
+    const user = await User.findById(id).select('-password')
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
@@ -18,11 +19,12 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   }
 }
 
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
+export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     await connectDB()
+    const { id } = await params
     const data = await req.json()
-    const user = await User.findByIdAndUpdate(params.id, data, { new: true }).select('-password')
+    const user = await User.findByIdAndUpdate(id, data, { new: true }).select('-password')
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
@@ -33,10 +35,11 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
   }
 }
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     await connectDB()
-    const user = await User.findByIdAndDelete(params.id)
+    const { id } = await params
+    const user = await User.findByIdAndDelete(id)
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
