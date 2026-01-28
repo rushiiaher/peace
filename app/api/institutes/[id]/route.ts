@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import connectDB from '@/lib/mongodb'
 import Institute from '@/lib/models/Institute'
+import '@/lib/models/Course'
 
 export async function GET(req: Request, { params }: { params: { id: string } }) {
   try {
