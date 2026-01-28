@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server'
 import connectDB from '@/lib/mongodb'
 import QuestionBank from '@/lib/models/QuestionBank'
+import '@/lib/models/Course'
 
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params
   try {
     await connectDB()
     const qb = await QuestionBank.findById(params.id).populate('courseId', 'name code')
@@ -13,7 +15,8 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   }
 }
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params
   try {
     await connectDB()
     const qb = await QuestionBank.findByIdAndDelete(params.id)

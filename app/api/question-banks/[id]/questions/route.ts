@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server'
 import connectDB from '@/lib/mongodb'
 import QuestionBank from '@/lib/models/QuestionBank'
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params
   try {
     await connectDB()
     const question = await req.json()
@@ -18,7 +19,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   }
 }
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params
   try {
     await connectDB()
     const { questionId } = await req.json()
@@ -34,19 +36,20 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
   }
 }
 
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
+export async function PUT(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params
   try {
     await connectDB()
     const { questionId, question, options, correctAnswer, explanation } = await req.json()
     const qb = await QuestionBank.findOneAndUpdate(
       { _id: params.id, 'questions._id': questionId },
-      { 
-        $set: { 
+      {
+        $set: {
           'questions.$.question': question,
           'questions.$.options': options,
           'questions.$.correctAnswer': correctAnswer,
           'questions.$.explanation': explanation
-        } 
+        }
       },
       { new: true }
     )
