@@ -186,6 +186,19 @@ export default function UsersPage() {
     return institutes.find((inst: any) => inst._id === id)
   }
 
+  const getInstituteName = (user: any) => {
+    if (user.instituteId) {
+      // If instituteId is populated (object), use it directly
+      if (typeof user.instituteId === 'object' && user.instituteId.name) {
+        return user.instituteId.name
+      }
+      // If instituteId is just an ID string, find it in institutes array
+      const institute = getInstituteById(user.instituteId)
+      return institute?.name || 'N/A'
+    }
+    return 'N/A'
+  }
+
   const filterByRole = (role: string) => {
     return users.filter((u: any) => u.role === role)
   }
@@ -494,8 +507,8 @@ export default function UsersPage() {
               <div className="flex-1 grid grid-cols-2 md:grid-cols-3 gap-y-4 gap-x-6 py-1 md:border-l md:pl-6">
                 <div>
                   <span className="text-[10px] uppercase text-muted-foreground font-bold tracking-wider">Institute</span>
-                  <p className="text-sm font-medium mt-0.5 truncate" title={user.instituteId ? getInstituteById(user.instituteId)?.name : 'N/A'}>
-                    {user.instituteId ? getInstituteById(user.instituteId)?.name || 'N/A' : 'N/A'}
+                  <p className="text-sm font-medium mt-0.5 truncate" title={getInstituteName(user)}>
+                    {getInstituteName(user)}
                   </p>
                 </div>
                 <div>

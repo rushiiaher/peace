@@ -8,7 +8,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   try {
     await connectDB()
     const { id } = await params
-    const user = await User.findById(id).select('-password')
+    const user = await User.findById(id)
+      .populate('instituteId', 'name code location')
+      .select('-password')
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
