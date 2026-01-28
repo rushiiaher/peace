@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import connectDB from '@/lib/mongodb'
 import Batch from '@/lib/models/Batch'
+import '@/lib/models/Course'
+import '@/lib/models/User'
 
 export const dynamic = 'force-dynamic'
 
