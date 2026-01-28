@@ -9,9 +9,9 @@ export async function GET() {
   try {
     await connectDB()
     const users = await User.find()
-      .populate('instituteId', 'name code location')
-      .select('-password')
+      .select('name email role instituteId status createdAt lastLogin rollNo')
       .sort({ createdAt: -1 })
+      .lean()
     return NextResponse.json(users)
   } catch (error) {
     console.error('Error fetching users:', error)
