@@ -10,7 +10,8 @@ export async function GET() {
     const courses = await Course.find().sort({ createdAt: -1 })
     return NextResponse.json(courses)
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to fetch courses' }, { status: 500 })
+    console.error('Error fetching courses:', error)
+    return NextResponse.json([], { status: 200 })
   }
 }
 

@@ -61,7 +61,8 @@ export async function GET(req: Request) {
 
     return NextResponse.json(institutesWithPayment)
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to fetch institutes' }, { status: 500 })
+    console.error('Error fetching institutes:', error)
+    return NextResponse.json([], { status: 200 })
   }
 }
 
@@ -72,6 +73,7 @@ export async function POST(req: Request) {
     const institute = await Institute.create(data)
     return NextResponse.json(institute, { status: 201 })
   } catch (error) {
+    console.error('Error creating institute:', error)
     return NextResponse.json({ error: 'Failed to create institute' }, { status: 500 })
   }
 }
