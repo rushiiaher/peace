@@ -6,10 +6,18 @@ import bcrypt from 'bcryptjs'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     await connectDB()
-    const users = await User.find()
+    const { searchParams } = new URL(req.url)
+    const instituteId = searchParams.get('instituteId')
+    const role = searchParams.get('role')
+
+    let query: any = {}
+    if (instituteId) query.instituteId = instituteId
+    if (role) query.role = role
+
+    const users = await User.find(query)
       .select('name email role instituteId status createdAt lastLogin rollNo')
       .populate('instituteId', 'name code')
       .sort({ createdAt: -1 })

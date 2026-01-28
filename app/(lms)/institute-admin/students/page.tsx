@@ -50,7 +50,10 @@ export default function InstituteStudentsPage() {
     try {
       const res = await fetch(`/api/users?instituteId=${instituteId}&role=student`)
       const data = await res.json()
-      const instituteStudents = data.filter((u: any) => u.role === 'student' && u.instituteId === instituteId)
+      const instituteStudents = data.filter((u: any) => {
+        const uInstId = typeof u.instituteId === 'object' ? u.instituteId?._id : u.instituteId
+        return u.role === 'student' && uInstId === instituteId
+      })
       setStudents(instituteStudents)
     } catch (error) {
       toast.error('Failed to fetch students')

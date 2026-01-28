@@ -66,7 +66,10 @@ export default function InstituteAdminDashboard() {
       const exams = examsRes.status === 'fulfilled' ? await examsRes.value.json() : []
       const enquiries = enquiriesRes.status === 'fulfilled' ? await enquiriesRes.value.json() : []
 
-      const students = users.filter((u: any) => u.role === 'student' && u.instituteId === instituteId)
+      const students = users.filter((u: any) => {
+        const uInstId = typeof u.instituteId === 'object' ? u.instituteId?._id : u.instituteId
+        return u.role === 'student' && uInstId === instituteId
+      })
       const collectedFees = payments.reduce((sum: number, p: any) => sum + (p.paidAmount || 0), 0)
       const pendingFees = students.length * 10000 - collectedFees // Simplified logic
       const upcomingExams = exams.filter((e: any) => new Date(e.date) > new Date()).length
