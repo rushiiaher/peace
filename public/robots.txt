@@ -1,0 +1,7 @@
+User-agent: *
+Disallow: /api/
+Disallow: /admin/
+Disallow: /super-admin/
+Disallow: /institute-admin/
+Disallow: /student/
+Allow: /api/auth/session
