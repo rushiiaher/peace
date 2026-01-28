@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import connectDB from '@/lib/mongodb'
 import User from '@/lib/models/User'
+import '@/lib/models/Institute' // Ensure model is registered
 import bcrypt from 'bcryptjs'
 
 export const dynamic = 'force-dynamic'

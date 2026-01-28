@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import connectDB from '@/lib/mongodb'
 import User from '@/lib/models/User'
+import '@/lib/models/Institute' // Ensure model is registered for populate
 import bcrypt from 'bcryptjs'
 
 export const dynamic = 'force-dynamic'
@@ -24,18 +25,18 @@ export async function POST(req: Request) {
   try {
     await connectDB()
     const data = await req.json()
-    
+
     // Hash password
     if (data.password) {
       data.password = await bcrypt.hash(data.password, 12)
     }
-    
+
     const user = await User.create(data)
     const userResponse = await User.findById(user._id)
       .populate('instituteId', 'name code location')
       .select('-password -sessionToken')
       .lean()
-    
+
     return NextResponse.json(userResponse, { status: 201 })
   } catch (error: any) {
     console.error('Error creating user:', error)
