@@ -3,7 +3,8 @@ import connectDB from '@/lib/mongodb'
 import ExamResult from '@/lib/models/ExamResult'
 import User from '@/lib/models/User'
 
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params
   try {
     await connectDB()
     const { searchParams } = new URL(req.url)
