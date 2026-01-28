@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server'
 import connectDB from '@/lib/mongodb'
 import Exam from '@/lib/models/Exam'
+import '@/lib/models/Course'
+import '@/lib/models/Institute'
+import '@/lib/models/User'
 
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params
   try {
     await connectDB()
     const exam = await Exam.findById(params.id)
@@ -16,7 +20,8 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   }
 }
 
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
+export async function PUT(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params
   try {
     await connectDB()
     const data = await req.json()
@@ -78,7 +83,8 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
   }
 }
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params
   try {
     await connectDB()
     const exam = await Exam.findById(params.id)
