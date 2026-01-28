@@ -35,9 +35,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       delete data.password
     }
     
-    const user = await User.findByIdAndUpdate(id, data, { new: true })
-      .populate('instituteId', 'name code location')
-      .select('-password')
+    const user = await User.findByIdAndUpdate(id, data, { new: true }).select('-password')
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }

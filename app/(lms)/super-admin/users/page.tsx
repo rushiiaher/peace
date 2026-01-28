@@ -613,7 +613,7 @@ export default function UsersPage() {
                   </div>
                   <div className="space-y-2 md:col-span-2">
                     <Label htmlFor="edit-instituteId" className="font-semibold">Institute</Label>
-                    <Select name="instituteId" defaultValue={typeof selectedUser.instituteId === 'object' ? selectedUser.instituteId?._id : selectedUser.instituteId} disabled={selectedUser.role === 'super-admin'}>
+                    <Select name="instituteId" defaultValue={selectedUser.instituteId?._id || selectedUser.instituteId} disabled={selectedUser.role === 'super-admin'}>
                       <SelectTrigger className="h-10">
                         <SelectValue placeholder="Select institute" />
                       </SelectTrigger>
