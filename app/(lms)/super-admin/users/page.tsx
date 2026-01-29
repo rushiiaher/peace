@@ -216,7 +216,9 @@ export default function UsersPage() {
 
     // Filter by institute
     if (filterInstituteId && filterInstituteId !== 'all') {
-      filtered = filtered.filter((u: any) => u.instituteId === filterInstituteId)
+      filtered = filtered.filter((u: any) =>
+        (u.instituteId?._id || u.instituteId) === filterInstituteId
+      )
     }
 
     return filtered
