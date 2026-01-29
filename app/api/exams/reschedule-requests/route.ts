@@ -3,6 +3,7 @@ import connectDB from '@/lib/mongodb'
 import RescheduleRequest from '@/lib/models/RescheduleRequest'
 import Exam from '@/lib/models/Exam'
 import User from '@/lib/models/User' // For populating if needed
+import '@/lib/models/Course'
 
 export const dynamic = 'force-dynamic'
 
