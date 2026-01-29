@@ -40,7 +40,10 @@ export function EnquiryForm({
         // Actually, to make it clean, let's extract the object here.
 
         const handledByValue = formData.get('handledBy') as string
-        const [handledBy, handledByModel] = handledByValue ? handledByValue.split('|') : [null, null]
+        // Only split if we have a valid non-empty string that looks like "id|model"
+        const [handledBy, handledByModel] = (handledByValue && handledByValue.includes('|'))
+            ? handledByValue.split('|')
+            : [null, null]
 
         const data = {
             firstName: formData.get('firstName'),

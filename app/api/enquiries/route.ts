@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server'
 import connectDB from '@/lib/mongodb'
 import Enquiry from '@/lib/models/Enquiry'
+import '@/lib/models/Institute'
+import '@/lib/models/User'
+import '@/lib/models/Staff'
+import '@/lib/models/Course'
 
 export const dynamic = 'force-dynamic'
 

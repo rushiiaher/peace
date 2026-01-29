@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import connectDB from '@/lib/mongodb'
 import Staff from '@/lib/models/Staff'
+import '@/lib/models/Institute'
 
 export const dynamic = 'force-dynamic'
 
@@ -9,7 +10,7 @@ export async function GET(req: Request) {
     await connectDB()
     const { searchParams } = new URL(req.url)
     const instituteId = searchParams.get('instituteId')
-    
+
     const query = instituteId ? { instituteId } : {}
     const staff = await Staff.find(query).sort({ createdAt: -1 })
     return NextResponse.json(staff)

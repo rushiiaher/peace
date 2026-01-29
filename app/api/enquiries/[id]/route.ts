@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server'
 import connectDB from '@/lib/mongodb'
 import Enquiry from '@/lib/models/Enquiry'
+import '@/lib/models/Institute'
+import '@/lib/models/User'
+import '@/lib/models/Staff'
 
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params
   try {
     await connectDB()
     const enquiry = await Enquiry.findById(params.id)
@@ -13,7 +17,8 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   }
 }
 
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
+export async function PUT(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params
   try {
     await connectDB()
     const data = await req.json()
@@ -25,7 +30,8 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
   }
 }
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params
   try {
     await connectDB()
     const enquiry = await Enquiry.findByIdAndDelete(params.id)
