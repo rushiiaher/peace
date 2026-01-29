@@ -40,6 +40,34 @@ export async function GET(req: Request) {
 
     const User = (await import('@/lib/models/User')).default
 
+    // Auto-update status to Completed for expired exams
+    const now = new Date()
+    const updates = []
+
+    for (const exam of exams) {
+      if (exam.status !== 'Completed' && exam.date) {
+        const examDate = new Date(exam.date)
+        const [hours, minutes] = (exam.startTime || '00:00').split(':').map(Number)
+        examDate.setHours(hours, minutes)
+
+        // Add duration + buffer (e.g. 1 hour buffer)
+        // If no duration, assume 1 hour default
+        const endTime = new Date(examDate.getTime() + (exam.duration || 60) * 60000 + 60 * 60000)
+
+        if (now > endTime) {
+          exam.status = 'Completed'
+          updates.push(exam._id)
+        }
+      }
+    }
+
+    if (updates.length > 0) {
+      await Exam.updateMany(
+        { _id: { $in: updates } },
+        { $set: { status: 'Completed' } }
+      )
+    }
+
     for (const exam of exams) {
       // 1. Populate top-level systemAssignments
       if (exam.systemAssignments?.length > 0) {

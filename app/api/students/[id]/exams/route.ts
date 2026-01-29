@@ -22,10 +22,38 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
     const courseIds = activeCourses.map((c: any) => c.courseId?._id || c.courseId).filter((id: any) => id)
 
     // Fetch all exams for these courses
+    // Fetch all exams for these courses
     const exams = await Exam.find({ courseId: { $in: courseIds } })
       .populate('courseId', 'name code')
       .populate('instituteId', 'name')
       .sort({ date: -1 })
+      .lean() // Use lean() to allow modification
+
+    // Auto-update status to Completed for expired exams
+    const updates = []
+
+    for (const exam of exams) {
+      if (exam.status !== 'Completed' && exam.date) {
+        const examDate = new Date(exam.date)
+        const [hours, minutes] = (exam.startTime || '00:00').split(':').map(Number)
+        examDate.setHours(hours, minutes)
+
+        // Add duration + buffer (e.g. 1 hour buffer)
+        const endTime = new Date(examDate.getTime() + (exam.duration || 60) * 60000 + 60 * 60000)
+
+        if (now > endTime) {
+          exam.status = 'Completed'
+          updates.push(exam._id)
+        }
+      }
+    }
+
+    if (updates.length > 0) {
+      await Exam.updateMany(
+        { _id: { $in: updates } },
+        { $set: { status: 'Completed' } }
+      )
+    }
 
     return NextResponse.json(exams)
   } catch (error: any) {
