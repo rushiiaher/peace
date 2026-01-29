@@ -285,7 +285,7 @@ export default function StudentExamsPage() {
                         </div>
                       </div>
                     </div>
-                    {!attempted && (
+                    {!attempted && exam.status !== 'Completed' ? (
                       <Button
                         size="sm"
                         onClick={() => startExam(exam._id)}
@@ -293,6 +293,11 @@ export default function StudentExamsPage() {
                       >
                         <Play className="w-4 h-4 mr-2" />
                         {isPresent ? 'Start Exam' : 'Waiting for Attendance'}
+                      </Button>
+                    ) : (
+                      <Button size="sm" disabled variant="secondary">
+                        <Award className="w-4 h-4 mr-2" />
+                        Exam Completed
                       </Button>
                     )}
                   </CardContent>
