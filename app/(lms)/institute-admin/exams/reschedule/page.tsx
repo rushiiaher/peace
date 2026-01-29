@@ -136,6 +136,96 @@ export default function RescheduleRequestPage() {
     }, [selectedExamId, selectedBatchId, allExams, allBatches])
 
 
+
+    // Helpers for Dropdown Options
+    const filteredBatches = allBatches.filter(b =>
+        !selectedCourseId || (b.courseId?._id || b.courseId) === selectedCourseId
+    )
+
+    const filteredExams = allExams.filter(e =>
+        !selectedCourseId || (e.courseId?._id || e.courseId) === selectedCourseId
+    )
+
+    const handleReasonChange = (studentId: string, value: string) => {
+        setReasons(prev => ({ ...prev, [studentId]: value }))
+    }
+
+    const toggleStudent = (studentId: string) => {
+        const newSet = new Set(selectedStudents)
+        if (newSet.has(studentId)) {
+            newSet.delete(studentId)
+            const newReasons = { ...reasons }
+            delete newReasons[studentId]
+            setReasons(newReasons)
+        } else {
+            newSet.add(studentId)
+        }
+        setSelectedStudents(newSet)
+    }
+
+    // Helper to get existing request status for a student
+    const getStudentRequestStatus = (studentId: string) => {
+        if (!selectedExamId) return null
+        const request = existingRequests.find(r =>
+            (r.studentId?._id || r.studentId) === studentId &&
+            (r.originalExamId?._id || r.originalExamId) === selectedExamId
+        )
+        return request
+    }
+
+    const handleSubmit = async () => {
+        if (selectedStudents.size === 0) {
+            toast.error('Select at least one student')
+            return
+        }
+
+        for (const sid of Array.from(selectedStudents)) {
+            if (!reasons[sid] || reasons[sid].trim().length < 5) {
+                toast.error('Please provide a valid reason (min 5 chars) for each selected student')
+                return
+            }
+        }
+
+        setSubmitting(true)
+        try {
+            const requests = Array.from(selectedStudents).map(sid => ({
+                studentId: sid,
+                reason: reasons[sid]
+            }))
+
+            const res = await fetch('/api/exams/reschedule-requests', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    instituteId,
+                    originalExamId: selectedExamId,
+                    requests
+                })
+            })
+
+            const data = await res.json()
+
+            if (res.ok) {
+                if (data.created > 0) {
+                    toast.success(`${data.created} reschedule request(s) sent to Super Admin`)
+                }
+                if (data.skipped > 0) {
+                    toast.warning(`${data.skipped} student(s) already have pending/approved requests`)
+                }
+                setSelectedStudents(new Set())
+                setReasons({})
+                // Refresh existing requests to show new ones
+                fetchData()
+            } else {
+                toast.error(data.error || 'Failed to submit requests')
+            }
+        } catch (error) {
+            toast.error('Submission error')
+        } finally {
+            setSubmitting(false)
+        }
+    }
+
     const [activeTab, setActiveTab] = useState("new")
 
     // ... existing status logic ...
@@ -397,10 +487,10 @@ export default function RescheduleRequestPage() {
                                                 </TableCell>
                                                 <TableCell>
                                                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${req.status === 'Pending'
-                                                            ? 'bg-yellow-50 text-yellow-700 border-yellow-200'
-                                                            : req.status === 'Approved'
-                                                                ? 'bg-green-50 text-green-700 border-green-200'
-                                                                : 'bg-red-50 text-red-700 border-red-200'
+                                                        ? 'bg-yellow-50 text-yellow-700 border-yellow-200'
+                                                        : req.status === 'Approved'
+                                                            ? 'bg-green-50 text-green-700 border-green-200'
+                                                            : 'bg-red-50 text-red-700 border-red-200'
                                                         }`}>
                                                         {req.status}
                                                     </span>
