@@ -4,6 +4,7 @@ import RescheduleRequest from '@/lib/models/RescheduleRequest'
 import Exam from '@/lib/models/Exam'
 import User from '@/lib/models/User' // For populating if needed
 import '@/lib/models/Course'
+import '@/lib/models/Institute'
 
 export const dynamic = 'force-dynamic'
 
