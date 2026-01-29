@@ -18,8 +18,9 @@ export async function GET(req: Request) {
     if (role) query.role = role
 
     const users = await User.find(query)
-      .select('name email role instituteId status createdAt lastLogin rollNo')
+      .select('name email role instituteId status createdAt lastLogin rollNo phone documents courses')
       .populate('instituteId', 'name code')
+      .populate('courses.courseId', 'name code')
       .sort({ createdAt: -1 })
       .lean()
     return NextResponse.json(users)
