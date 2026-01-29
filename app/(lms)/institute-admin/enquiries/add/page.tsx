@@ -23,12 +23,13 @@ export default function AddEnquiryPage() {
     const fetchData = async () => {
         try {
             const user = JSON.parse(localStorage.getItem('user') || '{}')
-            if (!user.instituteId) return
+            const instituteId = user.instituteId?._id || user.instituteId
+            if (!instituteId) return
 
             const [coursesRes, staffRes, adminRes] = await Promise.all([
-                fetch(`/api/institutes/${user.instituteId}/courses`),
-                fetch(`/api/staff?instituteId=${user.instituteId}`),
-                fetch(`/api/users?instituteId=${user.instituteId}&role=institute-admin`)
+                fetch(`/api/institutes/${instituteId}/courses`),
+                fetch(`/api/staff?instituteId=${instituteId}`),
+                fetch(`/api/users?instituteId=${instituteId}&role=institute-admin`)
             ])
 
             if (coursesRes.ok) setCourses(await coursesRes.json())
@@ -46,10 +47,11 @@ export default function AddEnquiryPage() {
         try {
             setLoading(true)
             const user = JSON.parse(localStorage.getItem('user') || '{}')
+            const instituteId = user.instituteId?._id || user.instituteId
 
             const payload = {
                 ...data,
-                instituteId: user.instituteId
+                instituteId: instituteId
             }
 
             const res = await fetch('/api/enquiries', {

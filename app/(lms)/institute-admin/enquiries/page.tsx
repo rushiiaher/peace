@@ -23,7 +23,8 @@ export default function EnquiriesPage() {
   const fetchEnquiries = async () => {
     try {
       const user = JSON.parse(localStorage.getItem('user') || '{}')
-      const res = await fetch(`/api/enquiries?instituteId=${user.instituteId}`)
+      const instituteId = user.instituteId?._id || user.instituteId
+      const res = await fetch(`/api/enquiries?instituteId=${instituteId}`)
       const data = await res.json()
       setEnquiries(Array.isArray(data) ? data : [])
     } catch (error) {
