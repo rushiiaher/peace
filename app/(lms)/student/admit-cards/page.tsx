@@ -46,6 +46,17 @@ export default function AdmitCardsPage() {
         return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }).toLowerCase()
       }
 
+      // Calculate Duration Dynamically
+      let displayDuration = card.duration;
+      if (card.examId?.courseId?.examConfigurations) {
+        // Fallback or override logic:
+        // Try to match examNumber from admit card or exam object to the course config
+        const examNum = card.examNumber || card.examId.examNumber || 1;
+        const config = card.examId.courseId.examConfigurations.find((c: any) => Number(c.examNumber) === Number(examNum));
+        if (config?.duration) {
+          displayDuration = config.duration;
+        }
+      }
 
       const data = {
         instituteName: "PEACEXperts Academy, Nashik", // Hardcoded as per image header preference
@@ -62,7 +73,7 @@ export default function AdmitCardsPage() {
         reportingTime: adjustTime(card.startTime, 30),
         gateClosingTime: adjustTime(card.startTime, 5),
         examStartTime: adjustTime(card.startTime, 0),
-        examDuration: `${card.duration} Minutes`,
+        examDuration: `${displayDuration} Minutes`,
         courseName: card.courseName,
         examCentreName: card.instituteName,
         examCentreAddress: "Exam Center Address will be provided by Institute." // Placeholder as address is not in text

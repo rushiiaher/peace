@@ -30,7 +30,14 @@ export async function GET(req: Request) {
 
     const admitCards = await AdmitCard.find(query)
       .populate('studentId', 'name motherName aadhaarCardNo documents')
-      .populate('examId', 'type title')
+      .populate({
+        path: 'examId',
+        select: 'type title examNumber courseId',
+        populate: {
+          path: 'courseId',
+          select: 'name examConfigurations'
+        }
+      })
       .lean()
     return NextResponse.json(admitCards)
   } catch (error: any) {

@@ -567,6 +567,14 @@ export default function SuperAdminExamsPage() {
               })
               .map((exam: any) => {
                 const rescheduledCount = exam.systemAssignments?.length || 0
+
+                // Correct Duration and Marks Logic
+                const fullCourse = courses.find((c: any) => c._id === (exam.courseId?._id || exam.courseId));
+                const config = fullCourse?.examConfigurations?.find((conf: any) => Number(conf.examNumber) === Number(exam.examNumber || 1));
+                const displayDuration = config?.duration || exam.duration || 60;
+                // Marks = Total Questions * 2 (Assuming standard 2 marks per question)
+                const displayMarks = config?.totalQuestions ? config.totalQuestions * 2 : (exam.totalMarks || 100);
+
                 return (
                   <Card key={exam._id} className="hover:shadow-lg transition-all border-l-4 border-l-orange-500 overflow-hidden group">
                     <CardContent className="p-0">
@@ -632,12 +640,12 @@ export default function SuperAdminExamsPage() {
                           <div className="flex items-center gap-4">
                             <div className="flex items-center gap-2">
                               <Timer className="w-4 h-4 text-muted-foreground" />
-                              <span className="text-sm font-medium">{exam.duration} mins</span>
+                              <span className="text-sm font-medium">{displayDuration} mins</span>
                             </div>
                             <div className="w-px h-4 bg-border"></div>
                             <div className="flex items-center gap-2">
                               <Award className="w-4 h-4 text-muted-foreground" />
-                              <span className="text-sm font-medium">{exam.totalMarks} Marks</span>
+                              <span className="text-sm font-medium">{displayMarks} Marks</span>
                             </div>
                           </div>
                         </div>
