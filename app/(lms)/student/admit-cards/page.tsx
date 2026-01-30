@@ -35,33 +35,34 @@ export default function AdmitCardsPage() {
   }, [studentId])
 
   const getDynamicDuration = (card: any) => {
-    let displayDuration = card.duration;
-    if (card.examId?.courseId?.examConfigurations) {
-      // Try to match examNumber from admit card or exam object to the course config
-      let examNum = card.examNumber || card.examId.examNumber;
+    // Priority: Course Config (Source of Truth) -> Exam Object -> Card Record
+    let displayDuration = card.duration || 60;
 
-      // If missing, try to infer from title (e.g. "Exam 2 ...")
+    const courseConfigs = card.examId?.courseId?.examConfigurations;
+    if (courseConfigs && Array.isArray(courseConfigs) && courseConfigs.length > 0) {
+      let examNum = card.examNumber || card.examId?.examNumber;
+
+      // Infer from title if missing
       if (!examNum) {
-        const titleToCheck = card.examTitle || card.examId.title || '';
-        const match = titleToCheck.match(/Exam\s*(\d+)/i);
-        if (match) examNum = parseInt(match[1]);
+        const title = card.examTitle || card.examId?.title || "";
+        const match = title.match(/Exam\s*(\d+)/i);
+        examNum = match ? parseInt(match[1]) : 1;
       }
 
-      // Default to 1
-      if (!examNum) examNum = 1;
-
-      const config = card.examId.courseId.examConfigurations.find((c: any) => Number(c.examNumber) === Number(examNum));
-
+      const config = courseConfigs.find((c: any) => Number(c.examNumber) === Number(examNum));
       if (config?.duration) {
-        displayDuration = config.duration;
-      } else if (card.examId.courseId.examConfigurations.length === 1) {
-        // Fallback: If no specific match but only 1 config exists, use it (safe default)
-        displayDuration = card.examId.courseId.examConfigurations[0].duration || displayDuration;
+        return config.duration;
       }
 
-      // Force valid Duration
-      if (!displayDuration || isNaN(displayDuration)) displayDuration = 60;
+      // If only one config exists, it's almost certainly the intended one
+      if (courseConfigs.length === 1) {
+        return courseConfigs[0].duration || displayDuration;
+      }
     }
+
+    // Secondary fallback to Exam object's listed duration
+    if (card.examId?.duration) return card.examId.duration;
+
     return displayDuration;
   }
 
