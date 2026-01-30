@@ -203,6 +203,10 @@ export async function POST(req: Request) {
 
     return NextResponse.json(exam, { status: 201 })
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'Failed to schedule exam' }, { status: 500 })
+    console.error('Schedule Final Error:', error)
+    return NextResponse.json({
+      error: error.message || 'Failed to schedule exam',
+      stack: error.stack
+    }, { status: 500 })
   }
 }

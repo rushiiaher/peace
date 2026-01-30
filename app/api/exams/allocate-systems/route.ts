@@ -177,6 +177,10 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ exam, sections: sections.length, message: sections.length > 1 ? `Exam scheduled in ${sections.length} sections` : 'Exam scheduled' }, { status: 201 })
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    console.error('Allocate Systems Error:', error)
+    return NextResponse.json({
+      error: error.message || 'Failed to allocate systems',
+      stack: error.stack
+    }, { status: 500 })
   }
 }

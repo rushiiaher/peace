@@ -207,9 +207,9 @@ export async function POST(req: Request) {
                     return AdmitCard.create({
                         examId: newExam._id,
                         studentId: assign.studentId,
-                        studentName: student.name,
-                        rollNo: student.rollNo || 'N/A',
-                        courseName: sampleReq.courseId.name,
+                        studentName: student?.name || 'Student',
+                        rollNo: student?.rollNo || 'N/A',
+                        courseName: sampleReq.courseId?.name || 'Course',
                         batchName: batchName,
                         examTitle: newTitle,
                         examDate: finalSection.date,
@@ -232,7 +232,7 @@ export async function POST(req: Request) {
 
                 results.push(newExam)
 
-            } catch (error) {
+            } catch (error: any) {
                 console.error("Group Processing Error", error)
                 // Rollback if exam was created but subsequent steps failed
                 if (newExam) {
@@ -240,7 +240,7 @@ export async function POST(req: Request) {
                     await Exam.findByIdAndDelete(newExam._id)
                     await AdmitCard.deleteMany({ examId: newExam._id })
                 }
-                throw error
+                throw new Error(`Schedule failed for one group: ${error.message}`);
             }
 
         }
@@ -249,6 +249,9 @@ export async function POST(req: Request) {
 
     } catch (error: any) {
         console.error("Approval Error", error)
-        return NextResponse.json({ error: 'Process failed: ' + error.message }, { status: 500 })
+        return NextResponse.json({
+            error: 'Process failed: ' + error.message,
+            stack: error.stack
+        }, { status: 500 })
     }
 }

@@ -313,13 +313,13 @@ export async function POST(req: Request) {
         systemName: rs.systemName,
         instituteName: institute.name,
         sectionNumber: 999,
-        rescheduled: false
+        isRescheduled: false
       })
 
       // Mark original admit card as rescheduled
       await AdmitCard.updateOne(
         { examId: exam._id, studentId: rs.studentId },
-        { rescheduled: true, rescheduledReason: reason }
+        { isRescheduled: true, rescheduledReason: reason }
       )
     }
 
@@ -343,6 +343,9 @@ export async function POST(req: Request) {
     })
   } catch (error: any) {
     console.error('Bulk reschedule error:', error)
-    return NextResponse.json({ error: error.message || 'Failed to reschedule' }, { status: 500 })
+    return NextResponse.json({
+      error: error.message || 'Failed to reschedule',
+      stack: error.stack
+    }, { status: 500 })
   }
 }

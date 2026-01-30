@@ -4,8 +4,7 @@ import AdmitCard from '@/lib/models/AdmitCard'
 import Exam from '@/lib/models/Exam'
 import User from '@/lib/models/User'
 import Course from '@/lib/models/Course'
-import '@/lib/models/Institute'
-
+import Institute from '@/lib/models/Institute'
 
 export const dynamic = 'force-dynamic'
 
@@ -24,30 +23,35 @@ export async function GET(req: Request) {
     } else if (studentId) {
       query.studentId = studentId
     } else if (instituteId) {
-      // Find exams for this institute
-      const exams = await Exam.find({ instituteId }).select('_id')
+      // Use lean for performance
+      const exams = await Exam.find({ instituteId }).select('_id').lean()
       const examIds = exams.map(e => e._id)
       query.examId = { $in: examIds }
     } else {
       return NextResponse.json({ error: 'examId, studentId, or instituteId is required' }, { status: 400 })
     }
 
+    // Explicitly load everything to avoid 500s during population
     const admitCards = await AdmitCard.find(query)
-      .populate('studentId', 'name motherName aadhaarCardNo documents')
+      .populate({
+        path: 'studentId',
+        select: 'name motherName aadhaarCardNo documents'
+      })
       .populate({
         path: 'examId',
-        select: 'type title examNumber courseId duration endTime startTime',
         populate: {
           path: 'courseId'
         }
       })
       .lean()
+
     return NextResponse.json(admitCards)
   } catch (error: any) {
     console.error('Admit cards fetch error:', error)
     return NextResponse.json({
-      error: error.message || 'Failed to fetch admit cards',
-      stack: error.stack
+      error: 'Internal Server Error',
+      details: error.message,
+      path: 'admit-cards/GET'
     }, { status: 500 })
   }
 }
