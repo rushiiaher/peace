@@ -6,6 +6,11 @@ import User from '@/lib/models/User'
 import Course from '@/lib/models/Course'
 import Institute from '@/lib/models/Institute'
 
+// Ensure models are registered for populate
+import '@/lib/models/User'
+import '@/lib/models/Course'
+import '@/lib/models/Institute'
+
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: Request) {

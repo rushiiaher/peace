@@ -1,4 +1,6 @@
 import mongoose from 'mongoose'
+import './User'
+import './Exam'
 
 const AdmitCardSchema = new mongoose.Schema({
   examId: { type: mongoose.Schema.Types.ObjectId, ref: 'Exam', required: true },

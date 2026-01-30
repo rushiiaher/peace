@@ -1,4 +1,7 @@
 import mongoose from 'mongoose'
+import './Course'
+import './Institute'
+import './User'
 
 const ExamSchema = new mongoose.Schema({
   courseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Course', required: true },
