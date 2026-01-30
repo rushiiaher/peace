@@ -271,10 +271,11 @@ export async function POST(req: Request) {
       instituteId: exam.instituteId,
       type: exam.type,
       title: `${exam.title} (Rescheduled)`,
+      examNumber: exam.examNumber || 1,
       date: examDate,
       startTime: openingTime,
       endTime: closingTime,
-      duration: exam.duration,
+      duration: sectionDuration,
       totalMarks: exam.totalMarks,
       questions: exam.questions,
       attendanceEnabled: true,
@@ -301,6 +302,7 @@ export async function POST(req: Request) {
       // Create new admit card for rescheduled exam
       await AdmitCard.create({
         examId: rescheduledExam._id,
+        examNumber: exam.examNumber || 1,
         studentId: rs.studentId,
         studentName: student?.name,
         rollNo: student?.rollNo,

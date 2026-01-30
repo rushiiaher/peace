@@ -151,8 +151,10 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
         setExam({ ...data, questions: shuffledQuestions })
         setAnswers(new Array(shuffledQuestions.length).fill(-1))
         setMarkedForReview(new Array(shuffledQuestions.length).fill(false))
-        // Duration is already in seconds from the API
-        setTimeLeft(data.duration || 1800)
+
+        // Duration from API is in minutes, convert to seconds for the timer
+        const durationInMinutes = data.duration || 60
+        setTimeLeft(durationInMinutes * 60)
 
         if (data.type === 'Final' && studentId) {
           const assignment = data.systemAssignments?.find((a: any) =>
@@ -568,19 +570,19 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
             <Button
               type="button"
               onClick={() => handleSubmit()}
-              disabled={elapsedTime < 1800} // 30 minutes = 1800 seconds
+              disabled={elapsedTime < (exam.duration || 60) * 30}
               className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold py-6"
               size="lg"
             >
               <CheckCircle2 className="w-5 h-5 mr-2" />
-              {elapsedTime < 1800
-                ? `Submit Exam (Available in ${Math.ceil((1800 - elapsedTime) / 60)} min)`
+              {elapsedTime < (exam.duration || 60) * 30
+                ? `Submit Exam (Available in ${Math.ceil(((exam.duration || 60) * 30 - elapsedTime) / 60)} min)`
                 : 'Submit Exam'}
             </Button>
 
-            {elapsedTime < 1800 && (
+            {elapsedTime < (exam.duration || 60) * 30 && (
               <p className="text-xs text-center text-muted-foreground">
-                Submit button will be enabled after 30 minutes from exam start
+                Submit button will be enabled after {Math.floor((exam.duration || 60) / 2)} minutes from exam start
               </p>
             )}
           </div>

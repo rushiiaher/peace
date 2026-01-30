@@ -92,7 +92,7 @@ export async function POST(req: Request) {
                 const { openingTime, closingTime, breakBetweenSections } = institute.examTimings || {
                     openingTime: '09:00', closingTime: '18:00', breakBetweenSections: 30
                 }
-                const sectionDuration = courseExamDuration || institute.examTimings?.sectionDuration || 180;
+                const sectionDuration = courseExamDuration || institute.examTimings?.sectionDuration || 60;
 
                 // Find next available slot starting TOMORROW
                 let scheduled = false
@@ -206,6 +206,7 @@ export async function POST(req: Request) {
 
                     return AdmitCard.create({
                         examId: newExam._id,
+                        examNumber: originalExam.examNumber || 1,
                         studentId: assign.studentId,
                         studentName: student?.name || 'Student',
                         rollNo: student?.rollNo || 'N/A',

@@ -41,9 +41,11 @@ export default function AdmitCardsPage() {
 
     const courseConfigs = card.examId?.courseId?.examConfigurations;
     if (courseConfigs && Array.isArray(courseConfigs) && courseConfigs.length > 0) {
+      // Priority 1: Direct examNumber on card
+      // Priority 2: Inferred from title
+      // Priority 3: Fallback to Exam 1
       let examNum = card.examNumber || card.examId?.examNumber;
 
-      // Infer from title if missing
       if (!examNum) {
         const title = card.examTitle || card.examId?.title || "";
         const match = title.match(/Exam\s*(\d+)/i);
@@ -55,11 +57,14 @@ export default function AdmitCardsPage() {
         return config.duration;
       }
 
-      // If only one config exists, it's almost certainly the intended one
+      // If only one config exists, it's the source of truth
       if (courseConfigs.length === 1) {
-        return courseConfigs[0].duration || displayDuration;
+        return courseConfigs[0].duration || 60;
       }
     }
+
+    // Final safety: If we see 180 but it's supposed to be 60 globally
+    if (displayDuration === 180) return 60;
 
     // Secondary fallback to Exam object's listed duration
     if (card.examId?.duration) return card.examId.duration;
