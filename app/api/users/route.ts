@@ -14,9 +14,12 @@ export async function GET(req: Request) {
     const instituteId = searchParams.get('instituteId')
     const role = searchParams.get('role')
 
+    const courseId = searchParams.get('courseId')
+
     let query: any = {}
     if (instituteId) query.instituteId = instituteId
     if (role) query.role = role
+    if (courseId) query['courses.courseId'] = courseId
 
     const users = await User.find(query)
       .select('name email role instituteId status createdAt lastLogin rollNo phone documents courses')

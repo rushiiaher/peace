@@ -3,7 +3,8 @@ import connectDB from '@/lib/mongodb'
 import Batch from '@/lib/models/Batch'
 import User from '@/lib/models/User'
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params
   try {
     await connectDB()
     const { studentId, booksIncluded } = await req.json()
@@ -80,7 +81,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   }
 }
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params
   try {
     await connectDB()
     const { studentId } = await req.json()
