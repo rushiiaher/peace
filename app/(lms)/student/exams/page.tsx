@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 // import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { toast } from "sonner"
-import { FileText, Clock, Calendar, Award, HelpCircle, Play, Download } from "lucide-react"
+import { FileText, Clock, Calendar, Award, HelpCircle, Play, Download, Ban } from "lucide-react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { generateAdmitCardHtml } from "@/utils/generate-admit-card"
 import { AnimatedTabsProfessional } from "@/components/lms/animated-tabs"
@@ -285,21 +285,35 @@ export default function StudentExamsPage() {
                         </div>
                       </div>
                     </div>
-                    {!attempted && exam.status !== 'Completed' ? (
-                      <Button
-                        size="sm"
-                        onClick={() => startExam(exam._id)}
-                        disabled={!isPresent}
-                      >
-                        <Play className="w-4 h-4 mr-2" />
-                        {isPresent ? 'Start Exam' : 'Waiting for Attendance'}
-                      </Button>
-                    ) : (
-                      <Button size="sm" disabled variant="secondary">
-                        <Award className="w-4 h-4 mr-2" />
-                        Exam Completed
-                      </Button>
-                    )}
+                    {(() => {
+                      if (attempted) {
+                        const score = results.find((r: any) => r.examId?._id === exam._id)?.percentage?.toFixed(0)
+                        return (
+                          <Button size="sm" disabled variant="secondary" className="font-bold">
+                            <Award className="w-4 h-4 mr-2" />
+                            Scored: {score}%
+                          </Button>
+                        )
+                      }
+                      if (exam.status === 'Completed') {
+                        return (
+                          <Button size="sm" disabled variant="destructive">
+                            <Ban className="w-4 h-4 mr-2" />
+                            Absent
+                          </Button>
+                        )
+                      }
+                      return (
+                        <Button
+                          size="sm"
+                          onClick={() => startExam(exam._id)}
+                          disabled={!isPresent}
+                        >
+                          <Play className="w-4 h-4 mr-2" />
+                          {isPresent ? 'Start Exam' : 'Waiting for Attendance'}
+                        </Button>
+                      )
+                    })()}
                   </CardContent>
                 </Card>
               )
