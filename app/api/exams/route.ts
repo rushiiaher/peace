@@ -33,6 +33,7 @@ export async function GET(req: Request) {
     }
 
     const exams = await Exam.find(query)
+      .select('-questions')
       .populate('courseId', 'name code')
       .populate('instituteId', 'name')
       .sort({ date: -1 })
@@ -68,24 +69,41 @@ export async function GET(req: Request) {
       )
     }
 
+    // Optimized: Collect all student IDs first
+    const studentIdsToFetch = new Set<string>()
     for (const exam of exams) {
-      // 1. Populate top-level systemAssignments
-      if (exam.systemAssignments?.length > 0) {
-        for (let i = 0; i < exam.systemAssignments.length; i++) {
-          const studentId = exam.systemAssignments[i].studentId
-          if (studentId && !studentId.name) {
-            const student = await User.findById(studentId).select('name rollNo').lean()
-            if (student) exam.systemAssignments[i].studentId = student
-          }
-        }
+      exam.systemAssignments?.forEach((sa: any) => {
+        if (sa.studentId && typeof sa.studentId === 'string') studentIdsToFetch.add(sa.studentId)
+        else if (sa.studentId?._id) studentIdsToFetch.add(sa.studentId._id.toString())
+      })
+      exam.sections?.forEach((section: any) => {
+        section.systemAssignments?.forEach((sa: any) => {
+          if (sa.studentId && typeof sa.studentId === 'string') studentIdsToFetch.add(sa.studentId)
+          else if (sa.studentId?._id) studentIdsToFetch.add(sa.studentId._id.toString())
+        })
+      })
+    }
 
-        // Rescheduled Logic (Only relevant if systemAssignments exists)
+    const studentsMap = new Map()
+    if (studentIdsToFetch.size > 0) {
+      const students = await User.find({ _id: { $in: Array.from(studentIdsToFetch) } }).select('name rollNo').lean()
+      students.forEach(s => studentsMap.set(s._id.toString(), s))
+    }
+
+    for (const exam of exams) {
+      if (exam.systemAssignments?.length > 0) {
+        exam.systemAssignments.forEach((sa: any) => {
+          const sid = sa.studentId?._id?.toString() || sa.studentId?.toString()
+          if (sid && !sa.studentId.name) sa.studentId = studentsMap.get(sid) || sa.studentId
+        })
+
+        // Rescheduled Logic
         const hasRescheduled = exam.systemAssignments.some((sa: any) => sa.isRescheduled)
         if (hasRescheduled) {
           const rescheduledAdmitCards = await AdmitCard.find({
             examId: exam._id,
             isRescheduled: true
-          }).sort({ examDate: -1 }).lean()
+          }).sort({ examDate: -1 }).limit(1).lean()
 
           if (rescheduledAdmitCards.length > 0) {
             const latestReschedule = rescheduledAdmitCards[0]
@@ -96,18 +114,12 @@ export async function GET(req: Request) {
         }
       }
 
-      // 2. Populate sections systemAssignments
       if (exam.sections?.length > 0) {
         for (const section of exam.sections) {
-          if (section.systemAssignments?.length > 0) {
-            for (let i = 0; i < section.systemAssignments.length; i++) {
-              const studentId = section.systemAssignments[i].studentId
-              if (studentId && !studentId.name) {
-                const student = await User.findById(studentId).select('name rollNo').lean()
-                if (student) section.systemAssignments[i].studentId = student
-              }
-            }
-          }
+          section.systemAssignments?.forEach((sa: any) => {
+            const sid = sa.studentId?._id?.toString() || sa.studentId?.toString()
+            if (sid && !sa.studentId.name) sa.studentId = studentsMap.get(sid) || sa.studentId
+          })
         }
       }
     }

@@ -39,6 +39,7 @@ export async function GET(req: Request) {
       })
       .populate({
         path: 'examId',
+        select: 'type title examNumber courseId duration startTime endTime totalMarks',
         populate: {
           path: 'courseId'
         }
