@@ -18,10 +18,12 @@ export default function AddStudentPage() {
 
     useEffect(() => {
         const user = JSON.parse(localStorage.getItem('user') || '{}')
-        if (user.instituteId) {
-            setInstituteId(user.instituteId)
-            fetchCourses(user.instituteId)
-            fetchBatches(user.instituteId)
+        const instId = user.instituteId?._id || user.instituteId
+
+        if (instId) {
+            setInstituteId(instId)
+            fetchCourses(instId)
+            fetchBatches(instId)
         }
     }, [])
 
