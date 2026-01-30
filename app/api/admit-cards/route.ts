@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import connectDB from '@/lib/mongodb'
 import AdmitCard from '@/lib/models/AdmitCard'
 import Exam from '@/lib/models/Exam'
+import '@/lib/models/Course'
+
 
 export const dynamic = 'force-dynamic'
 

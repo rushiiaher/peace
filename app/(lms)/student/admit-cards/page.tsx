@@ -64,8 +64,12 @@ export default function AdmitCardsPage() {
         if (!examNum) examNum = 1;
 
         const config = card.examId.courseId.examConfigurations.find((c: any) => Number(c.examNumber) === Number(examNum));
+
         if (config?.duration) {
           displayDuration = config.duration;
+        } else if (card.examId.courseId.examConfigurations.length === 1) {
+          // Fallback: If no specific match but only 1 config exists, use it (safe default)
+          displayDuration = card.examId.courseId.examConfigurations[0].duration || displayDuration;
         }
       }
 
