@@ -47,6 +47,7 @@ export default function AdmitCardsPage() {
       }
 
       // Calculate Duration Dynamically
+      // Calculate Duration Dynamically
       let displayDuration = card.duration;
       if (card.examId?.courseId?.examConfigurations) {
         // Fallback or override logic:
@@ -65,12 +66,16 @@ export default function AdmitCardsPage() {
 
         const config = card.examId.courseId.examConfigurations.find((c: any) => Number(c.examNumber) === Number(examNum));
 
+        // CRITICAL FIX: TRUST CONFIGURATION IF AVAILABLE
         if (config?.duration) {
           displayDuration = config.duration;
         } else if (card.examId.courseId.examConfigurations.length === 1) {
           // Fallback: If no specific match but only 1 config exists, use it (safe default)
           displayDuration = card.examId.courseId.examConfigurations[0].duration || displayDuration;
         }
+
+        // Force valid Duration
+        if (!displayDuration || isNaN(displayDuration)) displayDuration = 60;
       }
 
       const data = {
