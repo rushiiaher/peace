@@ -330,9 +330,14 @@ export default function InstituteExamsPage() {
     setCheckingAvailability(true)
     try {
       // Calculate available systems similar to backend logic
-      const hardwareAvailable = institData.systems?.filter((s: any) => s.status === 'Available') || []
+      // Fix: Check for both 'Available' and 'Active' and be case-insensitive
+      const hardwareAvailable = institData.systems?.filter((s: any) => {
+        const status = s.status?.toLowerCase()?.trim()
+        return !status || status === 'available' || status === 'active'
+      }) || []
 
       if (hardwareAvailable.length === 0) {
+        console.warn('No active/available systems found in institute data', institData.systems)
         setAvailableSystemsCount(0)
         return
       }
@@ -846,8 +851,11 @@ export default function InstituteExamsPage() {
                           <Calendar className="w-4 h-4 text-orange-600" />
                         </div>
                         <div>
-                          <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Date</p>
-                          <p className="font-medium text-sm">{new Date(exam.date).toLocaleDateString()}</p>
+                          <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Date & Time</p>
+                          <p className="font-medium text-sm">
+                            {new Date(exam.date).toLocaleDateString()}
+                            <span className="text-muted-foreground ml-1">at {exam.startTime || '10:00'}</span>
+                          </p>
                         </div>
                       </div>
 
@@ -857,7 +865,14 @@ export default function InstituteExamsPage() {
                         </div>
                         <div>
                           <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Duration</p>
-                          <p className="font-medium text-sm">{exam.duration} mins</p>
+                          <p className="font-medium text-sm">
+                            {(() => {
+                              // FIX: Lookup correct duration from course config to fix 180 vs 60 minute issue
+                              const fullCourse = courses.find((c: any) => c._id === (exam.courseId?._id || exam.courseId));
+                              const config = fullCourse?.examConfigurations?.find((conf: any) => Number(conf.examNumber) === Number(exam.examNumber || 1));
+                              return config?.duration || exam.duration || 60;
+                            })()} mins
+                          </p>
                         </div>
                       </div>
 

@@ -51,12 +51,24 @@ export default function EditExamPage() {
 
             const examData = await res.json()
 
-            // FIX: Use course configured duration if available, overriding potential bad default
-            const courseConfig = examData.courseId?.examConfigurations?.[0]
+            // FIX: Use course configured duration if available, based on exam number
+            console.log('Exam Data:', examData)
+            const examNum = examData.examNumber || 1
+            const courseConfig = examData.courseId?.examConfigurations?.find(
+                (c: any) => Number(c.examNumber) === Number(examNum)
+            )
             const courseDuration = courseConfig?.duration
-            if (courseDuration && examData.duration !== courseDuration) {
-                console.log(`Correcting duration from ${examData.duration} to ${courseDuration}`)
+
+            if (courseDuration) {
+                console.log(`Setting duration to ${courseDuration} from config (Exam #${examNum})`)
                 examData.duration = courseDuration
+            } else {
+                // Fallback to first config if specific one not found (for legacy data)
+                const firstConfig = examData.courseId?.examConfigurations?.[0]
+                if (firstConfig?.duration) {
+                    console.log(`Setting duration to ${firstConfig.duration} from first config fallback`)
+                    examData.duration = firstConfig.duration
+                }
             }
 
             setExam(examData)
@@ -64,7 +76,7 @@ export default function EditExamPage() {
             // Set initial form values
             const examDate = new Date(examData.date)
             setDate(examDate.toISOString().split('T')[0])
-            setStartTime(examData.startTime)
+            setStartTime(examData.startTime || '')  // Ensure not undefined
 
             // Fetch institute data - FIXED: Get instituteId properly
             const instituteId = examData.instituteId?._id || examData.instituteId
@@ -166,11 +178,13 @@ export default function EditExamPage() {
             setBusySystems(busy)
 
             // Filter available systems
-            console.log('All Systems Statuses:', allSystems.map(s => `${s.name}:${s.status}`))
+            console.log('All Systems:', allSystems)
+            console.log('Statuses:', allSystems.map(s => `${s.name}: ${s.status}`))
 
             const hardwareAvailable = allSystems.filter((s: any) => {
                 const status = s.status?.toLowerCase()?.trim()
-                return status === 'available' || status === 'active'
+                // If status is empty/missing, assume available (legacy data safety)
+                return !status || status === 'available' || status === 'active'
             })
             const available = hardwareAvailable.filter((s: any) => !busy.has(s.name))
 
