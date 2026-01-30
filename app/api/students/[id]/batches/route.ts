@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server'
 import connectDB from '@/lib/mongodb'
 import Batch from '@/lib/models/Batch'
 
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params
   try {
     await connectDB()
     const batches = await Batch.find({ students: params.id }).populate('courseId')

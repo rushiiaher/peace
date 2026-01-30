@@ -40,7 +40,8 @@ export default function ProfilePage() {
       }
       const user = JSON.parse(userStr)
       console.log('User from localStorage:', user)
-      const res = await fetch(`/api/students?userId=${user.id}`)
+      const userId = user.id || user._id
+      const res = await fetch(`/api/students?userId=${userId}`)
       const data = await res.json()
       console.log('API Response:', res.status, data)
       if (res.ok) {

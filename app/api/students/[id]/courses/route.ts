@@ -2,7 +2,10 @@ import { NextResponse } from 'next/server'
 import connectDB from '@/lib/mongodb'
 import User from '@/lib/models/User'
 
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+import '@/lib/models/Course'
+
+export async function GET(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params
   try {
     await connectDB()
     const student = await User.findById(params.id).populate('courses.courseId')
