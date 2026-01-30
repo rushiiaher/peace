@@ -59,7 +59,7 @@ export async function POST(req: Request) {
         }
 
         const { openingTime, closingTime, sectionDuration, breakBetweenSections } = institute.examTimings || {
-            openingTime: '09:00', closingTime: '18:00', sectionDuration: 180, breakBetweenSections: 30
+            openingTime: '09:00', closingTime: '18:00', sectionDuration: 60, breakBetweenSections: 30
         }
 
         // Map students for quick lookup

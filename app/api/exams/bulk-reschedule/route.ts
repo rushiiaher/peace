@@ -51,7 +51,7 @@ export async function POST(req: Request) {
     const examConfig = course?.examConfigurations?.find((c: any) => Number(c.examNumber) === Number(targetExamNum)) || course?.examConfigurations?.[0];
     const courseExamDuration = examConfig?.duration || null
 
-    const { openingTime = '09:00', closingTime = '18:00', sectionDuration = courseExamDuration || institute.examTimings?.sectionDuration || 180, breakBetweenSections = 30, workingDays = [1, 2, 3, 4, 5, 6] } = institute.examTimings || {}
+    const { openingTime = '09:00', closingTime = '18:00', sectionDuration = courseExamDuration || institute.examTimings?.sectionDuration || 60, breakBetweenSections = 30, workingDays = [1, 2, 3, 4, 5, 6] } = institute.examTimings || {}
 
     let examDate = new Date(rescheduleDate)
     if (isWeekend(examDate, workingDays)) {

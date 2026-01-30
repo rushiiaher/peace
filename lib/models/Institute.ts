@@ -23,7 +23,7 @@ const InstituteSchema = new mongoose.Schema({
   examTimings: {
     openingTime: { type: String, default: '09:00' },
     closingTime: { type: String, default: '18:00' },
-    sectionDuration: { type: Number, default: 180 },
+    sectionDuration: { type: Number, default: 60 },
     breakBetweenSections: { type: Number, default: 30 },
     workingDays: { type: [Number], default: [1, 2, 3, 4, 5, 6] }
   },
