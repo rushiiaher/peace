@@ -569,8 +569,18 @@ export default function SuperAdminExamsPage() {
                 const rescheduledCount = exam.systemAssignments?.length || 0
 
                 // Correct Duration and Marks Logic
+                // Correct Duration and Marks Logic
                 const fullCourse = courses.find((c: any) => c._id === (exam.courseId?._id || exam.courseId));
-                const config = fullCourse?.examConfigurations?.find((conf: any) => Number(conf.examNumber) === Number(exam.examNumber || 1));
+
+                // Try to get exam number from object, or infer from title (e.g., "Exam 2 (...)" -> 2)
+                let examNum = exam.examNumber;
+                if (!examNum) {
+                  const match = exam.title.match(/Exam\s*(\d+)/i);
+                  if (match) examNum = parseInt(match[1]);
+                  else examNum = 1; // Default to 1 if not found
+                }
+
+                const config = fullCourse?.examConfigurations?.find((conf: any) => Number(conf.examNumber) === Number(examNum));
                 const displayDuration = config?.duration || exam.duration || 60;
                 // Marks = Total Questions * 2 (Assuming standard 2 marks per question)
                 const displayMarks = config?.totalQuestions ? config.totalQuestions * 2 : (exam.totalMarks || 100);

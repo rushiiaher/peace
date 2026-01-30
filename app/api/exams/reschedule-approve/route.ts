@@ -183,6 +183,7 @@ export async function POST(req: Request) {
                     systemAssignments: finalSection.systemAssignments,
                     status: 'Scheduled',
                     multiSection: false,
+                    examNumber: originalExam.examNumber,
                     questions: originalExam.questions,
                     attendanceEnabled: false
                 })

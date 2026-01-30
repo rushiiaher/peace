@@ -51,7 +51,18 @@ export default function AdmitCardsPage() {
       if (card.examId?.courseId?.examConfigurations) {
         // Fallback or override logic:
         // Try to match examNumber from admit card or exam object to the course config
-        const examNum = card.examNumber || card.examId.examNumber || 1;
+        let examNum = card.examNumber || card.examId.examNumber;
+
+        // If missing, try to infer from title (e.g. "Exam 2 ...")
+        if (!examNum) {
+          const titleToCheck = card.examTitle || card.examId.title || '';
+          const match = titleToCheck.match(/Exam\s*(\d+)/i);
+          if (match) examNum = parseInt(match[1]);
+        }
+
+        // Default to 1
+        if (!examNum) examNum = 1;
+
         const config = card.examId.courseId.examConfigurations.find((c: any) => Number(c.examNumber) === Number(examNum));
         if (config?.duration) {
           displayDuration = config.duration;
