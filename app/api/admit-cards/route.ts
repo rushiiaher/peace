@@ -2,7 +2,9 @@ import { NextResponse } from 'next/server'
 import connectDB from '@/lib/mongodb'
 import AdmitCard from '@/lib/models/AdmitCard'
 import Exam from '@/lib/models/Exam'
-import '@/lib/models/Course'
+import User from '@/lib/models/User'
+import Course from '@/lib/models/Course'
+import '@/lib/models/Institute'
 
 
 export const dynamic = 'force-dynamic'
@@ -34,6 +36,7 @@ export async function GET(req: Request) {
       .populate('studentId', 'name motherName aadhaarCardNo documents')
       .populate({
         path: 'examId',
+        select: 'type title examNumber courseId duration endTime startTime',
         populate: {
           path: 'courseId'
         }
@@ -42,6 +45,9 @@ export async function GET(req: Request) {
     return NextResponse.json(admitCards)
   } catch (error: any) {
     console.error('Admit cards fetch error:', error)
-    return NextResponse.json({ error: error.message || 'Failed to fetch admit cards' }, { status: 500 })
+    return NextResponse.json({
+      error: error.message || 'Failed to fetch admit cards',
+      stack: error.stack
+    }, { status: 500 })
   }
 }
