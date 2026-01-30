@@ -108,13 +108,22 @@ export function CourseForm({ initialData, mode }: CourseFormProps) {
     const toggleQB = (examIndex: number, qbId: string) => {
         const newConfigs = [...examConfigs]
         const currentQBs = newConfigs[examIndex].questionBanks || []
-        // Handle if questionBanks contains objects (populated) or strings
-        const currentIds = currentQBs.map((qb: any) => typeof qb === 'object' ? qb._id : qb)
 
+        // Normalize to array of ID strings
+        const currentIds = currentQBs.map((qb: any) =>
+            (typeof qb === 'object' && qb !== null) ? qb._id : qb
+        ).filter(Boolean)
+
+        let newIds
         if (currentIds.includes(qbId)) {
-            newConfigs[examIndex].questionBanks = currentIds.filter((id: string) => id !== qbId)
+            newIds = currentIds.filter((id: string) => id !== qbId)
         } else {
-            newConfigs[examIndex].questionBanks = [...currentIds, qbId]
+            newIds = [...currentIds, qbId]
+        }
+
+        newConfigs[examIndex] = {
+            ...newConfigs[examIndex],
+            questionBanks: newIds
         }
         setExamConfigs(newConfigs)
     }
