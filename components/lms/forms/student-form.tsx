@@ -50,12 +50,14 @@ export function StudentForm({
             setEnrollLoading(true)
             try {
                 const updatedUser = await onCourseAdd(editModeCourseId, editModeBatchId, editModeBooksIncluded === 'true')
-                if (updatedUser) {
+                if (updatedUser && updatedUser.courses) {
                     setLocalCourses(updatedUser.courses)
                     setEditModeCourseId('')
                     setEditModeBatchId('')
                     setEditModeBooksIncluded('false')
                 }
+            } catch (err) {
+                console.error("Enrollment failed", err)
             } finally {
                 setEnrollLoading(false)
             }
