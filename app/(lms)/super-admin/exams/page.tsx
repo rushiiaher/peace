@@ -584,7 +584,13 @@ export default function SuperAdminExamsPage() {
                 let displayDuration = config?.duration || exam.duration || 60;
                 if (displayDuration === 180) displayDuration = 60;
                 // Marks = Total Questions * 2 (Assuming standard 2 marks per question)
-                const displayMarks = config?.totalQuestions ? config.totalQuestions * 2 : (exam.totalMarks || 100);
+                const evalComp = fullCourse?.evaluationComponents?.find((c: any) =>
+                  c.name.toLowerCase() === `exam ${examNum}` ||
+                  c.name.toLowerCase() === `final exam ${examNum}` ||
+                  (Number(examNum) === 1 && (c.name.toLowerCase() === 'final exam' || c.name.toLowerCase() === 'theory'))
+                );
+
+                const displayMarks = evalComp?.maxMarks || (config?.totalQuestions ? config.totalQuestions * 2 : (exam.totalMarks || 100));
 
                 return (
                   <Card key={exam._id} className="hover:shadow-lg transition-all border-l-4 border-l-orange-500 overflow-hidden group">
@@ -891,136 +897,155 @@ export default function SuperAdminExamsPage() {
                 }
                 return true
               })
-              .map((exam: any) => (
-                <Card key={exam._id} className="hover:shadow-lg transition-all border-l-4 border-l-purple-500 overflow-hidden group">
-                  <CardContent className="p-0">
-                    <div className="p-4 border-b bg-muted/5 flex items-start justify-between">
-                      <div className="space-y-1.5">
-                        <div className="flex items-center gap-2">
-                          <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg group-hover:scale-105 transition-transform">
-                            <Award className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                          </div>
-                          <div>
-                            <h3 className="font-semibold text-lg leading-none">{exam.title}</h3>
-                            <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                              <Badge variant="outline" className="text-xs font-normal border-purple-200 text-purple-700 bg-purple-50 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-800">
-                                <MapPin className="w-3 h-3 mr-1" />
-                                {exam.instituteId?.name || 'N/A'}
-                              </Badge>
-                              <Badge variant="outline" className="text-xs font-normal border-muted text-muted-foreground">
-                                {exam.courseId?.name || 'N/A'}
-                              </Badge>
+              .map((exam: any) => {
+                const fullCourse = courses.find((c: any) => c._id === (exam.courseId?._id || exam.courseId));
+                let examNum = exam.examNumber;
+                if (!examNum) {
+                  const match = exam.title.match(/Exam\s*(\d+)/i);
+                  if (match) examNum = parseInt(match[1]);
+                  else examNum = 1;
+                }
+                const config = fullCourse?.examConfigurations?.find((conf: any) => Number(conf.examNumber) === Number(examNum));
+                let displayDuration = config?.duration || exam.duration || 60;
+                if (displayDuration === 180) displayDuration = 60;
+
+                const evalComp = fullCourse?.evaluationComponents?.find((c: any) =>
+                  c.name.toLowerCase() === `exam ${examNum}` ||
+                  c.name.toLowerCase() === `final exam ${examNum}` ||
+                  (Number(examNum) === 1 && (c.name.toLowerCase() === 'final exam' || c.name.toLowerCase() === 'theory'))
+                );
+                const displayMarks = evalComp?.maxMarks || (config?.totalQuestions ? config.totalQuestions * 2 : (exam.totalMarks || 100));
+
+                return (
+                  <Card key={exam._id} className="hover:shadow-lg transition-all border-l-4 border-l-purple-500 overflow-hidden group">
+                    <CardContent className="p-0">
+                      <div className="p-4 border-b bg-muted/5 flex items-start justify-between">
+                        <div className="space-y-1.5">
+                          <div className="flex items-center gap-2">
+                            <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg group-hover:scale-105 transition-transform">
+                              <Award className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                            </div>
+                            <div>
+                              <h3 className="font-semibold text-lg leading-none">{exam.title}</h3>
+                              <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                                <Badge variant="outline" className="text-xs font-normal border-purple-200 text-purple-700 bg-purple-50 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-800">
+                                  <MapPin className="w-3 h-3 mr-1" />
+                                  {exam.instituteId?.name || 'N/A'}
+                                </Badge>
+                                <Badge variant="outline" className="text-xs font-normal border-muted text-muted-foreground">
+                                  {exam.courseId?.name || 'N/A'}
+                                </Badge>
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                      <div className="flex gap-2 items-center">
-                        {exam.systemAssignments?.some((sa: any) => sa.isRescheduled) && (
-                          <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 animate-pulse">
-                            <AlertCircle className="w-3 h-3 mr-1" />
-                            Rescheduled
-                          </Badge>
-                        )}
-                        <Badge variant={exam.status === 'Active' ? 'default' : 'secondary'} className={exam.status === 'Active' ? "bg-green-600 hover:bg-green-700 shadow-sm" : ""}>{exam.status}</Badge>
-                      </div>
-                    </div>
-
-                    <div className="p-5 grid grid-cols-2 md:grid-cols-4 gap-6">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-full">
-                          <Calendar className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                        </div>
-                        <div className="space-y-0.5">
-                          <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Date</p>
-                          <p className="font-medium text-sm">{new Date(exam.date).toLocaleDateString()}</p>
-                          <p className="text-xs text-muted-foreground">{exam.startTime} - {exam.endTime}</p>
+                        <div className="flex gap-2 items-center">
+                          {exam.systemAssignments?.some((sa: any) => sa.isRescheduled) && (
+                            <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 animate-pulse">
+                              <AlertCircle className="w-3 h-3 mr-1" />
+                              Rescheduled
+                            </Badge>
+                          )}
+                          <Badge variant={exam.status === 'Active' ? 'default' : 'secondary'} className={exam.status === 'Active' ? "bg-green-600 hover:bg-green-700 shadow-sm" : ""}>{exam.status}</Badge>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-teal-100 dark:bg-teal-900/20 rounded-full">
-                          <Timer className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+                      <div className="p-5 grid grid-cols-2 md:grid-cols-4 gap-6">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-full">
+                            <Calendar className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                          </div>
+                          <div className="space-y-0.5">
+                            <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Date</p>
+                            <p className="font-medium text-sm">{new Date(exam.date).toLocaleDateString()}</p>
+                            <p className="text-xs text-muted-foreground">{exam.startTime} - {exam.endTime}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Duration</p>
-                          <p className="font-medium text-sm">{exam.duration === 180 ? 60 : (exam.duration || 60)} mins</p>
+
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-teal-100 dark:bg-teal-900/20 rounded-full">
+                            <Timer className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Duration</p>
+                            <p className="font-medium text-sm">{displayDuration} mins</p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-indigo-100 dark:bg-indigo-900/20 rounded-full">
+                            <CheckCircle className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Questions</p>
+                            <p className="font-medium text-sm">{exam.totalQuestions || exam.questions?.length || 0}</p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-amber-100 dark:bg-amber-900/20 rounded-full">
+                            <Award className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Marks</p>
+                            <p className="font-medium text-sm">{displayMarks}</p>
+                          </div>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-indigo-100 dark:bg-indigo-900/20 rounded-full">
-                          <CheckCircle className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                      {exam.multiSection && (
+                        <div className="px-5 pb-4">
+                          <div className="bg-blue-50 dark:bg-blue-900/20 p-2.5 rounded text-sm flex items-center gap-2 border border-blue-100 dark:border-blue-900/50">
+                            <MoreVertical className="w-4 h-4 text-blue-600" />
+                            <p className="font-medium text-blue-900 dark:text-blue-300">Multi-Section Exam: {exam.sections?.length || 0} sections configured</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Questions</p>
-                          <p className="font-medium text-sm">{exam.totalQuestions || exam.questions?.length || 0}</p>
-                        </div>
-                      </div>
+                      )}
 
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-amber-100 dark:bg-amber-900/20 rounded-full">
-                          <Award className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Marks</p>
-                          <p className="font-medium text-sm">{exam.totalMarks}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {exam.multiSection && (
-                      <div className="px-5 pb-4">
-                        <div className="bg-blue-50 dark:bg-blue-900/20 p-2.5 rounded text-sm flex items-center gap-2 border border-blue-100 dark:border-blue-900/50">
-                          <MoreVertical className="w-4 h-4 text-blue-600" />
-                          <p className="font-medium text-blue-900 dark:text-blue-300">Multi-Section Exam: {exam.sections?.length || 0} sections configured</p>
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="p-3 bg-muted/10 border-t flex flex-wrap justify-end gap-2">
+                      <div className="p-3 bg-muted/10 border-t flex flex-wrap justify-end gap-2">
 
 
-                      <div className="flex justify-center">
-                        {!exams.some((e: any) => e.title === `${exam.title} (Rescheduled)`) ? (
-                          exam.status !== 'Completed' ? (
-                            <span className="text-xs text-muted-foreground self-center px-2 py-1 bg-muted rounded border opacity-70 cursor-not-allowed">Finish Exam First</span>
-                          ) : (
-                            (exam.systemAssignments?.length > 0) ? (
-                              <Button
-                                size="sm"
-                                variant="secondary"
-                                onClick={() => window.location.href = `/super-admin/exams/reschedule?examId=${exam._id}`}
-                              >
-                                <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
-                                Reschedule
-                              </Button>
+                        <div className="flex justify-center">
+                          {!exams.some((e: any) => e.title === `${exam.title} (Rescheduled)`) ? (
+                            exam.status !== 'Completed' ? (
+                              <span className="text-xs text-muted-foreground self-center px-2 py-1 bg-muted rounded border opacity-70 cursor-not-allowed">Finish Exam First</span>
                             ) : (
-                              <span className="text-xs text-muted-foreground self-center px-2 py-1 bg-muted rounded">No students</span>
+                              (exam.systemAssignments?.length > 0) ? (
+                                <Button
+                                  size="sm"
+                                  variant="secondary"
+                                  onClick={() => window.location.href = `/super-admin/exams/reschedule?examId=${exam._id}`}
+                                >
+                                  <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+                                  Reschedule
+                                </Button>
+                              ) : (
+                                <span className="text-xs text-muted-foreground self-center px-2 py-1 bg-muted rounded">No students</span>
+                              )
                             )
-                          )
-                        ) : (
-                          <span className="text-xs text-muted-foreground self-center px-2 py-1 bg-yellow-50 text-yellow-700 border border-yellow-200 rounded">Already rescheduled</span>
-                        )}
+                          ) : (
+                            <span className="text-xs text-muted-foreground self-center px-2 py-1 bg-yellow-50 text-yellow-700 border border-yellow-200 rounded">Already rescheduled</span>
+                          )}
+                        </div>
+
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => window.location.href = `/super-admin/exams/${exam._id}/edit`}
+                          disabled={exam.status === 'Completed'}
+                        >
+                          <Edit className="w-3.5 h-3.5 mr-1.5" />
+                          Edit Schedule
+                        </Button>
+
+
                       </div>
-
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => window.location.href = `/super-admin/exams/${exam._id}/edit`}
-                        disabled={exam.status === 'Completed'}
-                      >
-                        <Edit className="w-3.5 h-3.5 mr-1.5" />
-                        Edit Schedule
-                      </Button>
-
-
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                )
+              })}
           </div>
-        )
-        }
+        )}
       </div >
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
