@@ -5,8 +5,9 @@ import AdmitCard from '@/lib/models/AdmitCard'
 
 export async function PUT(
     req: Request,
-    { params }: { params: { id: string } }
+    props: { params: Promise<{ id: string }> }
 ) {
+    const params = await props.params
     try {
         await connectDB()
         const { date, startTime, endTime, systemAssignments } = await req.json()
