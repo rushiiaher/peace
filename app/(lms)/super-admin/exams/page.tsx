@@ -569,7 +569,6 @@ export default function SuperAdminExamsPage() {
                 const rescheduledCount = exam.systemAssignments?.length || 0
 
                 // Correct Duration and Marks Logic
-                // Correct Duration and Marks Logic
                 const fullCourse = courses.find((c: any) => c._id === (exam.courseId?._id || exam.courseId));
 
                 // Try to get exam number from object, or infer from title (e.g., "Exam 2 (...)" -> 2)
@@ -584,11 +583,17 @@ export default function SuperAdminExamsPage() {
                 let displayDuration = config?.duration || exam.duration || 60;
                 if (displayDuration === 180) displayDuration = 60;
                 // Marks = Total Questions * 2 (Assuming standard 2 marks per question)
-                const evalComp = fullCourse?.evaluationComponents?.find((c: any) =>
-                  c.name.toLowerCase() === `exam ${examNum}` ||
-                  c.name.toLowerCase() === `final exam ${examNum}` ||
-                  (Number(examNum) === 1 && (c.name.toLowerCase() === 'final exam' || c.name.toLowerCase() === 'theory'))
-                );
+                const baseTitle = exam.title.replace(/\(Rescheduled\)/i, '').trim();
+                const evalComp = fullCourse?.evaluationComponents?.find((c: any) => {
+                  const compName = c.name.toLowerCase();
+                  const bTitle = baseTitle.toLowerCase();
+                  return compName === bTitle ||
+                    compName === `exam ${examNum}` ||
+                    compName === `final exam ${examNum}` ||
+                    (Number(examNum) === 1 && (compName === 'final exam' || compName === 'theory' || compName === 'theory exam')) ||
+                    compName.includes(bTitle) ||
+                    bTitle.includes(compName)
+                });
 
                 const displayMarks = evalComp?.maxMarks || (config?.totalQuestions ? config.totalQuestions * 2 : (exam.totalMarks || 100));
 
@@ -909,11 +914,17 @@ export default function SuperAdminExamsPage() {
                 let displayDuration = config?.duration || exam.duration || 60;
                 if (displayDuration === 180) displayDuration = 60;
 
-                const evalComp = fullCourse?.evaluationComponents?.find((c: any) =>
-                  c.name.toLowerCase() === `exam ${examNum}` ||
-                  c.name.toLowerCase() === `final exam ${examNum}` ||
-                  (Number(examNum) === 1 && (c.name.toLowerCase() === 'final exam' || c.name.toLowerCase() === 'theory'))
-                );
+                const baseTitle = exam.title.replace(/\(Rescheduled\)/i, '').trim();
+                const evalComp = fullCourse?.evaluationComponents?.find((c: any) => {
+                  const compName = c.name.toLowerCase();
+                  const bTitle = baseTitle.toLowerCase();
+                  return compName === bTitle ||
+                    compName === `exam ${examNum}` ||
+                    compName === `final exam ${examNum}` ||
+                    (Number(examNum) === 1 && (compName === 'final exam' || compName === 'theory' || compName === 'theory exam')) ||
+                    compName.includes(bTitle) ||
+                    bTitle.includes(compName)
+                });
                 const displayMarks = evalComp?.maxMarks || (config?.totalQuestions ? config.totalQuestions * 2 : (exam.totalMarks || 100));
 
                 return (
