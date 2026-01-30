@@ -34,7 +34,6 @@ export async function GET(req: Request) {
       .populate('studentId', 'name motherName aadhaarCardNo documents')
       .populate({
         path: 'examId',
-        select: 'type title examNumber courseId',
         populate: {
           path: 'courseId'
         }

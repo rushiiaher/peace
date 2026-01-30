@@ -78,7 +78,8 @@ export async function POST(req: Request) {
             try {
                 // Fetch course to get exam configuration
                 const course = await Course.findById(originalExam.courseId)
-                const examConfig = course?.examConfigurations?.[0]
+                const targetExamNum = originalExam.examNumber || 1;
+                const examConfig = course?.examConfigurations?.find((c: any) => Number(c.examNumber) === Number(targetExamNum)) || course?.examConfigurations?.[0];
                 const courseExamDuration = examConfig?.duration || null
 
                 // Resource Allocation Logic (Simplified version of schedule route)

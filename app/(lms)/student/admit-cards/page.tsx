@@ -34,6 +34,37 @@ export default function AdmitCardsPage() {
       .catch(() => setLoading(false))
   }, [studentId])
 
+  const getDynamicDuration = (card: any) => {
+    let displayDuration = card.duration;
+    if (card.examId?.courseId?.examConfigurations) {
+      // Try to match examNumber from admit card or exam object to the course config
+      let examNum = card.examNumber || card.examId.examNumber;
+
+      // If missing, try to infer from title (e.g. "Exam 2 ...")
+      if (!examNum) {
+        const titleToCheck = card.examTitle || card.examId.title || '';
+        const match = titleToCheck.match(/Exam\s*(\d+)/i);
+        if (match) examNum = parseInt(match[1]);
+      }
+
+      // Default to 1
+      if (!examNum) examNum = 1;
+
+      const config = card.examId.courseId.examConfigurations.find((c: any) => Number(c.examNumber) === Number(examNum));
+
+      if (config?.duration) {
+        displayDuration = config.duration;
+      } else if (card.examId.courseId.examConfigurations.length === 1) {
+        // Fallback: If no specific match but only 1 config exists, use it (safe default)
+        displayDuration = card.examId.courseId.examConfigurations[0].duration || displayDuration;
+      }
+
+      // Force valid Duration
+      if (!displayDuration || isNaN(displayDuration)) displayDuration = 60;
+    }
+    return displayDuration;
+  }
+
   const handleDownload = (card: any) => {
     try {
       // Helper to adjust time
@@ -46,37 +77,7 @@ export default function AdmitCardsPage() {
         return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }).toLowerCase()
       }
 
-      // Calculate Duration Dynamically
-      // Calculate Duration Dynamically
-      let displayDuration = card.duration;
-      if (card.examId?.courseId?.examConfigurations) {
-        // Fallback or override logic:
-        // Try to match examNumber from admit card or exam object to the course config
-        let examNum = card.examNumber || card.examId.examNumber;
-
-        // If missing, try to infer from title (e.g. "Exam 2 ...")
-        if (!examNum) {
-          const titleToCheck = card.examTitle || card.examId.title || '';
-          const match = titleToCheck.match(/Exam\s*(\d+)/i);
-          if (match) examNum = parseInt(match[1]);
-        }
-
-        // Default to 1
-        if (!examNum) examNum = 1;
-
-        const config = card.examId.courseId.examConfigurations.find((c: any) => Number(c.examNumber) === Number(examNum));
-
-        // CRITICAL FIX: TRUST CONFIGURATION IF AVAILABLE
-        if (config?.duration) {
-          displayDuration = config.duration;
-        } else if (card.examId.courseId.examConfigurations.length === 1) {
-          // Fallback: If no specific match but only 1 config exists, use it (safe default)
-          displayDuration = card.examId.courseId.examConfigurations[0].duration || displayDuration;
-        }
-
-        // Force valid Duration
-        if (!displayDuration || isNaN(displayDuration)) displayDuration = 60;
-      }
+      const displayDuration = getDynamicDuration(card);
 
       const data = {
         instituteName: "PEACEXperts Academy, Nashik", // Hardcoded as per image header preference
@@ -122,68 +123,71 @@ export default function AdmitCardsPage() {
       {cards.length === 0 ? (
         <Card><CardContent className="py-12 text-center text-muted-foreground">No admit cards available</CardContent></Card>
       ) : (
-        cards.map((card) => (
-          <Card key={card._id} className="py-0">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base">{card.examTitle}</CardTitle>
-                {(card.isRescheduled || card.rescheduled) && (
-                  <Badge variant="outline" style={{ backgroundColor: '#fef3c7', color: '#92400e', borderColor: '#fcd34d' }}>
-                    ⚠ Rescheduled
-                  </Badge>
+        cards.map((card) => {
+          const displayDuration = getDynamicDuration(card);
+          return (
+            <Card key={card._id} className="py-0">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base">{card.examTitle}</CardTitle>
+                  {(card.isRescheduled || card.rescheduled) && (
+                    <Badge variant="outline" style={{ backgroundColor: '#fef3c7', color: '#92400e', borderColor: '#fcd34d' }}>
+                      ⚠ Rescheduled
+                    </Badge>
+                  )}
+                </div>
+                <Button size="sm" variant="outline" className="mt-2 w-full sm:w-auto" onClick={() => handleDownload(card)}>
+                  <Download className="w-4 h-4 mr-2" /> Download Admit Card
+                </Button>
+              </CardHeader>
+              <CardContent>
+                {(card.isRescheduled || card.rescheduled) && card.rescheduledReason && (
+                  <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-yellow-600 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-yellow-900">Rescheduling Reason:</p>
+                      <p className="text-sm text-yellow-800">{card.rescheduledReason}</p>
+                    </div>
+                  </div>
                 )}
-              </div>
-              <Button size="sm" variant="outline" className="mt-2 w-full sm:w-auto" onClick={() => handleDownload(card)}>
-                <Download className="w-4 h-4 mr-2" /> Download Admit Card
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {(card.isRescheduled || card.rescheduled) && card.rescheduledReason && (
-                <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-start gap-2">
-                  <AlertCircle className="w-4 h-4 text-yellow-600 mt-0.5" />
+                <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <p className="text-sm font-medium text-yellow-900">Rescheduling Reason:</p>
-                    <p className="text-sm text-yellow-800">{card.rescheduledReason}</p>
+                    <p className="text-muted-foreground">Student Name</p>
+                    <p className="font-medium">{card.studentName}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Roll Number</p>
+                    <p className="font-medium">{card.rollNo}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Course</p>
+                    <p className="font-medium">{card.courseName}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Institute</p>
+                    <p className="font-medium">{card.instituteName}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Exam Date</p>
+                    <p className="font-medium">{new Date(card.examDate).toLocaleDateString()}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Exam Time</p>
+                    <p className="font-medium">{card.startTime} - {card.endTime}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Duration</p>
+                    <p className="font-medium">{displayDuration} minutes</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Allocated PC</p>
+                    <p className="font-medium">{card.systemName}</p>
                   </div>
                 </div>
-              )}
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="text-muted-foreground">Student Name</p>
-                  <p className="font-medium">{card.studentName}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Roll Number</p>
-                  <p className="font-medium">{card.rollNo}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Course</p>
-                  <p className="font-medium">{card.courseName}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Institute</p>
-                  <p className="font-medium">{card.instituteName}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Exam Date</p>
-                  <p className="font-medium">{new Date(card.examDate).toLocaleDateString()}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Exam Time</p>
-                  <p className="font-medium">{card.startTime} - {card.endTime}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Duration</p>
-                  <p className="font-medium">{card.duration} minutes</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Allocated PC</p>
-                  <p className="font-medium">{card.systemName}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))
+              </CardContent>
+            </Card>
+          )
+        })
       )}
     </div>
   )
