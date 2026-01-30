@@ -88,9 +88,10 @@ export async function POST(req: Request) {
                     throw new Error(`No systems available at ${institute.name}`)
                 }
 
-                const { openingTime, closingTime, sectionDuration, breakBetweenSections } = institute.examTimings || {
-                    openingTime: '09:00', closingTime: '18:00', sectionDuration: courseExamDuration || 180, breakBetweenSections: 30
+                const { openingTime, closingTime, breakBetweenSections } = institute.examTimings || {
+                    openingTime: '09:00', closingTime: '18:00', breakBetweenSections: 30
                 }
+                const sectionDuration = courseExamDuration || institute.examTimings?.sectionDuration || 180;
 
                 // Find next available slot starting TOMORROW
                 let scheduled = false

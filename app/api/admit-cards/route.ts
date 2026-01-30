@@ -36,8 +36,7 @@ export async function GET(req: Request) {
         path: 'examId',
         select: 'type title examNumber courseId',
         populate: {
-          path: 'courseId',
-          select: 'name examConfigurations'
+          path: 'courseId'
         }
       })
       .lean()
