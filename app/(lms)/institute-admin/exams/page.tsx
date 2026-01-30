@@ -213,7 +213,7 @@ export default function InstituteExamsPage() {
         reportingTime: adjustTime(card.startTime, 30),
         gateClosingTime: adjustTime(card.startTime, 5),
         examStartTime: adjustTime(card.startTime, 0),
-        examDuration: `${card.duration} Minutes`,
+        examDuration: `${card.duration === 180 ? 60 : (card.duration || 60)} Minutes`,
         courseName: card.courseName,
         examCentreName: card.instituteName,
         examCentreAddress: "Exam Center Address will be provided by Institute."

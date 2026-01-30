@@ -362,7 +362,7 @@ export default function SuperAdminExamsPage() {
                         </div>
                         <div>
                           <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Duration</p>
-                          <p className="font-medium text-sm">{exam.duration} mins</p>
+                          <p className="font-medium text-sm">{exam.duration === 180 ? 60 : (exam.duration || 60)} mins</p>
                         </div>
                       </div>
 
@@ -581,7 +581,8 @@ export default function SuperAdminExamsPage() {
                 }
 
                 const config = fullCourse?.examConfigurations?.find((conf: any) => Number(conf.examNumber) === Number(examNum));
-                const displayDuration = config?.duration || exam.duration || 60;
+                let displayDuration = config?.duration || exam.duration || 60;
+                if (displayDuration === 180) displayDuration = 60;
                 // Marks = Total Questions * 2 (Assuming standard 2 marks per question)
                 const displayMarks = config?.totalQuestions ? config.totalQuestions * 2 : (exam.totalMarks || 100);
 
@@ -942,7 +943,7 @@ export default function SuperAdminExamsPage() {
                         </div>
                         <div>
                           <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Duration</p>
-                          <p className="font-medium text-sm">{exam.duration} mins</p>
+                          <p className="font-medium text-sm">{exam.duration === 180 ? 60 : (exam.duration || 60)} mins</p>
                         </div>
                       </div>
 

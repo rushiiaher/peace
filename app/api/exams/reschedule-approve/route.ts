@@ -92,7 +92,8 @@ export async function POST(req: Request) {
                 const { openingTime, closingTime, breakBetweenSections } = institute.examTimings || {
                     openingTime: '09:00', closingTime: '18:00', breakBetweenSections: 30
                 }
-                const sectionDuration = courseExamDuration || institute.examTimings?.sectionDuration || 60;
+                let sectionDuration = courseExamDuration || institute.examTimings?.sectionDuration || 60;
+                if (sectionDuration === 180) sectionDuration = 60;
 
                 // Find next available slot starting TOMORROW
                 let scheduled = false

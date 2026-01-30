@@ -63,11 +63,11 @@ export default function AdmitCardsPage() {
       }
     }
 
+    // Secondary fallback to Exam object's listed duration
+    if (card.examId?.duration) displayDuration = card.examId.duration;
+
     // Final safety: If we see 180 but it's supposed to be 60 globally
     if (displayDuration === 180) return 60;
-
-    // Secondary fallback to Exam object's listed duration
-    if (card.examId?.duration) return card.examId.duration;
 
     return displayDuration;
   }
