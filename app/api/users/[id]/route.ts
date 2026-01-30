@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server'
 import connectDB from '@/lib/mongodb'
 import User from '@/lib/models/User'
-import '@/lib/models/Institute' // Ensure model is registered
-import bcrypt from 'bcryptjs'
+import '@/lib/models/Course'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,6 +11,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     const { id } = await params
     const user = await User.findById(id)
       .populate('instituteId', 'name code location')
+      .populate('courses.courseId', 'name code')
       .select('-password')
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
@@ -41,7 +41,9 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       delete data.instituteId
     }
 
-    const user = await User.findByIdAndUpdate(id, data, { new: true }).select('-password')
+    const user = await User.findByIdAndUpdate(id, data, { new: true })
+      .select('-password')
+      .populate('courses.courseId', 'name code')
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
