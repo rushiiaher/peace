@@ -219,10 +219,16 @@ export async function POST(req: Request) {
                         systemName: assign.systemName,
                         instituteName: institute.name,
                         sectionNumber: 1,
-                        isRescheduled: true,
+                        isRescheduled: false, // New card is active
                         rescheduledReason: req?.reason || 'Rescheduled'
                     })
                 }))
+
+                // Mark original admit cards as rescheduled (void)
+                await AdmitCard.updateMany(
+                    { examId: originalExam._id, studentId: { $in: studentIds } },
+                    { $set: { isRescheduled: true, rescheduledReason: 'Rescheduled (Approved)' } }
+                )
 
                 // Update Requests
                 await RescheduleRequest.updateMany(

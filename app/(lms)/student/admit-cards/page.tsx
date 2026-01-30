@@ -28,7 +28,8 @@ export default function AdmitCardsPage() {
     fetch(`/api/admit-cards?studentId=${studentId}`)
       .then(res => res.json())
       .then(data => {
-        setCards(Array.isArray(data) ? data : [])
+        const activeCards = (Array.isArray(data) ? data : []).filter((c: any) => !c.isRescheduled && !c.rescheduled)
+        setCards(activeCards)
         setLoading(false)
       })
       .catch(() => setLoading(false))
