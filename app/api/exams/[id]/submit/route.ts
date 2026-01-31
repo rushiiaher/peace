@@ -3,12 +3,13 @@ import connectDB from '@/lib/mongodb'
 import Exam from '@/lib/models/Exam'
 import ExamResult from '@/lib/models/ExamResult'
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, props: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await props.params
     await connectDB()
     const { studentId, answers, timeTaken } = await req.json()
 
-    const exam = await Exam.findById(params.id)
+    const exam = await Exam.findById(id)
     if (!exam) return NextResponse.json({ error: 'Exam not found' }, { status: 404 })
 
     let correctCount = 0
@@ -21,7 +22,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     const score = (correctCount / exam.questions.length) * calculatedTotalMarks
     const percentage = calculatedTotalMarks > 0 ? (score / calculatedTotalMarks) * 100 : 0
 
-    const existingResult = await ExamResult.findOne({ examId: params.id, studentId })
+    const existingResult = await ExamResult.findOne({ examId: id, studentId })
 
     if (existingResult) {
       existingResult.answers = answers
@@ -38,7 +39,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     const isRescheduled = exam.title?.includes('(Rescheduled)')
 
     const result = await ExamResult.create({
-      examId: params.id,
+      examId: id,
       studentId,
       answers,
       score,
