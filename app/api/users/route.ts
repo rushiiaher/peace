@@ -39,6 +39,21 @@ export async function POST(req: Request) {
     await connectDB()
     const data = await req.json()
 
+    // Handle empty rollNo to prevent unique constraint violation (sparse index)
+    if (data.rollNo === '' || data.rollNo === null) {
+      delete data.rollNo
+    }
+
+    // Auto-generate roll number if missing for students
+    if (data.role === 'student' && !data.rollNo) {
+      const Institute = (await import('@/lib/models/Institute')).default
+      const inst = await Institute.findById(data.instituteId)
+      const instCode = inst?.code || 'ST'
+      const timestamp = Date.now().toString().slice(-6)
+      const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0')
+      data.rollNo = `${instCode}-${timestamp}${random}`
+    }
+
     // Hash password
     if (data.password) {
       data.password = await bcrypt.hash(data.password, 12)
@@ -54,8 +69,9 @@ export async function POST(req: Request) {
   } catch (error: any) {
     console.error('Error creating user:', error)
     if (error.code === 11000) {
-      return NextResponse.json({ error: 'Email or Roll Number already exists' }, { status: 400 })
+      const field = Object.keys(error.keyPattern || {})[0] || 'Email or Roll Number'
+      return NextResponse.json({ error: `${field} already exists` }, { status: 400 })
     }
-    return NextResponse.json({ error: 'Failed to create user' }, { status: 500 })
+    return NextResponse.json({ error: error.message || 'Failed to create user' }, { status: 500 })
   }
 }

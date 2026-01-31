@@ -43,6 +43,11 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       delete data.instituteId
     }
 
+    // Handle empty rollNo to prevent unique constraint violation (sparse index)
+    if (data.rollNo === '' || data.rollNo === null) {
+      delete data.rollNo
+    }
+
     const user = await User.findByIdAndUpdate(id, data, { new: true })
       .select('-password')
       .populate('courses.courseId', 'name code')
@@ -52,6 +57,10 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     return NextResponse.json(user)
   } catch (error: any) {
     console.error('Error updating user:', error)
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern || {})[0] || 'Email or Roll Number'
+      return NextResponse.json({ error: `${field} already exists` }, { status: 400 })
+    }
     return NextResponse.json({
       error: 'Failed to update user',
       details: error.message
