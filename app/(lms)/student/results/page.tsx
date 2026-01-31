@@ -146,7 +146,7 @@ export default function ResultsPage() {
                         className="w-full md:w-auto gap-2"
                         onClick={() => router.push(`/student/results/${result._id}/review`)}
                       >
-                        Review Answers
+                        Answer Key
                       </Button>
                     </div>
                   </div>
@@ -208,7 +208,7 @@ export default function ResultsPage() {
                         className="w-full md:w-auto gap-2"
                         onClick={() => router.push(`/student/results/${result._id}/review`)}
                       >
-                        Review Answers
+                        Answer Key
                       </Button>
                     </div>
                   </div>

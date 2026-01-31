@@ -41,7 +41,7 @@ export default function ExamReviewPage() {
                     <ArrowLeft className="w-5 h-5" />
                 </Button>
                 <SectionHeader
-                    title="Review Answers"
+                    title="Answer Key"
                     subtitle={`${result.examId?.title} - ${result.examId?.courseId?.name}`}
                 />
             </div>
@@ -76,7 +76,7 @@ export default function ExamReviewPage() {
             <div className="space-y-4">
                 <div className="flex items-center gap-2 p-3 bg-muted/30 rounded-lg text-sm text-muted-foreground border">
                     <Info className="w-4 h-4" />
-                    <span>Review your selections against the correct answers below.</span>
+                    <span>Review the correct answers against your selections below.</span>
                 </div>
 
                 {questions.map((q: any, idx: number) => {
