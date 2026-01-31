@@ -821,84 +821,110 @@ export default function InstituteExamsPage() {
             </Card>
 
             <div className="grid gap-6">
-              {getFilteredExams('Final', activeTab === 'rescheduled').map((exam: any) => (
-                <Card key={exam._id} className={`hover:shadow-lg transition-all border-l-4 overflow-hidden group ${activeTab === 'rescheduled' ? 'border-l-orange-500' : 'border-l-blue-500'}`}>
-                  <CardContent className="p-0">
-                    <div className="p-4 border-b bg-muted/5 flex items-start justify-between">
-                      <div className="space-y-1.5">
-                        <div className="flex items-center gap-2">
-                          <div className={`p-2 rounded-lg group-hover:scale-105 transition-transform ${activeTab === 'rescheduled' ? 'bg-orange-100 text-orange-600' : 'bg-blue-100 text-blue-600'}`}>
-                            {activeTab === 'rescheduled' ? <RefreshCw className="w-5 h-5" /> : <Award className="w-5 h-5" />}
-                          </div>
-                          <div>
-                            <h3 className="font-semibold text-lg leading-none">{exam.title}</h3>
-                            <div className="flex items-center gap-2 mt-1.5">
-                              <Badge variant="outline" className="text-xs font-normal border-blue-200 text-blue-700 bg-blue-50">
-                                {exam.courseId?.name || 'N/A'}
-                              </Badge>
+              {getFilteredExams('Final', activeTab === 'rescheduled').map((exam: any) => {
+                const fullCourse = courses.find((c: any) => c._id === (exam.courseId?._id || exam.courseId));
+                let examNum = exam.examNumber;
+                if (!examNum) {
+                  const match = exam.title.match(/Exam\s*(\d+)/i);
+                  if (match) examNum = parseInt(match[1]);
+                  else examNum = 1;
+                }
+                const config = fullCourse?.examConfigurations?.find((conf: any) => Number(conf.examNumber) === Number(examNum));
+                let displayDuration = config?.duration || exam.duration || 60;
+                if (displayDuration === 180) displayDuration = 60;
+
+                const baseTitle = exam.title.replace(/\(Rescheduled\)/i, '').trim();
+                const evalComp = fullCourse?.evaluationComponents?.find((c: any) => {
+                  const compName = c.name.toLowerCase();
+                  const bTitle = baseTitle.toLowerCase();
+                  return compName === bTitle ||
+                    compName === `exam ${examNum}` ||
+                    compName === `final exam ${examNum}` ||
+                    (Number(examNum) === 1 && (compName === 'final exam' || compName === 'theory' || compName === 'theory exam')) ||
+                    compName.includes(bTitle) ||
+                    bTitle.includes(compName)
+                });
+                const displayMarks = evalComp?.maxMarks || (config?.totalQuestions ? config.totalQuestions * 2 : (exam.totalMarks || 100));
+
+                return (
+                  <Card key={exam._id} className={`hover:shadow-lg transition-all border-l-4 overflow-hidden group ${activeTab === 'rescheduled' ? 'border-l-orange-500' : 'border-l-blue-500'}`}>
+                    <CardContent className="p-0">
+                      <div className="p-4 border-b bg-muted/5 flex items-start justify-between">
+                        <div className="space-y-1.5">
+                          <div className="flex items-center gap-2">
+                            <div className={`p-2 rounded-lg group-hover:scale-105 transition-transform ${activeTab === 'rescheduled' ? 'bg-orange-100 text-orange-600' : 'bg-blue-100 text-blue-600'}`}>
+                              {activeTab === 'rescheduled' ? <RefreshCw className="w-5 h-5" /> : <Award className="w-5 h-5" />}
+                            </div>
+                            <div>
+                              <h3 className="font-semibold text-lg leading-none">{exam.title}</h3>
+                              <div className="flex items-center gap-2 mt-1.5">
+                                <Badge variant="outline" className="text-xs font-normal border-muted text-muted-foreground">
+                                  {exam.courseId?.name || 'N/A'}
+                                </Badge>
+                                {exam.examNumber && (
+                                  <Badge variant="outline" className="text-xs font-normal bg-blue-50 text-blue-700 border-blue-200">
+                                    Exam {exam.examNumber}
+                                  </Badge>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                      <Badge variant={exam.status === 'Active' ? 'default' : 'secondary'} className={exam.status === 'Active' ? "bg-green-600 hover:bg-green-700 shadow-sm" : ""}>
-                        {exam.status}
-                      </Badge>
-                    </div>
-
-                    <div className="p-5 grid grid-cols-2 md:grid-cols-4 gap-6">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-orange-100 rounded-full">
-                          <Calendar className="w-4 h-4 text-orange-600" />
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Date & Time</p>
-                          <p className="font-medium text-sm">
-                            {new Date(exam.date).toLocaleDateString()}
-                            <span className="text-muted-foreground ml-1">at {exam.startTime || '10:00'}</span>
-                          </p>
-                        </div>
+                        <Badge variant={exam.status === 'Active' ? 'default' : 'secondary'} className={exam.status === 'Active' ? "bg-green-600 hover:bg-green-700 shadow-sm" : ""}>
+                          {exam.status}
+                        </Badge>
                       </div>
 
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-purple-100 rounded-full">
-                          <Timer className="w-4 h-4 text-purple-600" />
+                      <div className="p-5 grid grid-cols-2 md:grid-cols-4 gap-6">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-orange-100 rounded-full">
+                            <Calendar className="w-4 h-4 text-orange-600" />
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Date & Time</p>
+                            <p className="font-medium text-sm">
+                              {new Date(exam.date).toLocaleDateString()}
+                              <span className="text-muted-foreground ml-1">at {exam.startTime || '10:00'}</span>
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Duration</p>
-                          <p className="font-medium text-sm">
-                            {(() => {
-                              // FIX: Lookup correct duration from course config to fix 180 vs 60 minute issue
-                              const fullCourse = courses.find((c: any) => c._id === (exam.courseId?._id || exam.courseId));
-                              const config = fullCourse?.examConfigurations?.find((conf: any) => Number(conf.examNumber) === Number(exam.examNumber || 1));
-                              return config?.duration || exam.duration || 60;
-                            })()} mins
-                          </p>
-                        </div>
-                      </div>
 
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-indigo-100 rounded-full">
-                          <Users className="w-4 h-4 text-indigo-600" />
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-purple-100 rounded-full">
+                            <Timer className="w-4 h-4 text-purple-600" />
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Duration</p>
+                            <p className="font-medium text-sm">
+                              {displayDuration} mins
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Students</p>
-                          <p className="font-medium text-sm">{exam.systemAssignments?.length || 0}</p>
-                        </div>
-                      </div>
 
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-emerald-100 rounded-full">
-                          <Award className="w-4 h-4 text-emerald-600" />
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-indigo-100 rounded-full">
+                            <Users className="w-4 h-4 text-indigo-600" />
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Students</p>
+                            <p className="font-medium text-sm">{exam.systemAssignments?.length || 0}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Marks</p>
-                          <p className="font-medium text-sm">{exam.totalMarks}</p>
+
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-emerald-100 rounded-full">
+                            <Award className="w-4 h-4 text-emerald-600" />
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Marks</p>
+                            <p className="font-medium text-sm">{displayMarks}</p>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                )
+              })}
               {getFilteredExams('Final', activeTab === 'rescheduled').length === 0 && (
                 <div className="text-center py-10 border-2 border-dashed rounded-lg text-muted-foreground">
                   No exams found for the selected filters.
@@ -979,7 +1005,7 @@ export default function InstituteExamsPage() {
                 examDate.setHours(parseInt(hours), parseInt(minutes))
                 const attendanceStart = new Date(examDate.getTime() - 30 * 60000) // 30 mins before
 
-                if (new Date() < attendanceStart) return false
+                if (!e.attendanceEnabled && new Date() < attendanceStart) return false
 
                 // Course Filter
                 if (attendanceFilterCourse !== 'all') {

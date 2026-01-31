@@ -11,13 +11,14 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     const exam = await Exam.findById(params.id)
     if (!exam) return NextResponse.json({ error: 'Exam not found' }, { status: 404 })
 
-    let score = 0
+    let correctCount = 0
     exam.questions.forEach((q: any, i: number) => {
-      if (answers[i] === q.correctAnswer) score += 2
+      if (answers[i] === q.correctAnswer) correctCount++
     })
 
-    // Enforce 2 marks per question for total marks calculation to ensure accuracy
-    const calculatedTotalMarks = exam.questions.length * 2
+    // Use the stored totalMarks if available, otherwise fallback to question-based calculation
+    const calculatedTotalMarks = exam.totalMarks || (exam.questions.length * 2)
+    const score = (correctCount / exam.questions.length) * calculatedTotalMarks
     const percentage = calculatedTotalMarks > 0 ? (score / calculatedTotalMarks) * 100 : 0
 
     const existingResult = await ExamResult.findOne({ examId: params.id, studentId })

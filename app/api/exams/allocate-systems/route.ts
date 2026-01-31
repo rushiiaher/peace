@@ -125,16 +125,35 @@ export async function POST(req: Request) {
       remaining -= count
     })
 
+    // Determine exam number and total marks based on course configuration
+    let examNumber = 1;
+    const numMatch = title.match(/Exam\s*(\d+)/i);
+    if (numMatch) examNumber = parseInt(numMatch[1]);
+
+    const baseTitle = title.replace(/\(Rescheduled\)/i, '').trim().toLowerCase();
+    const evalComp = course.evaluationComponents?.find((c: any) => {
+      const compName = c.name.toLowerCase();
+      return compName === baseTitle ||
+        compName === `exam ${examNumber}` ||
+        compName === `final exam ${examNumber}` ||
+        (examNumber === 1 && (compName === 'final exam' || compName === 'theory' || compName === 'theory exam')) ||
+        compName.includes(baseTitle) ||
+        baseTitle.includes(compName);
+    });
+
+    const finalTotalMarks = evalComp?.maxMarks || questionsToSelect * 2;
+
     const exam = await Exam.create({
       courseId,
       instituteId,
       type: 'Final',
       title,
+      examNumber,
       date: sections[0].date,
       startTime: sections[0].startTime,
       endTime: sections[sections.length - 1].endTime,
       duration: sectionDuration,
-      totalMarks: questionsToSelect * 2,
+      totalMarks: finalTotalMarks,
       questions: questionPool,
       multiSection: sections.length > 1,
       sections,
