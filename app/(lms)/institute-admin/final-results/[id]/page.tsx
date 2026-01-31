@@ -171,7 +171,10 @@ export default function BatchResultEntryPage() {
                 // IF the exam result is missing? Actually Exam Result is source of truth.
                 // If Exam Result exists, we enforce it.
 
-                const examRes = fExamResults.find((r: any) => (r.studentId._id || r.studentId) === sid)
+                const examRes = fExamResults.find((r: any) => {
+                    const resSid = r.studentId?._id?.toString() || r.studentId?.toString()
+                    return resSid === sid?.toString()
+                })
 
                 // We target the identified final component name.
                 // Sentinel -1 means Not Conducted / Absent.
