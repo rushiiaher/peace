@@ -32,19 +32,25 @@ export default function BatchResultEntryPage() {
     const [instituteId, setInstituteId] = useState<string | null>(null)
     const [institute, setInstitute] = useState<any>(null)
 
+    const finalCompName = useMemo(() => {
+        if (!course) return 'Final Exam'
+        const comp = dynamicComponents.find((c: any) => c.name.toLowerCase().includes('final'))
+        return comp?.name || 'Final Exam'
+    }, [course, dynamicComponents])
+
     // Derived State for Components including dynamically fetched Final Exam
     // Derived State for Components including dynamically fetched Final Exam
     const dynamicComponents = useMemo(() => {
         if (!course) return []
         const components = [...(course.evaluationComponents || [])]
-        if (finalExamMetadata && !components.some((c: any) => c.name === 'Final Exam' || c.name.includes('Final'))) {
+        if (finalExamMetadata && !components.some((c: any) => c.name === finalCompName || c.name.includes('Final'))) {
             components.push({
-                name: 'Final Exam',
+                name: finalCompName,
                 maxMarks: finalExamMetadata.totalMarks || 100
             })
         }
         return components
-    }, [course, finalExamMetadata])
+    }, [course, finalExamMetadata, finalCompName])
 
     useEffect(() => {
         const user = JSON.parse(localStorage.getItem('user') || '{}')
@@ -64,9 +70,6 @@ export default function BatchResultEntryPage() {
             // Actually standard is often /api/batches/[id] but current route.ts is query based. 
             // Let's try fetching all batches and finding (not efficient but checking route.ts)
             // Wait, route.ts has ?instituteId. 
-            // I'll assume /api/batches returns array.
-
-            // Re-reading previous `view_file` of Batches Page: it fetches /api/batches?instituteId=...
             // I should use that or fix API to get single. 
             // For now, I'll fetch list and find. (Or better: create /api/batches/[id] route later if needed).
             // Actually, I can use the same endpoint if I filter by id in frontend or if backend supports it.
@@ -169,16 +172,16 @@ export default function BatchResultEntryPage() {
 
                 const examRes = fExamResults.find((r: any) => (r.studentId._id || r.studentId) === sid)
 
-                // We target the component named "Final Exam" (User requirement).
+                // We target the identified final component name.
                 // Sentinel -1 means Not Conducted / Absent.
 
                 if (examRes) {
-                    initialMarks[sid]['Final Exam'] = examRes.score
+                    initialMarks[sid][finalCompName] = examRes.score
                 } else {
                     // If exam metadata exists but student has no result -> Not Conducted
                     // If exam metadata doesn't exist -> we let it be 0 or manual (or handle as normal)
                     if (fExamMeta) {
-                        initialMarks[sid]['Final Exam'] = -1
+                        initialMarks[sid][finalCompName] = -1
                     }
                 }
             })
@@ -244,9 +247,9 @@ export default function BatchResultEntryPage() {
             }))
 
         // Get Final Exam data
-        const finalExamMarks = studentMarks['Final Exam'] || 0
-        const finalExamConfig = dynamicComponents.find((c: any) => c.name === 'Final Exam')
-        const finalExamMaxMarks = finalExamConfig?.maxMarks || (finalExamMetadata?.questions?.length * 2) || 100
+        const finalExamMarks = studentMarks[finalCompName] || 0
+        const finalExamConfig = dynamicComponents.find((c: any) => c.name === finalCompName)
+        const finalExamMaxMarks = finalExamConfig?.maxMarks || (finalExamMetadata?.totalMarks || 100)
 
         // Calculate correct answers (2 marks per question)
         const finalExamCorrect = Math.floor(finalExamMarks / 2)
@@ -296,12 +299,17 @@ export default function BatchResultEntryPage() {
 
         const payload = students.map(student => {
             const studentMarks = marksMap[student._id] || {}
-            const evalMarks = dynamicComponents.map((comp: any) => ({
-                name: comp.name,
-                marksObtained: studentMarks[comp.name] || 0,
-                maxMarks: comp.maxMarks
-            }))
 
+            // Separate Final Exam from other evaluation components
+            const evalMarks = dynamicComponents
+                .filter((comp: any) => !comp.name.toLowerCase().includes('final'))
+                .map((comp: any) => ({
+                    name: comp.name,
+                    marksObtained: studentMarks[comp.name] || 0,
+                    maxMarks: comp.maxMarks
+                }))
+
+            const onlineExamScore = studentMarks['Final Exam'] || 0
             const totalScore = calculateTotal(student._id)
             const totalMaxMarks = dynamicComponents.reduce((sum: number, c: any) => sum + c.maxMarks, 0)
 
@@ -311,9 +319,11 @@ export default function BatchResultEntryPage() {
                 batchId: batch._id,
                 instituteId: instituteId,
                 evaluationMarks: evalMarks,
+                onlineExamScore,
                 totalScore,
                 totalMaxMarks,
-                percentage: calculatePercentage(totalScore)
+                percentage: calculatePercentage(totalScore),
+                aadhaarCardNo: student.aadhaarCardNo // Optional: snapshot for reference
             }
         })
 
@@ -448,7 +458,7 @@ export default function BatchResultEntryPage() {
                                             size="sm"
                                             onClick={() => handleDownloadCertificate(student)}
                                             className="gap-1 h-8 text-xs"
-                                            disabled={!marksMap[student._id]?.['Final Exam'] || marksMap[student._id]?.['Final Exam'] === -1}
+                                            disabled={!marksMap[student._id]?.[finalCompName] || marksMap[student._id]?.[finalCompName] === -1}
                                         >
                                             <Download className="w-3 h-3" />
                                             Certificate
@@ -468,8 +478,8 @@ export default function BatchResultEntryPage() {
                 <Button
                     variant="default"
                     className="bg-green-600 hover:bg-green-700 gap-2 disabled:opacity-50"
-                    disabled={students.some(s => marksMap[s._id]?.['Final Exam'] === -1)}
-                    title={students.some(s => marksMap[s._id]?.['Final Exam'] === -1) ? "Cannot submit: Final Exam pending for some students" : ""}
+                    disabled={students.some(s => marksMap[s._id]?.[finalCompName] === -1)}
+                    title={students.some(s => marksMap[s._id]?.[finalCompName] === -1) ? "Cannot submit: Final Exam pending for some students" : ""}
                 >
                     <Send className="w-4 h-4" /> Finalize & Submit to Super Admin
                 </Button>

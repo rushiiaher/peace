@@ -15,14 +15,27 @@ export async function GET(req: Request) {
     const role = searchParams.get('role')
 
     const courseId = searchParams.get('courseId')
+    const batchId = searchParams.get('batchId')
 
     let query: any = {}
     if (instituteId) query.instituteId = instituteId
     if (role) query.role = role
     if (courseId) query['courses.courseId'] = courseId
 
+    // Handle batchId filtering - if batchId is provided, we fetch students from that batch
+    if (batchId) {
+      const Batch = (await import('@/lib/models/Batch')).default
+      const batch = await Batch.findById(batchId)
+      if (batch) {
+        query._id = { $in: batch.students }
+      } else {
+        // If batch not found, return empty
+        return NextResponse.json([])
+      }
+    }
+
     const users = await User.find(query)
-      .select('name email role instituteId status createdAt lastLogin rollNo phone documents courses')
+      .select('name email role instituteId status createdAt lastLogin rollNo phone documents courses motherName aadhaarCardNo dateOfBirth')
       .populate('instituteId', 'name code')
       .populate('courses.courseId', 'name code')
       .sort({ createdAt: -1 })
