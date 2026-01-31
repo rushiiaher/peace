@@ -34,16 +34,17 @@ export default function BatchResultEntryPage() {
 
     const finalCompName = useMemo(() => {
         if (!course) return 'Final Exam'
-        const comp = dynamicComponents.find((c: any) => c.name.toLowerCase().includes('final'))
+        const comp = course.evaluationComponents?.find((c: any) => c.name.toLowerCase().includes('final'))
         return comp?.name || 'Final Exam'
-    }, [course, dynamicComponents])
+    }, [course])
 
-    // Derived State for Components including dynamically fetched Final Exam
     // Derived State for Components including dynamically fetched Final Exam
     const dynamicComponents = useMemo(() => {
         if (!course) return []
         const components = [...(course.evaluationComponents || [])]
-        if (finalExamMetadata && !components.some((c: any) => c.name === finalCompName || c.name.includes('Final'))) {
+
+        const alreadyHasFinal = components.some((c: any) => c.name.toLowerCase().includes('final'))
+        if (finalExamMetadata && !alreadyHasFinal) {
             components.push({
                 name: finalCompName,
                 maxMarks: finalExamMetadata.totalMarks || 100

@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import { SectionHeader } from "@/components/lms/section"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { useRouter } from 'next/navigation'
 // import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Award, TrendingUp, FileText, Clock, Calendar } from "lucide-react"
@@ -15,6 +17,7 @@ export default function ResultsPage() {
   const [loading, setLoading] = useState(true)
   const [studentId, setStudentId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState("dpp")
+  const router = useRouter()
 
   useEffect(() => {
     const user = localStorage.getItem('user')
@@ -114,7 +117,7 @@ export default function ResultsPage() {
                   </div>
                 </CardHeader>
                 <CardContent className="pt-4">
-                  <div className="grid grid-cols-3 gap-4 text-sm">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                     <div className="flex items-center gap-2">
                       <Award className="w-4 h-4 text-muted-foreground" />
                       <div>
@@ -135,6 +138,16 @@ export default function ResultsPage() {
                         <p className="text-muted-foreground">Date</p>
                         <p className="font-medium">{new Date(result.submittedAt).toLocaleDateString()}</p>
                       </div>
+                    </div>
+                    <div className="flex items-end justify-end">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full md:w-auto gap-2"
+                        onClick={() => router.push(`/student/results/${result._id}/review`)}
+                      >
+                        Review Answers
+                      </Button>
                     </div>
                   </div>
                 </CardContent>
@@ -166,7 +179,7 @@ export default function ResultsPage() {
                   </div>
                 </CardHeader>
                 <CardContent className="pt-4">
-                  <div className="grid grid-cols-3 gap-4 text-sm">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                     <div className="flex items-center gap-2">
                       <Award className="w-4 h-4 text-muted-foreground" />
                       <div>
@@ -187,6 +200,16 @@ export default function ResultsPage() {
                         <p className="text-muted-foreground">Date</p>
                         <p className="font-medium">{new Date(result.submittedAt).toLocaleDateString()}</p>
                       </div>
+                    </div>
+                    <div className="flex items-end justify-end">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full md:w-auto gap-2"
+                        onClick={() => router.push(`/student/results/${result._id}/review`)}
+                      >
+                        Review Answers
+                      </Button>
                     </div>
                   </div>
                 </CardContent>
