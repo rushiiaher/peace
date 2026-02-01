@@ -48,10 +48,17 @@ export default function SuperAdminFeedbackPage() {
         fetch('/api/institutes'),
         fetch('/api/courses')
       ])
-      setForms(await formsRes.json())
-      setResponses(await responsesRes.json())
-      setInstitutes(await institutesRes.json())
-      setCourses(await coursesRes.json())
+      const [fData, rData, iData, cData] = await Promise.all([
+        formsRes.json(),
+        responsesRes.json(),
+        institutesRes.json(),
+        coursesRes.json()
+      ])
+
+      setForms(Array.isArray(fData) ? fData : [])
+      setResponses(Array.isArray(rData) ? rData : [])
+      setInstitutes(Array.isArray(iData) ? iData : [])
+      setCourses(Array.isArray(cData) ? cData : [])
     } catch (error) {
       toast.error('Failed to fetch data')
     } finally {
