@@ -133,7 +133,7 @@ export const generateProvisionalCertificateHtml = (data: ProvisionalCertificateD
 
       const draw = (text, x_mm, y_mm, size_pt = 12, color = '#000000', align = 'left', weight = 'bold', maxWidth_mm = 0) => {
         const sizePx = size_pt * 0.352 * scale;
-        ctx.font = \`\${weight} \${sizePx}px "Times New Roman", serif\`;
+        ctx.font = \`\${weight} \${sizePx}px Arial, sans-serif\`;
         ctx.fillStyle = color;
         ctx.textAlign = align;
         const x = x_mm * scale;
