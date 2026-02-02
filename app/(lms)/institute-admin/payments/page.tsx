@@ -175,6 +175,18 @@ export default function InstitutePaymentsPage() {
       const batchData = await batchRes.json()
       const instData = await instRes.json()
 
+      console.log('[DEBUG] API Response - Total Payments:', Array.isArray(payData) ? payData.length : 0)
+      if (Array.isArray(payData)) {
+        const pending = payData.filter((p: any) => p.status === 'Pending').length
+        const paid = payData.filter((p: any) => p.status === 'Paid').length
+        console.log('[DEBUG] Payment Status Breakdown:', {
+          total: payData.length,
+          pending,
+          paid,
+          statuses: payData.map((p: any) => p.status)
+        })
+      }
+
       setPayments(Array.isArray(payData) ? payData : [])
       setBatches(Array.isArray(batchData) ? batchData : [])
       setCourses(instData.courses || [])
