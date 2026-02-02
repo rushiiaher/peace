@@ -41,15 +41,22 @@ export default function InstitutePaymentsPage() {
 
   // --- Derived State & Filter Logic ---
   const getBatchStatus = (payment: any) => {
-    // Find matching batch
-    const batch = batches.find((b: any) =>
-      b.courseId?._id === payment.courseId?._id &&
-      b.students?.some((s: any) => s._id === payment.studentId?._id || s === payment.studentId?._id)
+    // Find ALL batches for this course (don't check students array, as students may be removed when batch ends)
+    const courseBatches = batches.filter((b: any) =>
+      b.courseId?._id === payment.courseId?._id || b.courseId === payment.courseId?._id
     )
-    if (!batch) {
-      console.log('[DEBUG] No batch found for payment:', payment._id, 'Student:', payment.studentId?.name)
-      return 'Active' // Default if not found (should be rare)
+
+    if (courseBatches.length === 0) {
+      console.log('[DEBUG] No batch found for course:', payment.courseId?.name, 'Student:', payment.studentId?.name)
+      return 'Active' // Default if not found
     }
+
+    // If multiple batches for same course, use the most recently ended one
+    // Sort by endDate descending (most recent first)
+    const sortedBatches = [...courseBatches].sort((a: any, b: any) =>
+      new Date(b.endDate).getTime() - new Date(a.endDate).getTime()
+    )
+    const batch = sortedBatches[0]
 
     // Check if batch is effectively finished based on End Date
     // Normalize to start of day for proper comparison
@@ -63,6 +70,7 @@ export default function InstitutePaymentsPage() {
       batchName: batch.name,
       batchId: batch._id,
       studentName: payment.studentId?.name,
+      courseBatchesFound: courseBatches.length,
       endDate: batch.endDate,
       endDateNormalized: endDate.toISOString(),
       todayNormalized: today.toISOString(),
