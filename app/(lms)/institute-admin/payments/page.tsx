@@ -49,7 +49,13 @@ export default function InstitutePaymentsPage() {
     if (!batch) return 'Active' // Default if not found (should be rare)
 
     // Check if batch is effectively finished based on End Date
-    if (new Date(batch.endDate) < new Date()) return 'Finished'
+    // Normalize to start of day for proper comparison
+    const endDate = new Date(batch.endDate)
+    const today = new Date()
+    endDate.setHours(0, 0, 0, 0)
+    today.setHours(0, 0, 0, 0)
+
+    if (endDate < today) return 'Finished'
     return 'Active'
   }
 
