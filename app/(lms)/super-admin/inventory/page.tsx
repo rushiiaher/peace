@@ -214,7 +214,7 @@ export default function InventoryPage() {
         }), 0)
 
         // Build dynamic headers
-        const baseHeaders = ['Sr. No', 'Student Name', 'Mother Name', 'Roll No', 'Email', 'Phone']
+        const baseHeaders = ['Sr. No', 'Student Name', 'Mother Name', 'Roll No', 'Aadhaar Number']
         const marksHeaders = [...evalComponentNames]
 
         // Add Final Exam column(s)
@@ -236,8 +236,7 @@ export default function InventoryPage() {
                 res.studentId?.name || '',
                 res.studentId?.motherName || '',
                 res.studentId?.rollNo || '',
-                res.studentId?.email || '',
-                res.studentId?.phone || ''
+                res.studentId?.aadhaarCardNo || ''
             ]
 
             // Map evaluation marks to their columns (excluding Final Exam)
