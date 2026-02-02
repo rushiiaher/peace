@@ -43,7 +43,6 @@ export default function InstitutePaymentsPage() {
   const getBatchStatus = (payment: any) => {
     // Safety check: if payment has no courseId, default to Active
     if (!payment.courseId) {
-      console.log('[DEBUG] Payment has no courseId:', payment._id, 'Student:', payment.studentId?.name)
       return 'Active'
     }
 
@@ -56,7 +55,6 @@ export default function InstitutePaymentsPage() {
     })
 
     if (courseBatches.length === 0) {
-      console.log('[DEBUG] No batch found for course:', payment.courseId?.name, 'Student:', payment.studentId?.name)
       return 'Active' // Default if not found
     }
 
@@ -75,29 +73,10 @@ export default function InstitutePaymentsPage() {
     today.setHours(0, 0, 0, 0)
 
     const status = endDate < today ? 'Finished' : 'Active'
-    console.log('[DEBUG] Batch Status Check:', {
-      batchName: batch.name,
-      batchId: batch._id,
-      studentName: payment.studentId?.name,
-      courseBatchesFound: courseBatches.length,
-      endDate: batch.endDate,
-      endDateNormalized: endDate.toISOString(),
-      todayNormalized: today.toISOString(),
-      status: status
-    })
-
     return status
   }
 
   const getFilteredPayments = (list: any[], ignoreBatchStatus = false) => {
-    console.log('[DEBUG] getFilteredPayments called:', {
-      listLength: list.length,
-      ignoreBatchStatus,
-      showPastBatches,
-      filterBatch,
-      filterCourse
-    })
-
     return list.filter(p => {
       // 1. Search Query
       if (searchQuery) {
@@ -128,17 +107,7 @@ export default function InstitutePaymentsPage() {
         if (!ignoreBatchStatus) {
           const status = getBatchStatus(p)
           const shouldFilter = !showPastBatches && status !== 'Active'
-          console.log('[DEBUG] Batch Status Filter:', {
-            studentName: p.studentId?.name,
-            paymentStatus: p.status,
-            batchStatus: status,
-            showPastBatches,
-            shouldFilter,
-            willBeFiltered: shouldFilter
-          })
           if (shouldFilter) return false
-        } else {
-          console.log('[DEBUG] Ignoring batch status for:', p.studentId?.name, 'Payment Status:', p.status)
         }
       }
 
@@ -191,18 +160,6 @@ export default function InstitutePaymentsPage() {
       const payData = await payRes.json()
       const batchData = await batchRes.json()
       const instData = await instRes.json()
-
-      console.log('[DEBUG] API Response - Total Payments:', Array.isArray(payData) ? payData.length : 0)
-      if (Array.isArray(payData)) {
-        const pending = payData.filter((p: any) => p.status === 'Pending').length
-        const paid = payData.filter((p: any) => p.status === 'Paid').length
-        console.log('[DEBUG] Payment Status Breakdown:', {
-          total: payData.length,
-          pending,
-          paid,
-          statuses: payData.map((p: any) => p.status)
-        })
-      }
 
       setPayments(Array.isArray(payData) ? payData : [])
       setBatches(Array.isArray(batchData) ? batchData : [])
@@ -519,11 +476,7 @@ export default function InstitutePaymentsPage() {
             <Button
               variant={showPastBatches ? "secondary" : "outline"}
               className="gap-2 whitespace-nowrap"
-              onClick={() => {
-                const newValue = !showPastBatches
-                console.log('[DEBUG] Toggle Clicked! showPastBatches:', showPastBatches, '→', newValue)
-                setShowPastBatches(newValue)
-              }}
+              onClick={() => setShowPastBatches(!showPastBatches)}
             >
               <History className="w-4 h-4" />
               {showPastBatches ? "Including Finished" : "Include Finished Batches"}
