@@ -97,7 +97,7 @@ export default function InstitutePaymentsPage() {
 
   // Filtered Lists
   const pendingPayments = getFilteredPayments(allPending, false)
-  const filteredPaidPayments = getFilteredPayments(allPaid, true)
+  const filteredPaidPayments = getFilteredPayments(allPaid, false)
 
   const totalPending = pendingPayments.reduce((sum: number, p: any) => sum + p.totalAmount, 0)
 
