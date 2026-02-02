@@ -41,10 +41,19 @@ export default function InstitutePaymentsPage() {
 
   // --- Derived State & Filter Logic ---
   const getBatchStatus = (payment: any) => {
+    // Safety check: if payment has no courseId, default to Active
+    if (!payment.courseId) {
+      console.log('[DEBUG] Payment has no courseId:', payment._id, 'Student:', payment.studentId?.name)
+      return 'Active'
+    }
+
     // Find ALL batches for this course (don't check students array, as students may be removed when batch ends)
-    const courseBatches = batches.filter((b: any) =>
-      b.courseId?._id === payment.courseId?._id || b.courseId === payment.courseId?._id
-    )
+    const courseBatches = batches.filter((b: any) => {
+      if (!b.courseId) return false // Skip batches with no courseId
+      const batchCourseId = typeof b.courseId === 'object' ? b.courseId._id : b.courseId
+      const paymentCourseId = typeof payment.courseId === 'object' ? payment.courseId._id : payment.courseId
+      return batchCourseId === paymentCourseId
+    })
 
     if (courseBatches.length === 0) {
       console.log('[DEBUG] No batch found for course:', payment.courseId?.name, 'Student:', payment.studentId?.name)
