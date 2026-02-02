@@ -46,7 +46,10 @@ export default function InstitutePaymentsPage() {
       b.courseId?._id === payment.courseId?._id &&
       b.students?.some((s: any) => s._id === payment.studentId?._id || s === payment.studentId?._id)
     )
-    if (!batch) return 'Active' // Default if not found (should be rare)
+    if (!batch) {
+      console.log('[DEBUG] No batch found for payment:', payment._id, 'Student:', payment.studentId?.name)
+      return 'Active' // Default if not found (should be rare)
+    }
 
     // Check if batch is effectively finished based on End Date
     // Normalize to start of day for proper comparison
@@ -55,11 +58,29 @@ export default function InstitutePaymentsPage() {
     endDate.setHours(0, 0, 0, 0)
     today.setHours(0, 0, 0, 0)
 
-    if (endDate < today) return 'Finished'
-    return 'Active'
+    const status = endDate < today ? 'Finished' : 'Active'
+    console.log('[DEBUG] Batch Status Check:', {
+      batchName: batch.name,
+      batchId: batch._id,
+      studentName: payment.studentId?.name,
+      endDate: batch.endDate,
+      endDateNormalized: endDate.toISOString(),
+      todayNormalized: today.toISOString(),
+      status: status
+    })
+
+    return status
   }
 
   const getFilteredPayments = (list: any[], ignoreBatchStatus = false) => {
+    console.log('[DEBUG] getFilteredPayments called:', {
+      listLength: list.length,
+      ignoreBatchStatus,
+      showPastBatches,
+      filterBatch,
+      filterCourse
+    })
+
     return list.filter(p => {
       // 1. Search Query
       if (searchQuery) {
@@ -89,7 +110,18 @@ export default function InstitutePaymentsPage() {
         // Only apply if we are NOT ignoring it (History tab) AND no specific batch selected
         if (!ignoreBatchStatus) {
           const status = getBatchStatus(p)
-          if (!showPastBatches && status !== 'Active') return false
+          const shouldFilter = !showPastBatches && status !== 'Active'
+          console.log('[DEBUG] Batch Status Filter:', {
+            studentName: p.studentId?.name,
+            paymentStatus: p.status,
+            batchStatus: status,
+            showPastBatches,
+            shouldFilter,
+            willBeFiltered: shouldFilter
+          })
+          if (shouldFilter) return false
+        } else {
+          console.log('[DEBUG] Ignoring batch status for:', p.studentId?.name, 'Payment Status:', p.status)
         }
       }
 
@@ -458,7 +490,11 @@ export default function InstitutePaymentsPage() {
             <Button
               variant={showPastBatches ? "secondary" : "outline"}
               className="gap-2 whitespace-nowrap"
-              onClick={() => setShowPastBatches(!showPastBatches)}
+              onClick={() => {
+                const newValue = !showPastBatches
+                console.log('[DEBUG] Toggle Clicked! showPastBatches:', showPastBatches, '→', newValue)
+                setShowPastBatches(newValue)
+              }}
             >
               <History className="w-4 h-4" />
               {showPastBatches ? "Including Finished" : "Include Finished Batches"}
