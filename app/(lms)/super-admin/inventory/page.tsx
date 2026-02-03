@@ -336,12 +336,16 @@ export default function InventoryPage() {
 
     // Download Photos as ZIP
     const handleDownloadPhotos = async () => {
+        console.log('=== Download Photos Clicked ===')
+        console.log('Filtered Results:', filteredResults.length)
+
         if (filteredResults.length === 0) {
             toast.error('No students to download photos for')
             return
         }
 
         const studentsWithPhotos = filteredResults.filter(res => res.studentId?.documents?.photo)
+        console.log('Students with photos:', studentsWithPhotos.length)
 
         if (studentsWithPhotos.length === 0) {
             toast.error('No student photos available')
@@ -351,8 +355,10 @@ export default function InventoryPage() {
         toast.info(`Preparing to download ${studentsWithPhotos.length} photos...`)
 
         try {
+            console.log('Importing JSZip...')
             // Dynamically import JSZip
             const JSZip = (await import('jszip')).default
+            console.log('JSZip imported successfully:', !!JSZip)
             const zip = new JSZip()
 
             let successCount = 0
