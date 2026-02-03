@@ -231,12 +231,13 @@ export default function InventoryPage() {
 
         // Prepare CSV rows
         const rows = filteredResults.map((res, index) => {
+            const aadhaarNo = res.studentId?.aadhaarCardNo || ''
             const baseData = [
                 (index + 1).toString(),
                 res.studentId?.name || '',
                 res.studentId?.motherName || '',
                 res.studentId?.rollNo || '',
-                res.studentId?.aadhaarCardNo || ''
+                aadhaarNo ? `'${aadhaarNo}` : '' // Prepend with single quote to force text format in Excel
             ]
 
             // Map evaluation marks to their columns (excluding Final Exam)
