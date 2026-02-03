@@ -61,7 +61,7 @@ export default function FeesPage() {
   const fetchData = async () => {
     try {
       const [studentsRes, paymentsRes, instituteRes, batchesRes] = await Promise.all([
-        fetch('/api/users'),
+        fetch(`/api/users?instituteId=${instituteId}&role=student`),
         fetch(`/api/fee-payments?instituteId=${instituteId}`),
         fetch(`/api/institutes/${instituteId}`),
         fetch(`/api/batches?instituteId=${instituteId}`)
@@ -72,7 +72,7 @@ export default function FeesPage() {
       const instituteData = await instituteRes.json()
       const batchesData = await batchesRes.json()
 
-      setStudents(studentsData.filter((u: any) => u.role === 'student' && u.instituteId === instituteId))
+      setStudents(Array.isArray(studentsData) ? studentsData : [])
       setPayments(paymentsData)
       setInstitute(instituteData)
       setCourses(instituteData.courses || [])
