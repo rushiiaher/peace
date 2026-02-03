@@ -15,7 +15,7 @@ export async function GET(req: Request) {
         if (batchId) query.batchId = batchId
         if (instituteId) query.instituteId = instituteId
 
-        const results = await FinalResult.find(query).populate('studentId', 'name rollNo motherName role')
+        const results = await FinalResult.find(query).populate('studentId', 'name rollNo motherName role documents')
         return NextResponse.json(results)
     } catch (error) {
         return NextResponse.json({ error: 'Failed to fetch results' }, { status: 500 })
