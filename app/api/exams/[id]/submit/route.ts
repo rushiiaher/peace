@@ -12,10 +12,25 @@ export async function POST(req: Request, props: { params: Promise<{ id: string }
     const exam = await Exam.findById(id)
     if (!exam) return NextResponse.json({ error: 'Exam not found' }, { status: 404 })
 
+    // Handle both old format (array of indices) and new format (array of {questionId, selectedOption})
     let correctCount = 0
-    exam.questions.forEach((q: any, i: number) => {
-      if (answers[i] === q.correctAnswer) correctCount++
-    })
+
+    if (answers.length > 0 && typeof answers[0] === 'object' && answers[0].questionId) {
+      // NEW FORMAT: answers = [{questionId: '123', selectedOption: 2}, ...]
+      // This format works correctly with randomized questions
+      answers.forEach((ans: any) => {
+        const question = exam.questions.find((q: any) => q._id.toString() === ans.questionId)
+        if (question && ans.selectedOption === question.correctAnswer) {
+          correctCount++
+        }
+      })
+    } else {
+      // OLD FORMAT (DEPRECATED): answers = [2, 0, 1, ...] - indices only
+      // This only works if questions are NOT randomized
+      exam.questions.forEach((q: any, i: number) => {
+        if (answers[i] === q.correctAnswer) correctCount++
+      })
+    }
 
     // Use the stored totalMarks if available, otherwise fallback to question-based calculation
     const calculatedTotalMarks = exam.totalMarks || (exam.questions.length * 2)

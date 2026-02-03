@@ -221,9 +221,16 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
 
     const timeTaken = Math.floor((Date.now() - startTime) / 1000)
 
+    // Create answer map with questionId => selectedOption
+    // This ensures correct grading even with shuffled questions
+    const answerMap = exam.questions.map((q: any, idx: number) => ({
+      questionId: q._id,
+      selectedOption: answers[idx]
+    }))
+
     console.log('=== SUBMITTING EXAM ===')
     console.log('Total Questions:', exam.questions?.length)
-    console.log('Answers Array:', answers)
+    console.log('Answer Map (questionId => selectedOption):', answerMap)
     console.log('Answered Count:', answers.filter(a => a !== -1).length)
     console.log('Time Taken:', timeTaken, 'seconds')
 
@@ -233,7 +240,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           studentId,
-          answers,
+          answers: answerMap, // Send questionId-based answers instead of indices
           timeTaken,
           autoSubmitted: isAutoSubmit,
           warnings

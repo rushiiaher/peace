@@ -80,9 +80,20 @@ export default function ExamReviewPage() {
                 </div>
 
                 {questions.map((q: any, idx: number) => {
-                    const studentChoice = studentAnswers[idx]
+                    // Handle both old format (array of indices) and new format (array of {questionId, selectedOption})
+                    let studentChoice
+
+                    if (studentAnswers.length > 0 && typeof studentAnswers[0] === 'object' && studentAnswers[0].questionId) {
+                        // NEW FORMAT: Find the answer for this question by questionId
+                        const answerObj = studentAnswers.find((ans: any) => ans.questionId === q._id.toString())
+                        studentChoice = answerObj ? answerObj.selectedOption : null
+                    } else {
+                        // OLD FORMAT: Use index-based lookup
+                        studentChoice = studentAnswers[idx]
+                    }
+
                     const isCorrect = studentChoice === q.correctAnswer
-                    const isUnattempted = studentChoice === null || studentChoice === undefined
+                    const isUnattempted = studentChoice === null || studentChoice === undefined || studentChoice === -1
 
                     return (
                         <Card key={idx} className={`border-l-4 ${isCorrect ? 'border-l-green-500' : isUnattempted ? 'border-l-gray-300' : 'border-l-red-500'}`}>
