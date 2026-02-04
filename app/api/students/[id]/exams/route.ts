@@ -22,17 +22,43 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
     const courseIds = activeCourses.map((c: any) => c.courseId?._id || c.courseId).filter((id: any) => id)
 
     // Fetch all exams for these courses
-    // Fetch all exams for these courses
     const exams = await Exam.find({ courseId: { $in: courseIds } })
       .populate('courseId', 'name code')
       .populate('instituteId', 'name')
       .sort({ date: -1 })
       .lean() // Use lean() to allow modification
 
+    // CRITICAL FIX: Filter exams based on student assignment
+    // - DPP exams: Show to all students enrolled in the course
+    // - Final exams: Only show if student is in systemAssignments OR if no systemAssignments exist
+    const filteredExams = exams.filter((exam: any) => {
+      // For DPP exams, show to all students enrolled in the course
+      if (exam.type === 'DPP') {
+        return true
+      }
+
+      // For Final exams, check systemAssignments
+      if (exam.type === 'Final') {
+        // If no systemAssignments exist, show to all students (backwards compatibility)
+        if (!exam.systemAssignments || exam.systemAssignments.length === 0) {
+          return true
+        }
+
+        // If systemAssignments exist, only show if student is assigned
+        const isAssigned = exam.systemAssignments.some((assignment: any) =>
+          (assignment.studentId?._id || assignment.studentId)?.toString() === params.id
+        )
+        return isAssigned
+      }
+
+      // For other exam types, show by default
+      return true
+    })
+
     // Auto-update status to Completed for expired exams
     const updates = []
 
-    for (const exam of exams) {
+    for (const exam of filteredExams) {
       if (exam.status !== 'Completed' && exam.date) {
         const examDate = new Date(exam.date)
         const [hours, minutes] = (exam.startTime || '00:00').split(':').map(Number)
@@ -55,7 +81,7 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
       )
     }
 
-    return NextResponse.json(exams)
+    return NextResponse.json(filteredExams)
   } catch (error: any) {
     console.error('Fetch student exams error:', error)
     return NextResponse.json({ error: error.message || 'Failed to fetch exams' }, { status: 500 })
