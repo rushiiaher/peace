@@ -255,6 +255,7 @@ export function StudentForm({
                                     name="password"
                                     type={showPassword ? "text" : "password"}
                                     required={!isEdit}
+                                    defaultValue={!isEdit ? "student123" : undefined}
                                     placeholder={isEdit ? "Leave blank to keep current" : "Set login password"}
                                     className="pr-10"
                                 />
