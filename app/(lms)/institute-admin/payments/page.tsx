@@ -502,7 +502,7 @@ export default function InstitutePaymentsPage() {
         <Card className="border-l-4 border-l-orange-500 shadow-sm p-4">
           <div className="flex justify-between items-center">
             <div>
-              <p className="text-sm text-muted-foreground">Pension Pending</p>
+              <p className="text-sm text-muted-foreground">Fees Pending</p>
               <p className="text-2xl font-bold">₹{totalPending.toLocaleString()}</p>
             </div>
             <IndianRupee className="text-orange-500 opacity-20 w-10 h-10" />
