@@ -3,7 +3,7 @@ import mongoose from 'mongoose'
 const ExamResultSchema = new mongoose.Schema({
   examId: { type: mongoose.Schema.Types.ObjectId, ref: 'Exam', required: true },
   studentId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  answers: [{ type: Number }],
+  answers: { type: mongoose.Schema.Types.Mixed }, // Supports [Number] (old) or [{questionId, selectedOption}] (new)
   score: { type: Number, required: true },
   totalMarks: { type: Number, required: true },
   percentage: { type: Number },
