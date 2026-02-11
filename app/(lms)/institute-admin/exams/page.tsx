@@ -249,7 +249,14 @@ export default function InstituteExamsPage() {
     try {
       const res = await fetch('/api/exam-results')
       const data = await res.json()
-      setResults(data)
+      // Filter results to only include those from exams belonging to this institute
+      const filteredResults = Array.isArray(data)
+        ? data.filter((r: any) => {
+          const examInstituteId = r.examId?.instituteId?._id || r.examId?.instituteId
+          return examInstituteId === instituteId
+        })
+        : []
+      setResults(filteredResults)
     } catch (error) {
       // toast.error('Failed to fetch results')
     }
