@@ -926,6 +926,7 @@ export default function SuperAdminExamsPage() {
                     bTitle.includes(compName)
                 });
                 const displayMarks = evalComp?.maxMarks || (config?.totalQuestions ? config.totalQuestions * 2 : (exam.totalMarks || 100));
+                const displayQuestions = config?.totalQuestions || exam.questions?.length || 0;
 
                 return (
                   <Card key={exam._id} className="hover:shadow-lg transition-all border-l-4 border-l-purple-500 overflow-hidden group">
@@ -989,7 +990,7 @@ export default function SuperAdminExamsPage() {
                           </div>
                           <div>
                             <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Questions</p>
-                            <p className="font-medium text-sm">{exam.totalQuestions || exam.questions?.length || 0}</p>
+                            <p className="font-medium text-sm">{displayQuestions}</p>
                           </div>
                         </div>
 
