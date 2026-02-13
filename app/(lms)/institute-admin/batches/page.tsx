@@ -35,6 +35,7 @@ export default function BatchesPage() {
   // Manage Student State
   const [selectedStudentId, setSelectedStudentId] = useState("")
   const [includeBooks, setIncludeBooks] = useState("false")
+  const [studentSearchQuery, setStudentSearchQuery] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
 
@@ -55,7 +56,7 @@ export default function BatchesPage() {
     try {
       const [batchesRes, usersRes, coursesRes] = await Promise.all([
         fetch(`/api/batches?instituteId=${instituteId}&limit=100`),
-        fetch('/api/users?limit=100'),
+        fetch(`/api/users?role=student&instituteId=${instituteId}&limit=100`),
         fetch(`/api/institutes/${instituteId}/courses`)
       ])
 
@@ -64,7 +65,7 @@ export default function BatchesPage() {
       const coursesData = await coursesRes.json()
 
       setBatches(Array.isArray(batchesData) ? batchesData : [])
-      setAllStudents(usersData.filter((u: any) => u.role === 'student' && u.instituteId === instituteId))
+      setAllStudents(Array.isArray(usersData) ? usersData : [])
 
       // Map correctly to get the Course object from the Institute's course list
       // Map correctly to get the Course object from the Institute's course list
@@ -671,6 +672,19 @@ export default function BatchesPage() {
 
                 <div className="space-y-4 bg-background p-4 rounded-lg border shadow-sm">
                   <div className="space-y-2">
+                    <Label className="text-xs font-semibold text-foreground">Search Student</Label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Type name or roll no..."
+                        value={studentSearchQuery}
+                        onChange={(e) => setStudentSearchQuery(e.target.value)}
+                        className="pl-9"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
                     <Label className="text-xs font-semibold text-foreground">Select Student</Label>
                     <Select value={selectedStudentId} onValueChange={setSelectedStudentId}>
                       <SelectTrigger className="w-full">
@@ -679,6 +693,12 @@ export default function BatchesPage() {
                       <SelectContent className="max-h-[250px] w-[280px]">
                         {allStudents
                           .filter(s => !(s.courses || []).some((c: any) => (c.courseId?._id || c.courseId) === (managedBatch?.courseId?._id || managedBatch?.courseId)))
+                          .filter(s => {
+                            const query = studentSearchQuery.toLowerCase()
+                            return query === '' ||
+                              s.name?.toLowerCase().includes(query) ||
+                              s.rollNo?.toLowerCase().includes(query)
+                          })
                           .map(s => (
                             <SelectItem key={s._id} value={s._id} className="py-2">
                               <div className="flex items-center gap-2">
