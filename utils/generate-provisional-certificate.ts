@@ -105,7 +105,7 @@ export const generateProvisionalCertificateHtml = (data: ProvisionalCertificateD
     
     // COORDINATE ADJUSTMENTS:
     const coords = {
-      rollNo: { x: 168, y: 90 }, // Leftward and slightly down from previous
+      rollNo: { x: 160, y: 90 }, // Moved leftward (was 168)
       candidateName: { x: 70, y: 96 },
       motherName: { x: 70, y: 105.5 }, 
       courseCode: { x: 70, y: 115 }, 
@@ -115,7 +115,7 @@ export const generateProvisionalCertificateHtml = (data: ProvisionalCertificateD
       finalTitle: { x: 44, y: 156 }, // Rightward
       finalMarks: { x: 87, y: 157 }, // Rightward/Centered
       finalMax: { x: 116, y: 157 }, // Rightward/Centered
-      finalResult: { x: 152, y: 166 }, // Leftward from previous
+      finalResult: { x: 152, y: 170 }, // Moved down (was 166)
       
       totalMarks: { x: 88, y: 189 }, 
       totalMax: { x: 116, y: 189 }, 
