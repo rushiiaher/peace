@@ -349,6 +349,69 @@ export default function BatchResultEntryPage() {
         }
     }
 
+    const handleSubmitToSuperAdmin = async () => {
+        if (!course || !batch) return
+
+        // Check if all students have final exam marks
+        const hasIncompleteMarks = students.some(s => marksMap[s._id]?.[finalCompName] === -1 || !marksMap[s._id]?.[finalCompName])
+        if (hasIncompleteMarks) {
+            toast.error("Cannot submit: Final Exam marks are missing for some students")
+            return
+        }
+
+        const payload = students.map(student => {
+            const studentMarks = marksMap[student._id] || {}
+
+            // Separate Final Exam from other evaluation components
+            const evalMarks = dynamicComponents
+                .filter((comp: any) => !comp.name.toLowerCase().includes('final'))
+                .map((comp: any) => ({
+                    name: comp.name,
+                    marksObtained: studentMarks[comp.name] || 0,
+                    maxMarks: comp.maxMarks
+                }))
+
+            const onlineExamScore = studentMarks['Final Exam'] || 0
+            const totalScore = calculateTotal(student._id)
+            const totalMaxMarks = dynamicComponents.reduce((sum: number, c: any) => sum + c.maxMarks, 0)
+
+            return {
+                studentId: student._id,
+                courseId: course._id || course,
+                batchId: batch._id,
+                instituteId: instituteId,
+                evaluationMarks: evalMarks,
+                onlineExamScore,
+                totalScore,
+                totalMaxMarks,
+                percentage: calculatePercentage(totalScore),
+                aadhaarCardNo: student.aadhaarCardNo,
+                submittedToSuperAdmin: true // Mark as submitted
+            }
+        })
+
+        try {
+            const res = await fetch('/api/final-results', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ results: payload })
+            })
+
+            if (res.ok) {
+                toast.success("✅ Results Successfully Submitted to Super Admin!", {
+                    description: `${students.length} student result(s) have been finalized and sent to Super Admin for review.`,
+                    duration: 5000
+                })
+                fetchData() // Refresh to show updated status
+            } else {
+                const errorData = await res.json()
+                toast.error(errorData.error || "Failed to submit results to Super Admin")
+            }
+        } catch (error) {
+            toast.error("Error submitting results to Super Admin")
+        }
+    }
+
     if (loading) return <div className="flex h-screen items-center justify-center"><Loader /></div>
 
     if (!course) return <div className="p-6">Batch/Course data missing or invalid.</div>
@@ -484,6 +547,7 @@ export default function BatchResultEntryPage() {
                     className="bg-green-600 hover:bg-green-700 gap-2 disabled:opacity-50"
                     disabled={students.some(s => marksMap[s._id]?.[finalCompName] === -1)}
                     title={students.some(s => marksMap[s._id]?.[finalCompName] === -1) ? "Cannot submit: Final Exam pending for some students" : ""}
+                    onClick={handleSubmitToSuperAdmin}
                 >
                     <Send className="w-4 h-4" /> Finalize & Submit to Super Admin
                 </Button>
