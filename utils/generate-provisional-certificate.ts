@@ -105,7 +105,7 @@ export const generateProvisionalCertificateHtml = (data: ProvisionalCertificateD
     
     // COORDINATE ADJUSTMENTS:
     const coords = {
-      rollNo: { x: 160, y: 90 }, // Moved leftward (was 168)
+      rollNo: { x: 165, y: 90 }, // Moved leftward (was 168)
       candidateName: { x: 70, y: 96 },
       motherName: { x: 70, y: 105.5 }, 
       courseCode: { x: 70, y: 115 }, 
@@ -146,7 +146,7 @@ export const generateProvisionalCertificateHtml = (data: ProvisionalCertificateD
       };
 
       // 1. Roll No
-      draw(data.rollNo, coords.rollNo.x, coords.rollNo.y, 11, '#000000', 'left');
+      draw(data.rollNo, coords.rollNo.x, coords.rollNo.y, 9, '#000000', 'left');
       
       // 2. Candidate Details (Locked per previous instruction)
       draw(data.candidateName, coords.candidateName.x, coords.candidateName.y, 13);
@@ -159,7 +159,7 @@ export const generateProvisionalCertificateHtml = (data: ProvisionalCertificateD
       draw("Final exam", coords.finalTitle.x, coords.finalTitle.y, 9, '#000000', 'left', 'bold', 55);
       draw(data.finalExamMarks, coords.finalMarks.x, coords.finalMarks.y, 13, '#000000', 'center');
       draw(data.finalExamMaxMarks, coords.finalMax.x, coords.finalMax.y, 13, '#000000', 'center');
-      draw(data.result, coords.finalResult.x, coords.finalResult.y, 20, data.resultColor, 'center');
+      draw(data.result, coords.finalResult.x, coords.finalResult.y, 16, data.resultColor, 'center');
 
       // 4. Internal Assessment (Gap reduced, moved slightly up, centered horizontally)
       data.evaluationComponents.slice(0, 4).forEach((comp, i) => {
