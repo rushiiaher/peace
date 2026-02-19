@@ -279,7 +279,14 @@ export default function InstitutePaymentsPage() {
       if (selectedPayments.has(p._id)) totalAmount += p.totalAmount
     })
 
-    if (!isDeliveryPaid && batchDeliveryCharge > 0) {
+    // Check if ANY of the selected payments already has the delivery charge applied
+    // This happens if a previous payment attempt failed/cancelled but the backend record was updated
+    const alreadyCharged = selectedIds.some((id: string) => {
+      const p = batchGroup.payments.find((py: any) => py._id === id)
+      return p && p.deliveryCharge > 0
+    })
+
+    if (!isDeliveryPaid && !alreadyCharged && batchDeliveryCharge > 0) {
       // Add delivery charge to the first selected payment
       // We update the backend record so valid invoice is generated upon success
       const targetPaymentId = selectedIds[0]
@@ -551,7 +558,8 @@ export default function InstitutePaymentsPage() {
                 // Check Global Paid History (allPaid) for this batch/course to see if delivery was ever paid
                 const isDeliveryPaid = allPaid.some((p: any) => (p.courseId?._id || p.courseId) === group.courseId && p.deliveryCharge > 0)
 
-                const willAddDelivery = !isDeliveryPaid && selectedCount > 0 && batchDeliveryCharge > 0
+                const alreadyCharged = group.payments.some((p: any) => selectedPayments.has(p._id) && p.deliveryCharge > 0)
+                const willAddDelivery = !isDeliveryPaid && !alreadyCharged && selectedCount > 0 && batchDeliveryCharge > 0
                 const finalTotal = selectedTotal + (willAddDelivery ? batchDeliveryCharge : 0)
 
                 return (
@@ -575,7 +583,11 @@ export default function InstitutePaymentsPage() {
                               <Clock className="w-3 h-3 mr-1" /> Delivery Charge Pending ({batchDeliveryCharge > 0 ? `₹${batchDeliveryCharge}` : 'Free'})
                             </Badge>
                           )}
-                          {willAddDelivery && <span className="text-xs text-amber-600 font-medium animate-pulse">(+₹{batchDeliveryCharge} included)</span>}
+                          {(willAddDelivery || (selectedCount > 0 && alreadyCharged)) && (
+                            <span className="text-xs text-amber-600 font-medium animate-pulse">
+                              {willAddDelivery ? `(+₹${batchDeliveryCharge} included)` : '(Delivery Included)'}
+                            </span>
+                          )}
                         </div>
                       </div>
                       <Button onClick={() => handlePaySelection(group.batchId)} size="sm" disabled={processing || selectedCount === 0}>
