@@ -17,7 +17,6 @@ export default function SettingsPage() {
   const [institute, setInstitute] = useState<any>(null)
 
   const [systemsOpen, setSystemsOpen] = useState(false)
-  const [timingsOpen, setTimingsOpen] = useState(false)
   const [newSystem, setNewSystem] = useState('')
   const [instituteId, setInstituteId] = useState<string | null>(null)
 
@@ -93,31 +92,6 @@ export default function SettingsPage() {
       }
     } catch (error) {
       toast.error('Failed to remove system')
-    }
-  }
-
-  const handleUpdateTimings = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    const formData = new FormData(e.currentTarget)
-    const examTimings = {
-      openingTime: formData.get('openingTime'),
-      closingTime: formData.get('closingTime')
-    }
-
-    try {
-      const res = await fetch(`/api/institutes/${instituteId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ examTimings })
-      })
-      if (res.ok) {
-        const updated = await res.json()
-        setInstitute(updated)
-        toast.success('Timings updated')
-        setTimingsOpen(false)
-      }
-    } catch (error) {
-      toast.error('Failed to update timings')
     }
   }
 
@@ -252,28 +226,25 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <CardTitle className="text-base">Operational Hours</CardTitle>
-                  <p className="text-xs text-muted-foreground">Set exam availability times</p>
+                  <p className="text-xs text-muted-foreground">Fixed exam availability times</p>
                 </div>
               </div>
-              <Button variant="ghost" size="icon" onClick={() => setTimingsOpen(true)} className="h-8 w-8">
-                <Edit className="w-4 h-4" />
-              </Button>
             </div>
           </CardHeader>
           <CardContent className="pt-6 flex-1">
             <div className="space-y-6">
               <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/20">
                 <div className="text-sm font-medium">Opening Time</div>
-                <div className="font-mono text-lg font-bold text-primary bg-background px-3 py-1 rounded border">{institute.examTimings?.openingTime || '09:00'}</div>
+                <div className="font-mono text-lg font-bold text-primary bg-background px-3 py-1 rounded border">08:00</div>
               </div>
               <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/20">
                 <div className="text-sm font-medium">Closing Time</div>
-                <div className="font-mono text-lg font-bold text-primary bg-background px-3 py-1 rounded border">{institute.examTimings?.closingTime || '18:00'}</div>
+                <div className="font-mono text-lg font-bold text-primary bg-background px-3 py-1 rounded border">18:30</div>
               </div>
             </div>
             <div className="mt-6 flex gap-2 items-start p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-lg text-xs">
               <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
-              <p>Exams will be automatically restricted to these operational hours.</p>
+              <p>Exams are strictly restricted to these operational hours (08:00 AM - 06:30 PM).</p>
             </div>
           </CardContent>
         </Card>
@@ -344,34 +315,6 @@ export default function SettingsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Timings Dialog */}
-      <Dialog open={timingsOpen} onOpenChange={setTimingsOpen}>
-        <DialogContent className="sm:max-w-[400px]">
-          <DialogHeader>
-            <DialogTitle>Update Operational Hours</DialogTitle>
-            <DialogDescription>Set the daily start and end time for exams.</DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleUpdateTimings} className="space-y-6 pt-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Opening Time</Label>
-                <Input name="openingTime" type="time" defaultValue={institute.examTimings?.openingTime || '09:00'} required className="text-center font-mono" />
-              </div>
-              <div className="space-y-2">
-                <Label>Closing Time</Label>
-                <Input name="closingTime" type="time" defaultValue={institute.examTimings?.closingTime || '18:00'} required className="text-center font-mono" />
-              </div>
-            </div>
-            <div className="bg-muted/30 p-3 rounded-lg text-xs text-muted-foreground text-center">
-              Configure when students can start their exams.
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setTimingsOpen(false)}>Cancel</Button>
-              <Button type="submit">Update Timings</Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

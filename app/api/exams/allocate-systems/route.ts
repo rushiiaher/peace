@@ -51,7 +51,12 @@ export async function POST(req: Request) {
     const examConfig = course.examConfigurations?.[0]
     const courseExamDuration = examConfig?.duration || null
 
-    const { openingTime = '09:00', closingTime = '18:00', sectionDuration = courseExamDuration || 60, breakBetweenSections = 30, workingDays = [1, 2, 3, 4, 5, 6] } = institute.examTimings || {}
+    // Enforce strict operational hours as requested
+    // Cooling time reduced to 15 mins
+    const openingTime = '08:00'
+    const closingTime = '18:30'
+    const { sectionDuration = courseExamDuration || 60, workingDays = [1, 2, 3, 4, 5, 6] } = institute.examTimings || {}
+    const breakBetweenSections = 15 // Reduced from 30 to 15 minutes
 
     const students = await User.find({ instituteId, role: 'student', 'courses.courseId': courseId })
     // Accept both 'Available' and 'Active' status systems
@@ -61,6 +66,11 @@ export async function POST(req: Request) {
 
     let examDate = new Date(date)
     let currentStartTime = startTime || openingTime
+
+    // Ensure start time is not before opening time
+    if (startTime && parseTime(startTime) < parseTime(openingTime)) {
+      currentStartTime = openingTime
+    }
 
     if (forceNextDay) {
       examDate = getNextWorkingDay(examDate, workingDays)
@@ -81,11 +91,13 @@ export async function POST(req: Request) {
 
     while (remainingStudents.length > 0) {
       const sectionStudents = remainingStudents.splice(0, availableSystems.length)
-      const sectionEndTime = addMinutes(currentStartTime, sectionDuration)
+      let sectionEndTime = addMinutes(currentStartTime, sectionDuration)
 
       if (parseTime(sectionEndTime) > parseTime(closingTime)) {
         examDate = getNextWorkingDay(examDate, workingDays)
         currentStartTime = openingTime
+        // Recalculate end time for the new start time
+        sectionEndTime = addMinutes(currentStartTime, sectionDuration)
       }
 
       const systemAssignments = sectionStudents.map((student, i) => ({
@@ -99,12 +111,14 @@ export async function POST(req: Request) {
         sectionNumber,
         date: new Date(examDate),
         startTime: currentStartTime,
-        endTime: addMinutes(currentStartTime, sectionDuration),
+        endTime: sectionEndTime,
         systemAssignments
       })
 
       currentStartTime = addMinutes(currentStartTime, sectionDuration + breakBetweenSections)
+      // Check if next section can fit in current day
       if (parseTime(currentStartTime) + sectionDuration > parseTime(closingTime)) {
+        // If not, move to next day
         examDate = getNextWorkingDay(examDate, workingDays)
         currentStartTime = openingTime
       }
