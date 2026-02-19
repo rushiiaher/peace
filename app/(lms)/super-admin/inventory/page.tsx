@@ -475,10 +475,14 @@ export default function InventoryPage() {
         (student.rollNo && student.rollNo.toLowerCase().includes(searchQuery.toLowerCase()))
     )
 
-    const filteredResults = results.filter(res =>
-        res.studentId?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (res.rollNo && res.rollNo.toLowerCase().includes(searchQuery.toLowerCase())) // Assuming Result may have rollNo populated or join
-    )
+    const filteredResults = results.filter(res => {
+        const studentName = res.studentId?.name || ''
+        const rollNo = res.studentId?.rollNo || res.rollNo || ''
+        const query = searchQuery.toLowerCase()
+
+        return studentName.toLowerCase().includes(query) ||
+            rollNo.toLowerCase().includes(query)
+    })
 
     return (
         <div className="space-y-6">
@@ -715,10 +719,10 @@ export default function InventoryPage() {
                                                     <TableCell className="font-medium">
                                                         <div className="flex items-center gap-3">
                                                             <div className="w-9 h-9 rounded-full bg-purple-100 flex items-center justify-center text-purple-700 font-bold text-sm shadow-sm ring-2 ring-background">
-                                                                {res.studentId?.name?.charAt(0).toUpperCase()}
+                                                                {(res.studentId?.name || '?').charAt(0).toUpperCase()}
                                                             </div>
                                                             <div className="flex flex-col">
-                                                                <span>{res.studentId?.name}</span>
+                                                                <span>{res.studentId?.name || 'Unknown Student'}</span>
                                                                 <span className="text-xs text-muted-foreground">{res.studentId?.role === 'student' ? 'Student' : ''}</span>
                                                             </div>
                                                         </div>

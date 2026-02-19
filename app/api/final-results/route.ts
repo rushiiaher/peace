@@ -10,14 +10,21 @@ export async function GET(req: Request) {
         const { searchParams } = new URL(req.url)
         const batchId = searchParams.get('batchId')
         const instituteId = searchParams.get('instituteId')
+        const courseId = searchParams.get('courseId')
 
         const query: any = {}
-        if (batchId) query.batchId = batchId
-        if (instituteId) query.instituteId = instituteId
+        if (batchId && batchId !== 'all') query.batchId = batchId
+        if (instituteId && instituteId !== 'all') query.instituteId = instituteId
+        if (courseId && courseId !== 'all') query.courseId = courseId
 
-        const results = await FinalResult.find(query).populate('studentId', 'name rollNo motherName role documents aadhaarCardNo')
+        const results = await FinalResult.find(query)
+            .populate('studentId', 'name rollNo motherName role documents aadhaarCardNo email phone')
+            .populate('batchId', 'name')
+            .populate('courseId', 'name code')
+
         return NextResponse.json(results)
     } catch (error) {
+        console.error("Fetch final results error:", error)
         return NextResponse.json({ error: 'Failed to fetch results' }, { status: 500 })
     }
 }
