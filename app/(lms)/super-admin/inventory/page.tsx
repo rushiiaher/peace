@@ -261,7 +261,7 @@ export default function InventoryPage() {
             }
         }
 
-        const summaryHeaders = ['Total Marks', 'Percentage', 'Dispatch Status']
+        const summaryHeaders = ['Total Marks', 'Percentage', 'Grade', 'Dispatch Status']
         const headers = [...baseHeaders, ...marksHeaders, ...summaryHeaders]
 
         // Prepare CSV rows
@@ -326,9 +326,23 @@ export default function InventoryPage() {
             }
 
             // Summary data
+            // Calculate Grade
+            let grade = '-'
+            if (s.percentage !== null && s.percentage !== undefined) {
+                if (calculatedTotal >= 273) grade = 'A+'
+                else if (calculatedTotal >= 243) grade = 'A'
+                else if (calculatedTotal >= 213) grade = 'B+'
+                else if (calculatedTotal >= 183) grade = 'B'
+                else if (calculatedTotal >= 151) grade = 'C+'
+                else if (calculatedTotal >= 135) grade = 'D'
+                else grade = 'F'
+            }
+
+            // Summary data
             const summaryData = [
                 calculatedTotal.toString(),
                 s.percentage ? `${s.percentage}%` : '-',
+                grade,
                 s.certificateDispatched ? 'Dispatched' : 'Pending'
             ]
 
