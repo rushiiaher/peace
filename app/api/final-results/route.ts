@@ -1,12 +1,8 @@
 import { NextResponse } from 'next/server'
 import connectDB from '@/lib/mongodb'
 import FinalResult from '@/lib/models/FinalResult'
+import User from '@/lib/models/User'
 import mongoose from 'mongoose'
-// Import referenced models so Mongoose registers them before populate runs
-import '@/lib/models/Batch'
-import '@/lib/models/Course'
-import '@/lib/models/User'
-import '@/lib/models/Institute'
 
 export const dynamic = 'force-dynamic'
 
@@ -26,10 +22,30 @@ export async function GET(req: Request) {
         if (isValidId(instituteId)) query.instituteId = instituteId
         if (isValidId(courseId)) query.courseId = courseId
 
-        const results = await FinalResult.find(query)
-            .populate('studentId', 'name rollNo motherName role documents aadhaarCardNo email phone')
+        // Use lean() for plain objects, then manually attach student data
+        const results = await FinalResult.find(query).lean()
 
-        return NextResponse.json(results)
+        // Collect unique student IDs
+        const studentIds = [...new Set(results.map((r: any) => r.studentId?.toString()).filter(Boolean))]
+
+        // Fetch all relevant students in one query
+        const students = studentIds.length > 0
+            ? await User.find({ _id: { $in: studentIds } })
+                .select('name rollNo motherName role documents aadhaarCardNo email phone')
+                .lean()
+            : []
+
+        // Build a lookup map
+        const studentMap: Record<string, any> = {}
+        students.forEach((s: any) => { studentMap[s._id.toString()] = s })
+
+        // Attach student data to each result
+        const enriched = results.map((r: any) => ({
+            ...r,
+            studentId: studentMap[r.studentId?.toString()] || null
+        }))
+
+        return NextResponse.json(enriched)
     } catch (error: any) {
         console.error("Fetch final results error:", error)
         return NextResponse.json(
@@ -38,6 +54,7 @@ export async function GET(req: Request) {
         )
     }
 }
+
 
 
 export async function POST(req: Request) {

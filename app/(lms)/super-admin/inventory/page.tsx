@@ -129,7 +129,7 @@ export default function InventoryPage() {
         setLoading(true)
         try {
             // Step 1: Fetch students directly (same as Books tab) — ensures students always show
-            let studentUrl = `/api/users?instituteId=${selectedInstitute}&role=student&courseId=${selectedCourse}&royaltyPaid=true`
+            let studentUrl = `/api/users?instituteId=${selectedInstitute}&role=student&courseId=${selectedCourse}`
             if (selectedBatch !== 'all') studentUrl += `&batchId=${selectedBatch}`
 
             // Step 2: Fetch any existing FinalResult records for dispatch status
@@ -144,8 +144,13 @@ export default function InventoryPage() {
             const studentsData = await studentsRes.json()
             const resultsData = await resultsRes.json()
 
+            if (!studentsRes.ok) console.error('Students fetch error:', studentsData)
+            if (!resultsRes.ok) console.error('Final results fetch error:', resultsData)
+
             const studentsArr = Array.isArray(studentsData) ? studentsData : []
             const resultsArr = Array.isArray(resultsData) ? resultsData : []
+
+            console.log(`[Cert] Students: ${studentsArr.length}, FinalResults: ${resultsArr.length}`)
 
             // Step 3: Merge — enrich each student with their FinalResult (if exists)
             const merged = studentsArr.map((student: any) => {
@@ -157,7 +162,7 @@ export default function InventoryPage() {
                     ...student,
                     finalResult: result || null,
                     certificateDispatched: result?.certificateDispatched || false,
-                    percentage: result?.percentage || null,
+                    percentage: result?.percentage ?? null,
                     evaluationMarks: result?.evaluationMarks || [],
                     onlineExamScore: result?.onlineExamScore ?? null,
                     resultId: result?._id || null,
