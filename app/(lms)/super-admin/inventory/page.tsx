@@ -260,31 +260,31 @@ export default function InventoryPage() {
         const headers = [...baseHeaders, ...marksHeaders, ...summaryHeaders]
 
         // Prepare CSV rows
-        const rows = filteredResults.map((res, index) => {
-            const aadhaarNo = res.studentId?.aadhaarCardNo || ''
+        const rows = filteredResults.map((s: any, index: number) => {
+            const aadhaarNo = s.aadhaarCardNo || ''
             const baseData = [
                 (index + 1).toString(),
-                res.studentId?.name || '',
-                res.studentId?.motherName || '',
-                res.studentId?.rollNo || '',
+                s.name || '',
+                s.motherName || '',
+                s.rollNo || '',
                 aadhaarNo ? `'${aadhaarNo}` : '' // Prepend with single quote to force text format in Excel
             ]
 
             // Map evaluation marks to their columns (excluding Final Exam)
             const marksData = evalComponentNames.map(componentName => {
-                const mark = res.evaluationMarks?.find((m: any) => m.name === componentName)
+                const mark = s.evaluationMarks?.find((m: any) => m.name === componentName)
                 return mark ? mark.marksObtained.toString() : '-'
             })
 
             // Handle Final Exam score(s)
             // Priority: Use onlineExamScore, fallback to evaluationMarks entries
-            const finalExamFromEval = res.evaluationMarks?.filter((m: any) =>
+            const finalExamFromEval = s.evaluationMarks?.filter((m: any) =>
                 m.name.toLowerCase().includes('final exam')
             ) || []
 
-            if (res.onlineExamScore !== undefined && res.onlineExamScore !== null) {
+            if (s.onlineExamScore !== undefined && s.onlineExamScore !== null) {
                 // Use the onlineExamScore (single canonical source)
-                marksData.push(res.onlineExamScore.toString())
+                marksData.push(s.onlineExamScore.toString())
             } else if (finalExamFromEval.length > 0) {
                 // Fallback: use from evaluationMarks
                 finalExamFromEval.forEach((fe: any) => {
@@ -305,15 +305,15 @@ export default function InventoryPage() {
             let calculatedTotal = 0
 
             // Sum evaluation marks (excluding Final Exam entries)
-            res.evaluationMarks?.forEach((m: any) => {
+            s.evaluationMarks?.forEach((m: any) => {
                 if (!m.name.toLowerCase().includes('final exam')) {
                     calculatedTotal += m.marksObtained || 0
                 }
             })
 
             // Add final exam score
-            if (res.onlineExamScore !== undefined && res.onlineExamScore !== null) {
-                calculatedTotal += res.onlineExamScore
+            if (s.onlineExamScore !== undefined && s.onlineExamScore !== null) {
+                calculatedTotal += s.onlineExamScore
             } else if (finalExamFromEval.length > 0) {
                 finalExamFromEval.forEach((fe: any) => {
                     calculatedTotal += fe.marksObtained || 0
@@ -323,8 +323,8 @@ export default function InventoryPage() {
             // Summary data
             const summaryData = [
                 calculatedTotal.toString(),
-                res.percentage ? `${res.percentage}%` : '-',
-                res.certificateDispatched ? 'Dispatched' : 'Pending'
+                s.percentage ? `${s.percentage}%` : '-',
+                s.certificateDispatched ? 'Dispatched' : 'Pending'
             ]
 
             return [...baseData, ...marksData, ...summaryData]
@@ -375,7 +375,7 @@ export default function InventoryPage() {
             return
         }
 
-        const studentsWithPhotos = filteredResults.filter(res => res.studentId?.documents?.photo)
+        const studentsWithPhotos = filteredResults.filter((s: any) => s.documents?.photo)
         console.log('Students with photos:', studentsWithPhotos.length)
 
         if (studentsWithPhotos.length === 0) {
@@ -397,12 +397,11 @@ export default function InventoryPage() {
             const usedFilenames = new Set<string>()
 
             // Fetch and add each photo to ZIP
-            const photoPromises = studentsWithPhotos.map(async (res, index) => {
-                const student = res.studentId
-                const photoUrl = student.documents?.photo
+            const photoPromises = studentsWithPhotos.map(async (s: any, index: number) => {
+                const photoUrl = s.documents?.photo
 
                 if (!photoUrl) {
-                    failedStudents.push(student.name)
+                    failedStudents.push(s.name || 'Unknown')
                     return
                 }
 
@@ -418,16 +417,16 @@ export default function InventoryPage() {
 
                     // Verify image type
                     if (!blob.type.startsWith('image/')) {
-                        failedStudents.push(student.name)
+                        failedStudents.push(s.name || 'Unknown')
                         return
                     }
 
                     // Clean filename
-                    let studentName = student.name.trim()
+                    let studentName = (s.name || 'Unknown').trim()
                         .replace(/[^a-zA-Z0-9\s]/g, '')
                         .replace(/\s+/g, '_')
                         .substring(0, 50)
-                    const rollNo = (student.rollNo || `Student${index + 1}`).replace(/[^a-zA-Z0-9]/g, '_')
+                    const rollNo = (s.rollNo || `Student${index + 1}`).replace(/[^a-zA-Z0-9]/g, '_')
 
                     // Get proper extension
                     let ext = 'jpg'
@@ -447,8 +446,8 @@ export default function InventoryPage() {
                     zip.file(filename, blob)
                     successCount++
                 } catch (err) {
-                    console.error(`Failed: ${student.name}`, err)
-                    failedStudents.push(student.name)
+                    console.error(`Failed: ${s.name}`, err)
+                    failedStudents.push(s.name || 'Unknown')
                 }
             })
 

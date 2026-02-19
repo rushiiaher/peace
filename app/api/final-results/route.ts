@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server'
 import connectDB from '@/lib/mongodb'
 import FinalResult from '@/lib/models/FinalResult'
+// Import referenced models so Mongoose registers them before populate runs
+import '@/lib/models/Batch'
+import '@/lib/models/Course'
+import '@/lib/models/User'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,8 +23,6 @@ export async function GET(req: Request) {
 
         const results = await FinalResult.find(query)
             .populate('studentId', 'name rollNo motherName role documents aadhaarCardNo email phone')
-            .populate('batchId', 'name')
-            .populate('courseId', 'name code')
 
         return NextResponse.json(results)
     } catch (error) {
