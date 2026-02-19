@@ -28,6 +28,7 @@ export default function InventoryPage() {
 
     const [students, setStudents] = useState<any[]>([])
     const [results, setResults] = useState<any[]>([])
+    const [certStudents, setCertStudents] = useState<any[]>([])
     const [loading, setLoading] = useState(false)
     const [selectedIds, setSelectedIds] = useState<string[]>([])
 
@@ -127,15 +128,44 @@ export default function InventoryPage() {
     const fetchCertificateData = async () => {
         setLoading(true)
         try {
-            let url = `/api/final-results?instituteId=${selectedInstitute}&courseId=${selectedCourse}` // API might need update to filter by courseId on final-results if not batch
-            // The previous code used batchId. Let's see if we can filter by course. 
-            // If API doesn't support courseId, we might fetch all for institute and filter client side or just send batchId if selected.
-            // Assuming we pass batchId if present.
-            if (selectedBatch !== 'all') url += `&batchId=${selectedBatch}`
+            // Step 1: Fetch students directly (same as Books tab) — ensures students always show
+            let studentUrl = `/api/users?instituteId=${selectedInstitute}&role=student&courseId=${selectedCourse}&royaltyPaid=true`
+            if (selectedBatch !== 'all') studentUrl += `&batchId=${selectedBatch}`
 
-            const res = await fetch(url)
-            const data = await res.json()
-            setResults(Array.isArray(data) ? data : [])
+            // Step 2: Fetch any existing FinalResult records for dispatch status
+            let resultsUrl = `/api/final-results?instituteId=${selectedInstitute}&courseId=${selectedCourse}`
+            if (selectedBatch !== 'all') resultsUrl += `&batchId=${selectedBatch}`
+
+            const [studentsRes, resultsRes] = await Promise.all([
+                fetch(studentUrl),
+                fetch(resultsUrl)
+            ])
+
+            const studentsData = await studentsRes.json()
+            const resultsData = await resultsRes.json()
+
+            const studentsArr = Array.isArray(studentsData) ? studentsData : []
+            const resultsArr = Array.isArray(resultsData) ? resultsData : []
+
+            // Step 3: Merge — enrich each student with their FinalResult (if exists)
+            const merged = studentsArr.map((student: any) => {
+                const result = resultsArr.find((r: any) => {
+                    const rStudentId = r.studentId?._id || r.studentId
+                    return rStudentId?.toString() === student._id?.toString()
+                })
+                return {
+                    ...student,
+                    finalResult: result || null,
+                    certificateDispatched: result?.certificateDispatched || false,
+                    percentage: result?.percentage || null,
+                    evaluationMarks: result?.evaluationMarks || [],
+                    onlineExamScore: result?.onlineExamScore ?? null,
+                    resultId: result?._id || null,
+                }
+            })
+
+            setCertStudents(merged)
+            setResults(resultsArr) // keep raw results for CSV export compatibility
         } finally {
             setLoading(false)
         }
@@ -475,13 +505,11 @@ export default function InventoryPage() {
         (student.rollNo && student.rollNo.toLowerCase().includes(searchQuery.toLowerCase()))
     )
 
-    const filteredResults = results.filter(res => {
-        const studentName = res.studentId?.name || ''
-        const rollNo = res.studentId?.rollNo || res.rollNo || ''
+    const filteredResults = certStudents.filter((s: any) => {
+        const studentName = s.name || ''
+        const rollNo = s.rollNo || ''
         const query = searchQuery.toLowerCase()
-
-        return studentName.toLowerCase().includes(query) ||
-            rollNo.toLowerCase().includes(query)
+        return studentName.toLowerCase().includes(query) || rollNo.toLowerCase().includes(query)
     })
 
     return (
@@ -684,13 +712,13 @@ export default function InventoryPage() {
                                 <div className="py-16 text-center text-muted-foreground bg-muted/20 border-dashed m-2 rounded-lg border">
                                     <ScrollText className="w-12 h-12 mx-auto mb-3 opacity-20" />
                                     <p className="text-lg font-medium text-foreground">No students found</p>
-                                    <p className="text-sm">Select an Institute and Course to view certificates</p>
+                                    <p className="text-sm">Select an Institute, Course and Batch to view certificates</p>
                                 </div>
                             ) : (
                                 <Table>
                                     <TableHeader className="bg-muted/40">
                                         <TableRow>
-                                            <TableHead className="w-12 pl-4"><Checkbox onCheckedChange={() => selectAll(filteredResults.map(r => r._id))} checked={selectedIds.length === filteredResults.length && filteredResults.length > 0} /></TableHead>
+                                            <TableHead className="w-12 pl-4"><Checkbox onCheckedChange={() => selectAll(filteredResults.map(s => s._id))} checked={selectedIds.length === filteredResults.length && filteredResults.length > 0} /></TableHead>
                                             <TableHead>Student</TableHead>
                                             <TableHead>Mother's Name</TableHead>
                                             <TableHead>Marks Details</TableHead>
@@ -699,45 +727,49 @@ export default function InventoryPage() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {filteredResults.map(res => {
-                                            // Filter out "Final Exam" from evaluationMarks to prevent duplicates
-                                            const evalMarks = res.evaluationMarks
+                                        {filteredResults.map(s => {
+                                            // s is a merged student object: student fields at root, result fields also at root
+                                            const evalMarks = (s.evaluationMarks || [])
                                                 .filter((m: any) => !m.name.toLowerCase().includes('final exam'))
                                                 .map((m: any) => `${m.name}: ${m.marksObtained}`)
 
-                                            // Add Final Exam score separately (single source of truth)
                                             const marksDisplay = [
                                                 ...evalMarks,
-                                                res.onlineExamScore !== undefined && res.onlineExamScore !== null
-                                                    ? `Final Exam: ${res.onlineExamScore}`
+                                                s.onlineExamScore !== undefined && s.onlineExamScore !== null
+                                                    ? `Final Exam: ${s.onlineExamScore}`
                                                     : null
-                                            ].filter(Boolean).join(', ');
+                                            ].filter(Boolean).join(', ') || (s.finalResult ? '' : 'Results not yet submitted')
 
                                             return (
-                                                <TableRow key={res._id} className="group hover:bg-muted/30 transition-colors">
-                                                    <TableCell className="pl-4"><Checkbox checked={selectedIds.includes(res._id)} onCheckedChange={() => toggleSelection(res._id)} /></TableCell>
+                                                <TableRow key={s._id} className="group hover:bg-muted/30 transition-colors">
+                                                    <TableCell className="pl-4"><Checkbox checked={selectedIds.includes(s._id)} onCheckedChange={() => toggleSelection(s._id)} /></TableCell>
                                                     <TableCell className="font-medium">
                                                         <div className="flex items-center gap-3">
                                                             <div className="w-9 h-9 rounded-full bg-purple-100 flex items-center justify-center text-purple-700 font-bold text-sm shadow-sm ring-2 ring-background">
-                                                                {(res.studentId?.name || '?').charAt(0).toUpperCase()}
+                                                                {(s.name || '?').charAt(0).toUpperCase()}
                                                             </div>
                                                             <div className="flex flex-col">
-                                                                <span>{res.studentId?.name || 'Unknown Student'}</span>
-                                                                <span className="text-xs text-muted-foreground">{res.studentId?.role === 'student' ? 'Student' : ''}</span>
+                                                                <span>{s.name || 'Unknown Student'}</span>
+                                                                <span className="text-xs text-muted-foreground">{s.rollNo || ''}</span>
                                                             </div>
                                                         </div>
                                                     </TableCell>
-                                                    <TableCell>{res.studentId?.motherName || '---'}</TableCell>
+                                                    <TableCell>{s.motherName || '---'}</TableCell>
                                                     <TableCell className="text-xs text-muted-foreground max-w-[300px] truncate" title={marksDisplay}>
                                                         {marksDisplay}
                                                     </TableCell>
                                                     <TableCell>
-                                                        <span className="font-bold text-foreground">{res.percentage}%</span>
+                                                        {s.percentage !== null
+                                                            ? <span className="font-bold text-foreground">{s.percentage}%</span>
+                                                            : <span className="text-muted-foreground text-xs">N/A</span>
+                                                        }
                                                     </TableCell>
                                                     <TableCell>
-                                                        {res.certificateDispatched ?
-                                                            <Badge className="bg-green-500 hover:bg-green-600">Dispatched</Badge> :
-                                                            <Badge variant="outline" className="text-orange-600 bg-orange-50 border-orange-200">Pending</Badge>
+                                                        {s.finalResult
+                                                            ? s.certificateDispatched
+                                                                ? <Badge className="bg-green-500 hover:bg-green-600">Dispatched</Badge>
+                                                                : <Badge variant="outline" className="text-orange-600 bg-orange-50 border-orange-200">Pending</Badge>
+                                                            : <Badge variant="outline" className="text-gray-500 bg-gray-50 border-gray-200">No Result</Badge>
                                                         }
                                                     </TableCell>
                                                 </TableRow>
