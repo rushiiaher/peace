@@ -127,6 +127,39 @@ export function StudentForm({
         e.preventDefault()
         const formData = new FormData(e.currentTarget)
 
+        // Validation
+        const nameRegex = /^[A-Za-z\s]+$/
+        const phoneRegex = /^\d{10}$/
+
+        const firstName = formData.get('firstName') as string
+        const middleName = formData.get('middleName') as string
+        const lastName = formData.get('lastName') as string
+        const phone = formData.get('phone') as string
+        const guardianPhone = formData.get('guardianPhone') as string
+
+        if (!nameRegex.test(firstName)) {
+            toast.error('First Name must contain only alphabets')
+            return
+        }
+        if (middleName && !nameRegex.test(middleName)) {
+            toast.error('Middle Name must contain only alphabets')
+            return
+        }
+        if (!nameRegex.test(lastName)) {
+            toast.error('Last Name must contain only alphabets')
+            return
+        }
+
+        if (phone && !phoneRegex.test(phone)) {
+            toast.error('Phone number must be exactly 10 digits')
+            return
+        }
+
+        if (guardianPhone && !phoneRegex.test(guardianPhone)) {
+            toast.error('Guardian Phone must be exactly 10 digits')
+            return
+        }
+
         // Construct base data object
         const data: any = {
             rollNo: formData.get('rollNo'),
