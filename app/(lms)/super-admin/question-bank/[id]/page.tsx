@@ -8,7 +8,9 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "sonner"
 import { ArrowLeft, Plus, Search, Trash2, Edit, Upload } from "lucide-react"
 import Link from 'next/link'
@@ -23,6 +25,9 @@ export default function ManageQuestionBankPage() {
     const [uploadExcelOpen, setUploadExcelOpen] = useState(false)
     const [excelFile, setExcelFile] = useState<File | null>(null)
     const [uploading, setUploading] = useState(false)
+
+    const [editQuestionOpen, setEditQuestionOpen] = useState(false)
+    const [editingQuestion, setEditingQuestion] = useState<any>(null)
 
     useEffect(() => {
         fetchQuestionBank()
@@ -58,6 +63,35 @@ export default function ManageQuestionBankPage() {
             }
         } catch (error) {
             toast.error('Failed to delete question')
+        }
+    }
+
+    const handleUpdateQuestion = async () => {
+        if (!editingQuestion) return
+
+        try {
+            const res = await fetch(`/api/question-banks/${params.id}/questions`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    questionId: editingQuestion._id,
+                    question: editingQuestion.question,
+                    options: editingQuestion.options,
+                    correctAnswer: parseInt(editingQuestion.correctAnswer),
+                    explanation: editingQuestion.explanation
+                })
+            })
+
+            if (res.ok) {
+                toast.success('Question updated')
+                setEditQuestionOpen(false)
+                setEditingQuestion(null)
+                fetchQuestionBank()
+            } else {
+                toast.error('Failed to update question')
+            }
+        } catch (error) {
+            toast.error('Failed to update question')
         }
     }
 
@@ -119,14 +153,27 @@ export default function ManageQuestionBankPage() {
                                     <span className="font-bold text-muted-foreground min-w-[24px]">Q{i + 1}.</span>
                                     <p className="font-medium whitespace-pre-wrap">{q.question}</p>
                                 </div>
-                                <Button
-                                    size="sm"
-                                    variant="destructive"
-                                    className="h-8 w-8 p-0 shrink-0"
-                                    onClick={() => handleDeleteQuestion(q._id)}
-                                >
-                                    <Trash2 className="w-4 h-4" />
-                                </Button>
+                                <div className="flex gap-2">
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-8 w-8 p-0 shrink-0"
+                                        onClick={() => {
+                                            setEditingQuestion({ ...q })
+                                            setEditQuestionOpen(true)
+                                        }}
+                                    >
+                                        <Edit className="w-4 h-4" />
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        variant="destructive"
+                                        className="h-8 w-8 p-0 shrink-0"
+                                        onClick={() => handleDeleteQuestion(q._id)}
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                </div>
                             </div>
                         </CardHeader>
                         <CardContent className="pl-12 space-y-3">
@@ -218,6 +265,76 @@ export default function ManageQuestionBankPage() {
                             {uploading ? 'Uploading...' : 'Upload & Import'}
                         </Button>
                     </div>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={editQuestionOpen} onOpenChange={setEditQuestionOpen}>
+                <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>Edit Question</DialogTitle>
+                    </DialogHeader>
+                    {editingQuestion && (
+                        <div className="space-y-4 py-4">
+                            <div className="space-y-2">
+                                <Label>Question Text</Label>
+                                <Textarea
+                                    value={editingQuestion.question}
+                                    onChange={(e) => setEditingQuestion({ ...editingQuestion, question: e.target.value })}
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label>Options</Label>
+                                <div className="grid grid-cols-1 gap-2">
+                                    {editingQuestion.options.map((opt: string, idx: number) => (
+                                        <div key={idx} className="flex items-center gap-2">
+                                            <span className="text-sm font-medium w-6">{String.fromCharCode(65 + idx)}.</span>
+                                            <Input
+                                                value={opt}
+                                                onChange={(e) => {
+                                                    const newOptions = [...editingQuestion.options]
+                                                    newOptions[idx] = e.target.value
+                                                    setEditingQuestion({ ...editingQuestion, options: newOptions })
+                                                }}
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label>Correct Answer</Label>
+                                <Select
+                                    value={String(editingQuestion.correctAnswer)}
+                                    onValueChange={(val) => setEditingQuestion({ ...editingQuestion, correctAnswer: parseInt(val) })}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select correct option" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {editingQuestion.options.map((_: any, idx: number) => (
+                                            <SelectItem key={idx} value={String(idx)}>
+                                                Option {String.fromCharCode(65 + idx)}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label>Explanation (Optional)</Label>
+                                <Textarea
+                                    value={editingQuestion.explanation || ''}
+                                    onChange={(e) => setEditingQuestion({ ...editingQuestion, explanation: e.target.value })}
+                                    placeholder="Explain why this answer is correct..."
+                                />
+                            </div>
+                        </div>
+                    )}
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setEditQuestionOpen(false)}>Cancel</Button>
+                        <Button onClick={handleUpdateQuestion}>Save Changes</Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
         </div>
