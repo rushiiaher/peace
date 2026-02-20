@@ -22,6 +22,7 @@ const navByRole: Record<Role, NavItem[]> = {
     { href: "/super-admin/feedback", label: "Institute Rating & Feedback", icon: Star },
     { href: "/super-admin/courses", label: "Global Course Management", icon: BookOpen },
     { href: "/super-admin/exams", label: "Exam Management", icon: FileText },
+    { href: "/super-admin/final-results", label: "Final Results", icon: ClipboardList },
     { href: "/super-admin/question-bank", label: "Question Bank", icon: HelpCircle },
     { href: "/super-admin/payments", label: "Payment Gateway", icon: CreditCard },
     { href: "/super-admin/reports", label: "Global Reports", icon: BarChart3 },
