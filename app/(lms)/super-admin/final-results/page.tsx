@@ -149,13 +149,15 @@ export default function FinalResultsPage() {
         return list
     }, [results, searchQuery, dateFrom, dateTo])
 
-    // ── Summary Stats ─────────────────────────────────────────────────────────
+    // ── Summary Stats — all driven by the filtered list ──────────────────────
     const stats = useMemo(() => {
         const total = filtered.length
-        const passed = filtered.filter((r: any) => r.percentage >= 45).length
-        const failed = total - passed
-        const avgPct = total > 0
-            ? (filtered.reduce((sum: number, r: any) => sum + (r.percentage || 0), 0) / total).toFixed(1)
+        // Only students with an actual submitted result count towards pass/fail/avg
+        const withResult = filtered.filter((r: any) => r.percentage != null)
+        const passed = withResult.filter((r: any) => Number(r.percentage) >= 45).length
+        const failed = withResult.length - passed
+        const avgPct = withResult.length > 0
+            ? (withResult.reduce((sum: number, r: any) => sum + Number(r.percentage), 0) / withResult.length).toFixed(1)
             : '0'
         return { total, passed, failed, avgPct }
     }, [filtered])
