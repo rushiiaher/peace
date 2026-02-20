@@ -165,23 +165,20 @@ export default function FinalResultsPage() {
         if (filtered.length === 0) { toast.error('No results to export'); return }
 
         const headers = [
-            'Sr. No', 'Student Name', 'Roll No', 'Mother Name', 'Total Score',
-            'Max Marks', 'Percentage', 'Grade', 'Status', 'Result Date'
+            'Sr. No', 'Student Name', 'Roll No', 'Mother Name',
+            'Institute', 'Course', 'Batch', 'Percentage', 'Result Date'
         ]
 
         const rows = filtered.map((r: any, i: number) => {
-            const total = r.totalScore ?? 0
-            const grade = getGrade(total, r.percentage != null)
             return [
                 (i + 1).toString(),
                 r.studentId?.name || '-',
                 r.studentId?.rollNo || '-',
                 r.studentId?.motherName || '-',
-                total.toString(),
-                (r.totalMaxMarks ?? '-').toString(),
+                r.instituteId?.name || '-',
+                r.courseId?.name || '-',
+                r.batchId?.name || '-',
                 r.percentage != null ? `${r.percentage}%` : '-',
-                grade,
-                r.status || '-',
                 r.createdAt ? new Date(r.createdAt).toLocaleDateString('en-IN') : '-',
             ]
         })
@@ -427,17 +424,15 @@ export default function FinalResultsPage() {
                                         <TableHead>Student Name</TableHead>
                                         <TableHead>Roll No</TableHead>
                                         <TableHead>Mother's Name</TableHead>
-                                        <TableHead className="text-center">Total Score</TableHead>
-                                        <TableHead className="text-center">Max Marks</TableHead>
+                                        <TableHead>Institute</TableHead>
+                                        <TableHead>Course</TableHead>
+                                        <TableHead>Batch</TableHead>
                                         <TableHead className="text-center">Percentage</TableHead>
-                                        <TableHead className="text-center">Grade</TableHead>
-                                        <TableHead className="text-center">Status</TableHead>
                                         <TableHead>Date</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {filtered.map((r: any, idx: number) => {
-                                        const grade = getGrade(r.totalScore ?? 0, r.percentage != null)
                                         const pct = r.percentage != null ? Number(r.percentage) : null
                                         return (
                                             <TableRow key={r._id} className="hover:bg-muted/30 transition-colors">
@@ -457,11 +452,22 @@ export default function FinalResultsPage() {
                                                 </TableCell>
                                                 <TableCell className="font-mono text-sm">{r.studentId?.rollNo || '—'}</TableCell>
                                                 <TableCell className="text-sm">{r.studentId?.motherName || '—'}</TableCell>
-                                                <TableCell className="text-center font-semibold">
-                                                    {r.totalScore ?? '—'}
+                                                <TableCell className="text-sm">
+                                                    <div className="flex items-center gap-1.5">
+                                                        <Building2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                                                        {r.instituteId?.name || '—'}
+                                                    </div>
                                                 </TableCell>
-                                                <TableCell className="text-center text-muted-foreground">
-                                                    {r.totalMaxMarks ?? '—'}
+                                                <TableCell className="text-sm">
+                                                    <div className="flex items-center gap-1.5">
+                                                        <BookOpen className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                                                        {r.courseId?.name || '—'}
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="text-sm">
+                                                    <Badge variant="outline" className="text-xs font-normal">
+                                                        {r.batchId?.name || '—'}
+                                                    </Badge>
                                                 </TableCell>
                                                 <TableCell className="text-center">
                                                     {pct != null ? (
@@ -469,17 +475,6 @@ export default function FinalResultsPage() {
                                                             {pct.toFixed(1)}%
                                                         </span>
                                                     ) : '—'}
-                                                </TableCell>
-                                                <TableCell className="text-center">
-                                                    <Badge className={`text-xs font-bold ${gradeColor[grade] || gradeColor['-']}`}>
-                                                        {grade}
-                                                    </Badge>
-                                                </TableCell>
-                                                <TableCell className="text-center">
-                                                    <Badge variant={r.status === 'Finalized' ? 'default' : 'secondary'}
-                                                        className="text-xs">
-                                                        {r.status || 'Pending'}
-                                                    </Badge>
                                                 </TableCell>
                                                 <TableCell className="text-sm text-muted-foreground">
                                                     {r.createdAt
