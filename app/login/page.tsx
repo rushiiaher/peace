@@ -62,14 +62,11 @@ export default function LoginPage() {
               <img src="/Peacexperts_LOGO.png" alt="Logo" className="w-16 h-16 rounded-full" />
             </div>
           </div>
-          <CardTitle className="text-3xl text-center font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            Welcome Back
+          <CardTitle className="text-3xl text-center font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent leading-tight">
+            Institute & Student Log In
           </CardTitle>
           <p className="text-sm text-muted-foreground text-center">
             Sign in to continue to your dashboard
-          </p>
-          <p className="text-xs text-muted-foreground text-center">
-            This login is for both <span className="font-semibold text-foreground">institute admins</span> and <span className="font-semibold text-foreground">students</span>
           </p>
         </CardHeader>
         <CardContent className="space-y-6">
