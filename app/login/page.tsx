@@ -63,7 +63,9 @@ export default function LoginPage() {
             </div>
           </div>
           <CardTitle className="text-3xl text-center font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent leading-tight">
-            Institute & Student Log In
+            Welcome<br />
+            Institute & Student<br />
+            Login
           </CardTitle>
           <p className="text-sm text-muted-foreground text-center">
             Sign in to continue to your dashboard
