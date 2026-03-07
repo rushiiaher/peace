@@ -153,8 +153,9 @@ export default function BatchResultEntryPage() {
             // 5. Initialize Marks Map
             const initialMarks: any = {}
             resultsData.forEach((res: any) => {
+                if (!res.studentId) return; // Skip if student was deleted
                 const marks: any = {}
-                res.evaluationMarks.forEach((m: any) => {
+                res.evaluationMarks?.forEach((m: any) => {
                     marks[m.name] = m.marksObtained
                 })
                 initialMarks[res.studentId._id || res.studentId] = marks
@@ -464,7 +465,7 @@ export default function BatchResultEntryPage() {
                                 </TableCell>
                             </TableRow>
                         ) : students.map(student => {
-                            const result = existingResults.find(r => (r.studentId._id || r.studentId) === student._id)
+                            const result = existingResults.find(r => r.studentId && (r.studentId._id || r.studentId) === student._id)
                             const total = calculateTotal(student._id)
                             const percentage = calculatePercentage(total)
 
