@@ -72,11 +72,30 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
   try {
     await connectDB()
     const { id } = await params
-    const user = await User.findByIdAndDelete(id)
+
+    // 1. Fetch user to confirm role/existence
+    const user = await User.findById(id)
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
-    return NextResponse.json({ message: 'User deleted successfully' })
+
+    // 2. If user is a student, perform cascade cleanup
+    if (user.role === 'student') {
+      const FinalResult = (await import('@/lib/models/FinalResult')).default
+      const ExamResult = (await import('@/lib/models/ExamResult')).default
+      const AdmitCard = (await import('@/lib/models/AdmitCard')).default
+
+      await Promise.all([
+        FinalResult.deleteMany({ studentId: id }),
+        ExamResult.deleteMany({ studentId: id }),
+        AdmitCard.deleteMany({ studentId: id }),
+      ])
+    }
+
+    // 3. Delete the user
+    await User.findByIdAndDelete(id)
+
+    return NextResponse.json({ message: 'User and associated records deleted successfully' })
   } catch (error) {
     console.error('Error deleting user:', error)
     return NextResponse.json({ error: 'Failed to delete user' }, { status: 500 })

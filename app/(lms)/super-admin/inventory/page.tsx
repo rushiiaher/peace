@@ -524,6 +524,9 @@ export default function InventoryPage() {
     )
 
     const filteredResults = certStudents.filter((s: any) => {
+        // Only show students who have finished the exam (have a finalResult record)
+        if (!s.finalResult) return false
+
         const studentName = s.name || ''
         const rollNo = s.rollNo || ''
         const query = searchQuery.toLowerCase()

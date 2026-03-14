@@ -70,7 +70,7 @@ export async function GET(req: Request) {
             instituteId: instituteMap[r.instituteId?.toString()] || null,
             courseId: courseMap[r.courseId?.toString()] || null,
             batchId: batchMap[r.batchId?.toString()] || null,
-        }))
+        })).filter((r: any) => r.studentId !== null)
 
         return NextResponse.json(enriched)
     } catch (error: any) {
