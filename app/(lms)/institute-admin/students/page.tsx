@@ -388,9 +388,14 @@ export default function InstituteStudentsPage() {
                         <Button
                           size="icon"
                           variant="ghost"
-                          className="h-8 w-8 text-muted-foreground hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-full"
+                          disabled={student.courses?.some((c: any) => c.royaltyPaid === true)}
+                          className={`h-8 w-8 ${student.courses?.some((c: any) => c.royaltyPaid === true) 
+                            ? 'opacity-30 cursor-not-allowed' 
+                            : 'text-muted-foreground hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20'} rounded-full`}
                           onClick={(e) => handleDelete(student._id, e)}
-                          title="Delete Student"
+                          title={student.courses?.some((c: any) => c.royaltyPaid === true)
+                            ? "Cannot delete: Royalty already paid to Super Admin"
+                            : "Delete Student"}
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>

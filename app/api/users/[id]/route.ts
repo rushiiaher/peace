@@ -79,6 +79,13 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
+    // 1.5 Restriction: Prevent deletion if royalty is paid
+    if (user.role === 'student' && user.courses?.some((c: any) => c.royaltyPaid === true)) {
+      return NextResponse.json({
+        error: 'Cannot delete student because royalty has already been paid to Super Admin for one or more courses.'
+      }, { status: 400 })
+    }
+
     // 2. If user is a student, perform cascade cleanup
     if (user.role === 'student') {
       const FinalResult = (await import('@/lib/models/FinalResult')).default
