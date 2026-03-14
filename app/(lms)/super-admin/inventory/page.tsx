@@ -213,7 +213,12 @@ export default function InventoryPage() {
     const getEnrollment = (student: any) => student.courses?.find((c: any) => (c.courseId?._id || c.courseId) === selectedCourse)
 
     const handleExportCSV = () => {
-        if (filteredResults.length === 0) {
+        // Respect selection if any students are selected
+        const dataToExport = selectedIds.length > 0 
+            ? filteredResults.filter(s => selectedIds.includes(s._id))
+            : filteredResults
+
+        if (dataToExport.length === 0) {
             toast.error('No data to export')
             return
         }
@@ -229,7 +234,7 @@ export default function InventoryPage() {
 
         // Collect all unique evaluation component names (EXCLUDING "Final Exam")
         const allEvalComponents = new Set<string>()
-        filteredResults.forEach(res => {
+        dataToExport.forEach(res => {
             res.evaluationMarks?.forEach((m: any) => {
                 // Skip if it's named "Final Exam" - we'll handle that separately
                 if (!m.name.toLowerCase().includes('final exam')) {
@@ -240,7 +245,7 @@ export default function InventoryPage() {
         const evalComponentNames = Array.from(allEvalComponents).sort()
 
         // Check if there are multiple final exams (shouldn't be, but handle gracefully)
-        const maxFinalExams = Math.max(...filteredResults.map(res => {
+        const maxFinalExams = Math.max(...dataToExport.map(res => {
             const finalExams = res.evaluationMarks?.filter((m: any) =>
                 m.name.toLowerCase().includes('final exam')
             ) || []
@@ -263,9 +268,9 @@ export default function InventoryPage() {
 
         const summaryHeaders = ['Total Marks', 'Percentage', 'Grade', 'Dispatch Status']
         const headers = [...baseHeaders, ...marksHeaders, ...summaryHeaders]
-
+        
         // Prepare CSV rows
-        const rows = filteredResults.map((s: any, index: number) => {
+        const rows = dataToExport.map((s: any, index: number) => {
             const aadhaarNo = s.aadhaarCardNo || ''
             const baseData = [
                 (index + 1).toString(),
@@ -356,7 +361,7 @@ export default function InventoryPage() {
             `Course,"${courseName}"`,
             `Batch,"${batchName}"`,
             `Export Date,"${new Date().toLocaleDateString()}"`,
-            `Total Students,"${filteredResults.length}"`,
+            `Total Students,"${dataToExport.length}"`,
             '', // Empty line
             // Column Headers
             headers.join(','),
@@ -386,15 +391,20 @@ export default function InventoryPage() {
 
     // Download Photos as ZIP
     const handleDownloadPhotos = async () => {
-        console.log('=== Download Photos Clicked ===')
-        console.log('Filtered Results:', filteredResults.length)
+        // Respect selection if any students are selected
+        const dataToDownload = selectedIds.length > 0
+            ? filteredResults.filter(s => selectedIds.includes(s._id))
+            : filteredResults
 
-        if (filteredResults.length === 0) {
+        console.log('=== Download Photos Clicked ===')
+        console.log('Data count:', dataToDownload.length)
+
+        if (dataToDownload.length === 0) {
             toast.error('No students to download photos for')
             return
         }
 
-        const studentsWithPhotos = filteredResults.filter((s: any) => s.documents?.photo)
+        const studentsWithPhotos = dataToDownload.filter((s: any) => s.documents?.photo)
         console.log('Students with photos:', studentsWithPhotos.length)
 
         if (studentsWithPhotos.length === 0) {
