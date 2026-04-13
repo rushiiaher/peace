@@ -136,19 +136,27 @@ export default function InventoryPage() {
             let resultsUrl = `/api/final-results?instituteId=${selectedInstitute}&courseId=${selectedCourse}`
             if (selectedBatch !== 'all') resultsUrl += `&batchId=${selectedBatch}`
 
-            const [studentsRes, resultsRes] = await Promise.all([
+            let examsUrl = `/api/exams?courseId=${selectedCourse}&type=Final`
+
+            const [studentsRes, resultsRes, examsRes] = await Promise.all([
                 fetch(studentUrl),
-                fetch(resultsUrl)
+                fetch(resultsUrl),
+                fetch(examsUrl)
             ])
 
             const studentsData = await studentsRes.json()
             const resultsData = await resultsRes.json()
+            const examsData = await examsRes.json()
 
             if (!studentsRes.ok) console.error('Students fetch error:', studentsData)
             if (!resultsRes.ok) console.error('Final results fetch error:', resultsData)
 
             const studentsArr = Array.isArray(studentsData) ? studentsData : []
             const resultsArr = Array.isArray(resultsData) ? resultsData : []
+            const examsArr = Array.isArray(examsData) ? examsData : []
+
+            const finalExam = examsArr.length > 0 ? examsArr[0] : null
+            const examDateStr = finalExam && finalExam.date ? new Date(finalExam.date).toLocaleDateString() : 'N/A'
 
             console.log(`[Cert] Students: ${studentsArr.length}, FinalResults: ${resultsArr.length}`)
 
@@ -166,6 +174,7 @@ export default function InventoryPage() {
                     evaluationMarks: result?.evaluationMarks || [],
                     onlineExamScore: result?.onlineExamScore ?? null,
                     resultId: result?._id || null,
+                    examDate: examDateStr,
                 }
             })
 
@@ -266,7 +275,7 @@ export default function InventoryPage() {
             }
         }
 
-        const summaryHeaders = ['Total Marks', 'Percentage', 'Grade', 'Dispatch Status']
+        const summaryHeaders = ['Total Marks', 'Percentage', 'Grade', 'Exam Date', 'Dispatch Status']
         const headers = [...baseHeaders, ...marksHeaders, ...summaryHeaders]
         
         // Prepare CSV rows
@@ -348,6 +357,7 @@ export default function InventoryPage() {
                 calculatedTotal.toString(),
                 s.percentage ? `${s.percentage}%` : '-',
                 grade,
+                s.examDate || '-',
                 s.certificateDispatched ? 'Dispatched' : 'Pending'
             ]
 
@@ -754,6 +764,7 @@ export default function InventoryPage() {
                                             <TableHead>Mother's Name</TableHead>
                                             <TableHead>Marks Details</TableHead>
                                             <TableHead>Percentage</TableHead>
+                                            <TableHead>Exam Date</TableHead>
                                             <TableHead>Status</TableHead>
                                         </TableRow>
                                     </TableHeader>
@@ -794,6 +805,9 @@ export default function InventoryPage() {
                                                             ? <span className="font-bold text-foreground">{s.percentage}%</span>
                                                             : <span className="text-muted-foreground text-xs">N/A</span>
                                                         }
+                                                    </TableCell>
+                                                    <TableCell className="text-muted-foreground text-sm">
+                                                        {s.examDate}
                                                     </TableCell>
                                                     <TableCell>
                                                         {s.finalResult
