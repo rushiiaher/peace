@@ -136,7 +136,7 @@ export default function InventoryPage() {
             let resultsUrl = `/api/final-results?instituteId=${selectedInstitute}&courseId=${selectedCourse}`
             if (selectedBatch !== 'all') resultsUrl += `&batchId=${selectedBatch}`
 
-            let examsUrl = `/api/exams?courseId=${selectedCourse}&type=Final`
+            let examsUrl = `/api/exams?courseId=${selectedCourse}&type=Final&instituteId=${selectedInstitute}`
 
             const [studentsRes, resultsRes, examsRes] = await Promise.all([
                 fetch(studentUrl),
@@ -156,7 +156,7 @@ export default function InventoryPage() {
             const examsArr = Array.isArray(examsData) ? examsData : []
 
             const finalExam = examsArr.length > 0 ? examsArr[0] : null
-            const examDateStr = finalExam && finalExam.date ? new Date(finalExam.date).toLocaleDateString() : 'N/A'
+            const examDateStr = finalExam && finalExam.date ? new Date(finalExam.date).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'N/A'
 
             console.log(`[Cert] Students: ${studentsArr.length}, FinalResults: ${resultsArr.length}`)
 
