@@ -142,7 +142,7 @@ export default function FinalResultsPage() {
             list = list.filter((r: any) => r.examDate && new Date(r.examDate).getTime() >= from)
         }
         if (dateTo) {
-            const to = new Date(dateTo).getTime() + 86400000 // include full day
+            const to = new Date(dateTo).getTime() + 86400000
             list = list.filter((r: any) => r.examDate && new Date(r.examDate).getTime() <= to)
         }
 
@@ -181,7 +181,7 @@ export default function FinalResultsPage() {
                 r.courseId?.name || '-',
                 r.batchId?.name || '-',
                 r.percentage != null ? `${r.percentage}%` : '-',
-                r.examDate || '-',
+                r.examDate ? new Date(r.examDate).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-',
             ]
         })
 
@@ -479,7 +479,7 @@ export default function FinalResultsPage() {
                                                     ) : '—'}
                                                 </TableCell>
                                                 <TableCell className="text-sm text-muted-foreground">
-                                                    {r.examDate || '—'}
+                                                    {r.examDate ? new Date(r.examDate).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'}
                                                 </TableCell>
                                             </TableRow>
                                         )

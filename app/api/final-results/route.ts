@@ -68,22 +68,22 @@ export async function GET(req: Request) {
         // Note: instituteId is optional on Exam model, so we only filter by courseId
         // to avoid missing exams that were created without instituteId
         const courseIdsForExam = [...new Set(results.map((r: any) => r.courseId?.toString()).filter(Boolean))]
+        const instituteIdsForExam = [...new Set(results.map((r: any) => r.instituteId?.toString()).filter(Boolean))]
 
         const finalExams = courseIdsForExam.length > 0
             ? await Exam.find({
                 type: 'Final',
                 courseId: { $in: courseIdsForExam },
-            }).select('courseId date').sort({ date: -1 }).lean()
+                ...(instituteIdsForExam.length > 0 ? { instituteId: { $in: instituteIdsForExam } } : {})
+            }).select('courseId instituteId date').sort({ date: -1 }).lean()
             : []
 
-        // Build exam date map: courseId -> latest Final exam date (formatted)
+        // Build exam date map: courseId+instituteId -> latest Final exam date (ISO string)
         const examDateMap: Record<string, string> = {}
         for (const exam of finalExams as any[]) {
-            const key = exam.courseId?.toString()
+            const key = `${exam.courseId?.toString()}_${exam.instituteId?.toString()}`
             if (key && !examDateMap[key] && exam.date) {
-                examDateMap[key] = new Date(exam.date).toLocaleDateString('en-IN', {
-                    day: '2-digit', month: '2-digit', year: 'numeric'
-                })
+                examDateMap[key] = new Date(exam.date).toISOString()
             }
         }
 
@@ -96,7 +96,7 @@ export async function GET(req: Request) {
                 instituteId: instituteMap[r.instituteId?.toString()] || null,
                 courseId: courseMap[r.courseId?.toString()] || null,
                 batchId: batchMap[r.batchId?.toString()] || null,
-                examDate: courseKey ? (examDateMap[courseKey] || null) : null,
+                examDate: (courseKey && r.instituteId) ? (examDateMap[`${courseKey}_${r.instituteId?.toString()}`] || null) : null,
             }
         }).filter((r: any) => r.studentId !== null)
 
