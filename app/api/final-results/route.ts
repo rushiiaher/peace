@@ -64,47 +64,39 @@ export async function GET(req: Request) {
         const courseMap = toMap(courses as any[])
         const batchMap = toMap(batches as any[])
 
-        // Build a lookup key for exam dates: "courseId_instituteId" -> examDate
-        // Collect unique (courseId, instituteId) combos from results
-        const examKeys = [...new Set(
-            results.map((r: any) =>
-                `${r.courseId?.toString()}_${r.instituteId?.toString()}`
-            ).filter(Boolean)
-        )]
-
-        // Fetch Final exams matching those combos
+        // Fetch Final exams for the unique courseIds present in results
+        // Note: instituteId is optional on Exam model, so we only filter by courseId
+        // to avoid missing exams that were created without instituteId
         const courseIdsForExam = [...new Set(results.map((r: any) => r.courseId?.toString()).filter(Boolean))]
-        const instituteIdsForExam = [...new Set(results.map((r: any) => r.instituteId?.toString()).filter(Boolean))]
 
         const finalExams = courseIdsForExam.length > 0
             ? await Exam.find({
                 type: 'Final',
                 courseId: { $in: courseIdsForExam },
-                instituteId: { $in: instituteIdsForExam }
-            }).select('courseId instituteId date').lean()
+            }).select('courseId date').sort({ date: -1 }).lean()
             : []
 
-        // Build exam date map: "courseId_instituteId" -> formatted date string
+        // Build exam date map: courseId -> latest Final exam date (formatted)
         const examDateMap: Record<string, string> = {}
         for (const exam of finalExams as any[]) {
-            const key = `${exam.courseId?.toString()}_${exam.instituteId?.toString()}`
-            if (!examDateMap[key] && exam.date) {
+            const key = exam.courseId?.toString()
+            if (key && !examDateMap[key] && exam.date) {
                 examDateMap[key] = new Date(exam.date).toLocaleDateString('en-IN', {
                     day: '2-digit', month: '2-digit', year: 'numeric'
                 })
             }
         }
 
-        // Enrich each result with all related data
+        // Enrich each result with all related data + examDate
         const enriched = results.map((r: any) => {
-            const examKey = `${r.courseId?.toString()}_${r.instituteId?.toString()}`
+            const courseKey = r.courseId?.toString()
             return {
                 ...r,
                 studentId: studentMap[r.studentId?.toString()] || null,
                 instituteId: instituteMap[r.instituteId?.toString()] || null,
                 courseId: courseMap[r.courseId?.toString()] || null,
                 batchId: batchMap[r.batchId?.toString()] || null,
-                examDate: examDateMap[examKey] || null,
+                examDate: courseKey ? (examDateMap[courseKey] || null) : null,
             }
         }).filter((r: any) => r.studentId !== null)
 
