@@ -136,14 +136,14 @@ export default function FinalResultsPage() {
             })
         }
 
-        // Date range filter (based on result createdAt)
+        // Date range filter (based on actual exam date)
         if (dateFrom) {
             const from = new Date(dateFrom).getTime()
-            list = list.filter((r: any) => new Date(r.createdAt).getTime() >= from)
+            list = list.filter((r: any) => r.examDate && new Date(r.examDate).getTime() >= from)
         }
         if (dateTo) {
             const to = new Date(dateTo).getTime() + 86400000 // include full day
-            list = list.filter((r: any) => new Date(r.createdAt).getTime() <= to)
+            list = list.filter((r: any) => r.examDate && new Date(r.examDate).getTime() <= to)
         }
 
         return list
@@ -168,7 +168,7 @@ export default function FinalResultsPage() {
 
         const headers = [
             'Sr. No', 'Student Name', 'Roll No', 'Mother Name',
-            'Institute', 'Course', 'Batch', 'Percentage', 'Result Date'
+            'Institute', 'Course', 'Batch', 'Percentage', 'Exam Date'
         ]
 
         const rows = filtered.map((r: any, i: number) => {
@@ -181,7 +181,7 @@ export default function FinalResultsPage() {
                 r.courseId?.name || '-',
                 r.batchId?.name || '-',
                 r.percentage != null ? `${r.percentage}%` : '-',
-                r.createdAt ? new Date(r.createdAt).toLocaleDateString('en-IN') : '-',
+                r.examDate || '-',
             ]
         })
 
@@ -479,9 +479,7 @@ export default function FinalResultsPage() {
                                                     ) : '—'}
                                                 </TableCell>
                                                 <TableCell className="text-sm text-muted-foreground">
-                                                    {r.createdAt
-                                                        ? new Date(r.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
-                                                        : '—'}
+                                                    {r.examDate || '—'}
                                                 </TableCell>
                                             </TableRow>
                                         )

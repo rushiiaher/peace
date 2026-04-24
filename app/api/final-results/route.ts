@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import connectDB from '@/lib/mongodb'
 import FinalResult from '@/lib/models/FinalResult'
 import User from '@/lib/models/User'
+import Exam from '@/lib/models/Exam'
 import mongoose from 'mongoose'
 
 export const dynamic = 'force-dynamic'
@@ -63,14 +64,49 @@ export async function GET(req: Request) {
         const courseMap = toMap(courses as any[])
         const batchMap = toMap(batches as any[])
 
+        // Build a lookup key for exam dates: "courseId_instituteId" -> examDate
+        // Collect unique (courseId, instituteId) combos from results
+        const examKeys = [...new Set(
+            results.map((r: any) =>
+                `${r.courseId?.toString()}_${r.instituteId?.toString()}`
+            ).filter(Boolean)
+        )]
+
+        // Fetch Final exams matching those combos
+        const courseIdsForExam = [...new Set(results.map((r: any) => r.courseId?.toString()).filter(Boolean))]
+        const instituteIdsForExam = [...new Set(results.map((r: any) => r.instituteId?.toString()).filter(Boolean))]
+
+        const finalExams = courseIdsForExam.length > 0
+            ? await Exam.find({
+                type: 'Final',
+                courseId: { $in: courseIdsForExam },
+                instituteId: { $in: instituteIdsForExam }
+            }).select('courseId instituteId date').lean()
+            : []
+
+        // Build exam date map: "courseId_instituteId" -> formatted date string
+        const examDateMap: Record<string, string> = {}
+        for (const exam of finalExams as any[]) {
+            const key = `${exam.courseId?.toString()}_${exam.instituteId?.toString()}`
+            if (!examDateMap[key] && exam.date) {
+                examDateMap[key] = new Date(exam.date).toLocaleDateString('en-IN', {
+                    day: '2-digit', month: '2-digit', year: 'numeric'
+                })
+            }
+        }
+
         // Enrich each result with all related data
-        const enriched = results.map((r: any) => ({
-            ...r,
-            studentId: studentMap[r.studentId?.toString()] || null,
-            instituteId: instituteMap[r.instituteId?.toString()] || null,
-            courseId: courseMap[r.courseId?.toString()] || null,
-            batchId: batchMap[r.batchId?.toString()] || null,
-        })).filter((r: any) => r.studentId !== null)
+        const enriched = results.map((r: any) => {
+            const examKey = `${r.courseId?.toString()}_${r.instituteId?.toString()}`
+            return {
+                ...r,
+                studentId: studentMap[r.studentId?.toString()] || null,
+                instituteId: instituteMap[r.instituteId?.toString()] || null,
+                courseId: courseMap[r.courseId?.toString()] || null,
+                batchId: batchMap[r.batchId?.toString()] || null,
+                examDate: examDateMap[examKey] || null,
+            }
+        }).filter((r: any) => r.studentId !== null)
 
         return NextResponse.json(enriched)
     } catch (error: any) {
