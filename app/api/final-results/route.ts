@@ -65,17 +65,30 @@ export async function GET(req: Request) {
         const courseMap = toMap(courses as any[])
         const batchMap = toMap(batches as any[])
 
-        // Enrich each result. resultDate = submittedAt (when institute submitted to super admin)
-        // fallback: updatedAt → createdAt. This avoids future exam dates showing up.
+        // Enrich each result.
+        // resultDate priority: submittedAt → updatedAt → createdAt
+        // Safety clamp: if the chosen date is somehow in the future (data anomaly),
+        // fall through to the next candidate; last resort = now.
+        const now = new Date()
+        const pastDate = (r: any): Date | null => {
+            const candidates = [r.submittedAt, r.updatedAt, r.createdAt]
+            for (const d of candidates) {
+                if (d && new Date(d) <= now) return new Date(d)
+            }
+            // All candidates are future – use the earliest future date (shouldn't happen)
+            const validDates = candidates.filter(Boolean).map((d: any) => new Date(d))
+            return validDates.length > 0 ? new Date(Math.min(...validDates.map((d: Date) => d.getTime()))) : now
+        }
+
         const enriched = results.map((r: any) => {
-            const resultDate = r.submittedAt || r.updatedAt || r.createdAt || null
+            const rd = pastDate(r)
             return {
                 ...r,
                 studentId: studentMap[r.studentId?.toString()] || null,
                 instituteId: instituteMap[r.instituteId?.toString()] || null,
                 courseId: courseMap[r.courseId?.toString()] || null,
                 batchId: batchMap[r.batchId?.toString()] || null,
-                resultDate: resultDate ? new Date(resultDate).toISOString() : null,
+                resultDate: rd ? rd.toISOString() : null,
             }
         }).filter((r: any) => r.studentId !== null)
 
