@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server'
 import connectDB from '@/lib/mongodb'
 import FinalResult from '@/lib/models/FinalResult'
 import User from '@/lib/models/User'
-import Exam from '@/lib/models/Exam'
 import mongoose from 'mongoose'
 
 export const dynamic = 'force-dynamic'
@@ -23,8 +22,10 @@ export async function GET(req: Request) {
         if (isValidId(instituteId)) query.instituteId = instituteId
         if (isValidId(courseId)) query.courseId = courseId
 
-        // lean() – no populate, safe in serverless
-        const results = await FinalResult.find(query).lean()
+        // Sort newest first: submittedAt desc → updatedAt desc → createdAt desc
+        const results = await FinalResult.find(query)
+            .sort({ submittedAt: -1, updatedAt: -1, createdAt: -1 })
+            .lean()
 
         // Collect unique IDs for batch lookups
         const studentIds = [...new Set(results.map((r: any) => r.studentId?.toString()).filter(Boolean))]
@@ -64,39 +65,17 @@ export async function GET(req: Request) {
         const courseMap = toMap(courses as any[])
         const batchMap = toMap(batches as any[])
 
-        // Fetch Final exams for the unique courseIds present in results
-        // Note: instituteId is optional on Exam model, so we only filter by courseId
-        // to avoid missing exams that were created without instituteId
-        const courseIdsForExam = [...new Set(results.map((r: any) => r.courseId?.toString()).filter(Boolean))]
-        const instituteIdsForExam = [...new Set(results.map((r: any) => r.instituteId?.toString()).filter(Boolean))]
-
-        const finalExams = courseIdsForExam.length > 0
-            ? await Exam.find({
-                type: 'Final',
-                courseId: { $in: courseIdsForExam },
-                ...(instituteIdsForExam.length > 0 ? { instituteId: { $in: instituteIdsForExam } } : {})
-            }).select('courseId instituteId date').sort({ date: -1 }).lean()
-            : []
-
-        // Build exam date map: courseId+instituteId -> latest Final exam date (ISO string)
-        const examDateMap: Record<string, string> = {}
-        for (const exam of finalExams as any[]) {
-            const key = `${exam.courseId?.toString()}_${exam.instituteId?.toString()}`
-            if (key && !examDateMap[key] && exam.date) {
-                examDateMap[key] = new Date(exam.date).toISOString()
-            }
-        }
-
-        // Enrich each result with all related data + examDate
+        // Enrich each result. resultDate = submittedAt (when institute submitted to super admin)
+        // fallback: updatedAt → createdAt. This avoids future exam dates showing up.
         const enriched = results.map((r: any) => {
-            const courseKey = r.courseId?.toString()
+            const resultDate = r.submittedAt || r.updatedAt || r.createdAt || null
             return {
                 ...r,
                 studentId: studentMap[r.studentId?.toString()] || null,
                 instituteId: instituteMap[r.instituteId?.toString()] || null,
                 courseId: courseMap[r.courseId?.toString()] || null,
                 batchId: batchMap[r.batchId?.toString()] || null,
-                examDate: (courseKey && r.instituteId) ? (examDateMap[`${courseKey}_${r.instituteId?.toString()}`] || null) : null,
+                resultDate: resultDate ? new Date(resultDate).toISOString() : null,
             }
         }).filter((r: any) => r.studentId !== null)
 
