@@ -156,18 +156,30 @@ export async function POST(req: Request) {
         await connectDB()
         const { results } = await req.json()
 
-        const operations = results.map((result: any) => ({
-            updateOne: {
-                filter: { studentId: result.studentId, courseId: result.courseId },
-                update: {
-                    $set: {
-                        ...result,
-                        updatedAt: new Date()
-                    }
-                },
-                upsert: true
+        const operations = results.map((result: any) => {
+            const updateFields: any = {
+                ...result,
+                updatedAt: new Date()
             }
-        }))
+
+            // Set submittedAt timestamp when first submitting to super admin
+            // Only set it if not already present (preserve original submission time on re-saves)
+            if (result.submittedToSuperAdmin && !result.submittedAt) {
+                updateFields.submittedAt = new Date()
+            } else if (result.submittedAt) {
+                updateFields.submittedAt = new Date(result.submittedAt)
+            }
+
+            return {
+                updateOne: {
+                    filter: { studentId: result.studentId, courseId: result.courseId },
+                    update: {
+                        $set: updateFields
+                    },
+                    upsert: true
+                }
+            }
+        })
 
         await FinalResult.bulkWrite(operations)
         return NextResponse.json({ message: 'Results saved successfully' })

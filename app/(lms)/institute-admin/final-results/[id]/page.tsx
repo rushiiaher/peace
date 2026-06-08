@@ -353,14 +353,31 @@ export default function BatchResultEntryPage() {
     const handleSubmitToSuperAdmin = async () => {
         if (!course || !batch) return
 
-        // Check if all students have final exam marks
-        const hasIncompleteMarks = students.some(s => marksMap[s._id]?.[finalCompName] === -1 || !marksMap[s._id]?.[finalCompName])
-        if (hasIncompleteMarks) {
-            toast.error("Cannot submit: Final Exam marks are missing for some students")
+        // Only submit students who have NOT already been submitted to super admin
+        const pendingStudents = students.filter(s => {
+            const result = existingResults.find(
+                r => r.studentId && (r.studentId._id || r.studentId) === s._id
+            )
+            return !result?.submittedToSuperAdmin
+        })
+
+        if (pendingStudents.length === 0) {
+            toast.info("All students in this batch have already been submitted to Super Admin.")
             return
         }
 
-        const payload = students.map(student => {
+        // Check if all PENDING students have valid final exam marks
+        const hasIncompleteMarks = pendingStudents.some(s =>
+            marksMap[s._id]?.[finalCompName] === -1 ||
+            marksMap[s._id]?.[finalCompName] === undefined ||
+            marksMap[s._id]?.[finalCompName] === null
+        )
+        if (hasIncompleteMarks) {
+            toast.error("Cannot submit: Final Exam marks are missing or not yet conducted for some students.")
+            return
+        }
+
+        const payload = pendingStudents.map(student => {
             const studentMarks = marksMap[student._id] || {}
 
             // Separate Final Exam from other evaluation components
@@ -372,7 +389,7 @@ export default function BatchResultEntryPage() {
                     maxMarks: comp.maxMarks
                 }))
 
-            const onlineExamScore = studentMarks['Final Exam'] || 0
+            const onlineExamScore = studentMarks[finalCompName] || 0
             const totalScore = calculateTotal(student._id)
             const totalMaxMarks = dynamicComponents.reduce((sum: number, c: any) => sum + c.maxMarks, 0)
 
@@ -387,7 +404,8 @@ export default function BatchResultEntryPage() {
                 totalMaxMarks,
                 percentage: calculatePercentage(totalScore),
                 aadhaarCardNo: student.aadhaarCardNo,
-                submittedToSuperAdmin: true // Mark as submitted
+                submittedToSuperAdmin: true,
+                submittedAt: new Date().toISOString()
             }
         })
 
@@ -400,7 +418,7 @@ export default function BatchResultEntryPage() {
 
             if (res.ok) {
                 toast.success("✅ Results Successfully Submitted to Super Admin!", {
-                    description: `${students.length} student result(s) have been finalized and sent to Super Admin for review.`,
+                    description: `${pendingStudents.length} student result(s) have been finalized and sent to Super Admin for review.`,
                     duration: 5000
                 })
                 fetchData() // Refresh to show updated status
@@ -546,8 +564,34 @@ export default function BatchResultEntryPage() {
                 <Button
                     variant="default"
                     className="bg-green-600 hover:bg-green-700 gap-2 disabled:opacity-50"
-                    disabled={students.some(s => marksMap[s._id]?.[finalCompName] === -1)}
-                    title={students.some(s => marksMap[s._id]?.[finalCompName] === -1) ? "Cannot submit: Final Exam pending for some students" : ""}
+                    disabled={(() => {
+                        // Only consider students who haven't been submitted yet
+                        const pendingStudents = students.filter(s => {
+                            const result = existingResults.find(
+                                r => r.studentId && (r.studentId._id || r.studentId) === s._id
+                            )
+                            return !result?.submittedToSuperAdmin
+                        })
+                        if (pendingStudents.length === 0) return false // All submitted, allow re-click (shows info toast)
+                        return pendingStudents.some(s =>
+                            marksMap[s._id]?.[finalCompName] === -1 ||
+                            marksMap[s._id]?.[finalCompName] === undefined ||
+                            marksMap[s._id]?.[finalCompName] === null
+                        )
+                    })()}
+                    title={(() => {
+                        const pendingStudents = students.filter(s => {
+                            const result = existingResults.find(
+                                r => r.studentId && (r.studentId._id || r.studentId) === s._id
+                            )
+                            return !result?.submittedToSuperAdmin
+                        })
+                        const hasPending = pendingStudents.some(s =>
+                            marksMap[s._id]?.[finalCompName] === -1 ||
+                            marksMap[s._id]?.[finalCompName] === undefined
+                        )
+                        return hasPending ? "Cannot submit: Final Exam pending for some students" : ""
+                    })()}
                     onClick={handleSubmitToSuperAdmin}
                 >
                     <Send className="w-4 h-4" /> Finalize & Submit to Super Admin
