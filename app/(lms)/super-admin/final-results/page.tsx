@@ -136,14 +136,14 @@ export default function FinalResultsPage() {
             })
         }
 
-        // Date range filter (based on result submission date)
+        // Date range filter (based on actual exam date per student)
         if (dateFrom) {
             const from = new Date(dateFrom).getTime()
-            list = list.filter((r: any) => r.resultDate && new Date(r.resultDate).getTime() >= from)
+            list = list.filter((r: any) => r.examDate && new Date(r.examDate).getTime() >= from)
         }
         if (dateTo) {
             const to = new Date(dateTo).getTime() + 86400000
-            list = list.filter((r: any) => r.resultDate && new Date(r.resultDate).getTime() <= to)
+            list = list.filter((r: any) => r.examDate && new Date(r.examDate).getTime() <= to)
         }
 
         return list
@@ -168,7 +168,7 @@ export default function FinalResultsPage() {
 
         const headers = [
             'Sr. No', 'Student Name', 'Roll No', 'Mother Name',
-            'Institute', 'Course', 'Batch', 'Percentage', 'Result Date'
+            'Institute', 'Course', 'Batch', 'Percentage', 'Exam Date'
         ]
 
         const rows = filtered.map((r: any, i: number) => {
@@ -181,7 +181,7 @@ export default function FinalResultsPage() {
                 r.courseId?.name || '-',
                 r.batchId?.name || '-',
                 r.percentage != null ? `${r.percentage}%` : '-',
-                r.resultDate ? new Date(r.resultDate).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-',
+                r.examDate ? new Date(r.examDate).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-',
             ]
         })
 
@@ -430,7 +430,7 @@ export default function FinalResultsPage() {
                                         <TableHead>Course</TableHead>
                                         <TableHead>Batch</TableHead>
                                         <TableHead className="text-center">Percentage</TableHead>
-                                        <TableHead>Result Date</TableHead>
+                                        <TableHead>Exam Date</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -479,8 +479,8 @@ export default function FinalResultsPage() {
                                                     ) : '—'}
                                                 </TableCell>
                                                 <TableCell className="text-sm text-muted-foreground">
-                                                    {r.resultDate
-                                                        ? new Date(r.resultDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+                                                    {r.examDate
+                                                        ? new Date(r.examDate).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })
                                                         : '—'}
                                                 </TableCell>
                                             </TableRow>

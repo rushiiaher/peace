@@ -155,8 +155,55 @@ export default function InventoryPage() {
             const resultsArr = Array.isArray(resultsData) ? resultsData : []
             const examsArr = Array.isArray(examsData) ? examsData : []
 
-            const finalExam = examsArr.length > 0 ? examsArr[0] : null
-            const examDateStr = finalExam && finalExam.date ? new Date(finalExam.date).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'N/A'
+            // ─── Per-student exam date lookup ─────────────────────────────────────
+            // Build studentId → formatted exam date string from Exam sections.
+            // Each student may have sat in a different section (different date),
+            // so we must not use the same root date for everyone.
+            const studentExamDateMap: Record<string, string> = {}
+            const fallbackDateStr = examsArr[0]?.date
+                ? new Date(examsArr[0].date).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                : 'N/A'
+
+            for (const exam of examsArr) {
+                const mainDateStr = exam.date
+                    ? new Date(exam.date).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                    : 'N/A'
+
+                if (exam.sections && exam.sections.length > 0) {
+                    // Build sectionNumber → date string map
+                    const sectionDateByNum: Record<number, string> = {}
+                    for (const sec of exam.sections) {
+                        const secDateStr = sec.date
+                            ? new Date(sec.date).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                            : mainDateStr
+                        sectionDateByNum[sec.sectionNumber] = secDateStr
+
+                        // Assign from section-level systemAssignments
+                        for (const a of (sec.systemAssignments || [])) {
+                            const sid = (a.studentId?._id || a.studentId)?.toString()
+                            if (sid && !studentExamDateMap[sid]) {
+                                studentExamDateMap[sid] = secDateStr
+                            }
+                        }
+                    }
+                    // Top-level systemAssignments carry a sectionNumber
+                    for (const a of (exam.systemAssignments || [])) {
+                        const sid = (a.studentId?._id || a.studentId)?.toString()
+                        if (sid && !studentExamDateMap[sid]) {
+                            const secNum = a.sectionNumber ?? 1
+                            studentExamDateMap[sid] = sectionDateByNum[secNum] || mainDateStr
+                        }
+                    }
+                } else {
+                    // Single-date exam — all assigned students share the same date
+                    for (const a of (exam.systemAssignments || [])) {
+                        const sid = (a.studentId?._id || a.studentId)?.toString()
+                        if (sid && !studentExamDateMap[sid]) {
+                            studentExamDateMap[sid] = mainDateStr
+                        }
+                    }
+                }
+            }
 
             console.log(`[Cert] Students: ${studentsArr.length}, FinalResults: ${resultsArr.length}`)
 
@@ -174,7 +221,9 @@ export default function InventoryPage() {
                     evaluationMarks: result?.evaluationMarks || [],
                     onlineExamScore: result?.onlineExamScore ?? null,
                     resultId: result?._id || null,
-                    examDate: examDateStr,
+                    // Per-student exam date: section date they actually sat
+                    // Falls back to the exam's root date if not found in assignments
+                    examDate: studentExamDateMap[student._id?.toString()] || fallbackDateStr,
                 }
             })
 

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import connectDB from '@/lib/mongodb'
 import FinalResult from '@/lib/models/FinalResult'
 import User from '@/lib/models/User'
+import Exam from '@/lib/models/Exam'
 import mongoose from 'mongoose'
 
 export const dynamic = 'force-dynamic'
@@ -22,7 +23,7 @@ export async function GET(req: Request) {
         if (isValidId(instituteId)) query.instituteId = instituteId
         if (isValidId(courseId)) query.courseId = courseId
 
-        // Sort newest first: submittedAt desc → updatedAt desc → createdAt desc
+        // Sort newest first by submission time
         const results = await FinalResult.find(query)
             .sort({ submittedAt: -1, updatedAt: -1, createdAt: -1 })
             .lean()
@@ -65,30 +66,78 @@ export async function GET(req: Request) {
         const courseMap = toMap(courses as any[])
         const batchMap = toMap(batches as any[])
 
-        // Enrich each result.
-        // resultDate priority: submittedAt → updatedAt → createdAt
-        // Safety clamp: if the chosen date is somehow in the future (data anomaly),
-        // fall through to the next candidate; last resort = now.
-        const now = new Date()
-        const pastDate = (r: any): Date | null => {
-            const candidates = [r.submittedAt, r.updatedAt, r.createdAt]
-            for (const d of candidates) {
-                if (d && new Date(d) <= now) return new Date(d)
+        // ─── Per-student exam date lookup ────────────────────────────────────────
+        // The CORRECT exam date for each student is the date of the specific
+        // exam section they were assigned to — NOT the Exam's root date, NOT
+        // updatedAt (which changes every time marks are re-submitted).
+        //
+        // Priority: section.systemAssignments → top-level systemAssignments
+        //           → exam.date (fallback for un-sectioned exams)
+        const finalExams = courseIds.length > 0
+            ? await Exam.find({
+                type: 'Final',
+                courseId: { $in: courseIds },
+            }).select('courseId instituteId date sections systemAssignments').lean()
+            : []
+
+        // studentId (string) → Date of the section they sat
+        const studentExamDateMap: Record<string, Date> = {}
+
+        for (const exam of finalExams as any[]) {
+            const mainDate: Date = new Date(exam.date)
+
+            if (exam.sections && exam.sections.length > 0) {
+                // Build sectionNumber → Date map
+                const sectionDateByNum: Record<number, Date> = {}
+                for (const sec of exam.sections) {
+                    const secDate = sec.date ? new Date(sec.date) : mainDate
+                    sectionDateByNum[sec.sectionNumber] = secDate
+
+                    // Assign from section-level systemAssignments
+                    for (const a of (sec.systemAssignments || [])) {
+                        const sid = a.studentId?._id?.toString() || a.studentId?.toString()
+                        if (sid && !studentExamDateMap[sid]) {
+                            studentExamDateMap[sid] = secDate
+                        }
+                    }
+                }
+
+                // Assign from top-level systemAssignments (have sectionNumber field)
+                for (const a of (exam.systemAssignments || [])) {
+                    const sid = a.studentId?._id?.toString() || a.studentId?.toString()
+                    if (sid && !studentExamDateMap[sid]) {
+                        const secNum = a.sectionNumber ?? 1
+                        studentExamDateMap[sid] = sectionDateByNum[secNum] || mainDate
+                    }
+                }
+            } else {
+                // Single-date exam — all students share the same date
+                for (const a of (exam.systemAssignments || [])) {
+                    const sid = a.studentId?._id?.toString() || a.studentId?.toString()
+                    if (sid && !studentExamDateMap[sid]) {
+                        studentExamDateMap[sid] = mainDate
+                    }
+                }
             }
-            // All candidates are future – use the earliest future date (shouldn't happen)
-            const validDates = candidates.filter(Boolean).map((d: any) => new Date(d))
-            return validDates.length > 0 ? new Date(Math.min(...validDates.map((d: Date) => d.getTime()))) : now
         }
 
+        // Enrich each result
         const enriched = results.map((r: any) => {
-            const rd = pastDate(r)
+            const origStudentId = r.studentId?.toString()
+
+            // Per-student exam date (static — from the Exam section they sat)
+            const examDate: Date | null = origStudentId
+                ? (studentExamDateMap[origStudentId] || null)
+                : null
+
             return {
                 ...r,
-                studentId: studentMap[r.studentId?.toString()] || null,
+                studentId: studentMap[origStudentId] || null,
                 instituteId: instituteMap[r.instituteId?.toString()] || null,
                 courseId: courseMap[r.courseId?.toString()] || null,
                 batchId: batchMap[r.batchId?.toString()] || null,
-                resultDate: rd ? rd.toISOString() : null,
+                // examDate: actual date the student sat the exam (from Exam model, per section)
+                examDate: examDate ? examDate.toISOString() : null,
             }
         }).filter((r: any) => r.studentId !== null)
 
