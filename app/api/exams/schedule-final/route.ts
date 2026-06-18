@@ -142,14 +142,31 @@ export async function POST(req: Request) {
     const totalAvailable = qbs.reduce((sum: number, qb: any) => sum + qb.questions.length, 0)
     const questionsToSelect = Math.min(totalQuestions, totalAvailable)
 
+    const shuffle = <T>(arr: T[]): T[] => {
+      const a = [...arr]
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]]
+      }
+      return a
+    }
+
+    const seenQuestionIds = new Set<string>()
     const questionPool: any[] = []
     let remaining = questionsToSelect
 
     qbs.forEach((qb: any, index: number) => {
+      // Deduplicate within this QB and against questions already picked from other QBs
+      const uniqueQs = qb.questions.filter((q: any) => {
+        const qid = q._id?.toString()
+        if (!qid || seenQuestionIds.has(qid)) return false
+        seenQuestionIds.add(qid)
+        return true
+      })
       const proportion = qb.questions.length / totalAvailable
       const count = index === qbs.length - 1 ? remaining : Math.floor(questionsToSelect * proportion)
-      const shuffled = [...qb.questions].sort(() => 0.5 - Math.random())
-      questionPool.push(...shuffled.slice(0, Math.min(count, qb.questions.length)))
+      const shuffled = shuffle(uniqueQs)
+      questionPool.push(...shuffled.slice(0, Math.min(count, uniqueQs.length)))
       remaining -= count
     })
 

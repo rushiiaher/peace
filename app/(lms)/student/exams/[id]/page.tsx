@@ -147,7 +147,12 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
     fetch(`/api/exams/${id}`)
       .then(res => res.json())
       .then(data => {
-        const shuffledQuestions = [...(data.questions || [])].sort(() => 0.5 - Math.random())
+        const qs = [...(data.questions || [])]
+        for (let i = qs.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [qs[i], qs[j]] = [qs[j], qs[i]]
+        }
+        const shuffledQuestions = qs
         setExam({ ...data, questions: shuffledQuestions })
         setAnswers(new Array(shuffledQuestions.length).fill(-1))
         setMarkedForReview(new Array(shuffledQuestions.length).fill(false))
