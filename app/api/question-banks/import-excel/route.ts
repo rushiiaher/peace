@@ -15,7 +15,11 @@ export async function POST(req: Request) {
     
     const formattedQuestions = questions.map((q: any) => ({
       question: q.question,
-      options: [q.option1, q.option2, q.option3, q.option4],
+      // Use variable-length options (True/False = 2, MCQ = 3-4).
+      // Fall back to legacy option1-4 fields, dropping empties.
+      options: Array.isArray(q.options) && q.options.length > 0
+        ? q.options
+        : [q.option1, q.option2, q.option3, q.option4].filter((o: any) => o != null && String(o).trim() !== ''),
       correctAnswer: q.correctIndex,
       explanation: `Answer: ${q.answerText}`
     }))

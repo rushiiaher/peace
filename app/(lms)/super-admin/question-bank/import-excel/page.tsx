@@ -262,7 +262,10 @@ export default function ImportQBExcelPage() {
                     <p className="font-medium text-sm mb-2">{row.question}</p>
 
                     <div className="grid grid-cols-2 gap-2 text-sm">
-                      {[row.option1, row.option2, row.option3, row.option4].map((opt, i) => (
+                      {(row.options && row.options.length > 0
+                        ? row.options
+                        : [row.option1, row.option2, row.option3, row.option4].filter((o: any) => o != null && String(o).trim() !== '')
+                      ).map((opt: string, i: number) => (
                         <div
                           key={i}
                           className={`p-2 rounded ${

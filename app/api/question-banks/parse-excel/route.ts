@@ -11,6 +11,7 @@ interface ParsedRow {
   option2: string
   option3: string
   option4: string
+  options: string[]
   answerText: string
   correctIndex: number
   isValid: boolean
@@ -23,11 +24,14 @@ function normalize(s: string): string {
 
 function findMatchingOption(answerText: string, options: string[]): { index: number; confidence: number } {
   const trimmedAnswer = answerText.trim()
-  
-  // Check if answer is a number (1, 2, 3, 4)
+
+  // Check if answer is a number (1, 2, 3, 4) — must be within the available options
   if (/^[1-4]$/.test(trimmedAnswer)) {
     const optionNumber = parseInt(trimmedAnswer)
-    return { index: optionNumber - 1, confidence: 1.0 }
+    if (optionNumber >= 1 && optionNumber <= options.length) {
+      return { index: optionNumber - 1, confidence: 1.0 }
+    }
+    return { index: -1, confidence: 0 }
   }
   
   const normalizedAnswer = normalize(answerText)
@@ -87,45 +91,57 @@ export async function POST(req: Request) {
     
     for (let i = 1; i < data.length; i++) {
       const row = data[i]
-      
-      if (!row || row.length < 7 || !row[1]) {
+
+      // Skip only truly empty rows. Rows missing options/answer are kept and
+      // flagged invalid below (with a reason) instead of being silently dropped.
+      if (!row || row.length < 2 || !row[1]) {
         continue
       }
       
+      // Read cell as string WITHOUT using `|| ''` — that would wipe falsy values
+      // like boolean False (True/False answers) or the number 0.
+      const cell = (v: any) => (v === null || v === undefined) ? '' : String(v).trim()
+
+      // Strip a leading 0-indexed numbering prefix ("0 Text", "1 Text"), but
+      // never strip an option down to empty — bare-digit options ("1", "2") are valid.
+      const stripPrefix = (s: string) => {
+        const t = s.replace(/^[0-3]\s*/, '')
+        return t === '' ? s : t
+      }
+
       const srNo = Number(row[0]) || i
-      const question = String(row[1] || '').trim()
-      let option1 = String(row[2] || '').trim()
-      let option2 = String(row[3] || '').trim()
-      let option3 = String(row[4] || '').trim()
-      let option4 = String(row[5] || '').trim()
-      const answerText = String(row[6] || '').trim()
-      
-      option1 = option1.replace(/^[0-3]\s*/, '')
-      option2 = option2.replace(/^[0-3]\s*/, '')
-      option3 = option3.replace(/^[0-3]\s*/, '')
-      option4 = option4.replace(/^[0-3]\s*/, '')
-      
+      const question = cell(row[1])
+      const option1 = stripPrefix(cell(row[2]))
+      const option2 = stripPrefix(cell(row[3]))
+      const option3 = stripPrefix(cell(row[4]))
+      const option4 = stripPrefix(cell(row[5]))
+      const answerText = cell(row[6])
+
+      // Variable-length options: supports True/False (2 opts) and MCQ (3-4 opts).
+      // Only non-empty options are kept, in column order.
+      const options = [option1, option2, option3, option4].filter(o => o !== '')
+
       let isValid = true
       let error = ''
       let correctIndex = -1
-      
+
       if (!question) {
         isValid = false
         error = 'Question is empty'
       }
-      
-      if (!option1 || !option2 || !option3 || !option4) {
+
+      // Need at least 2 options (e.g. True/False). Was previously requiring all 4.
+      if (options.length < 2) {
         isValid = false
-        error = error ? `${error}; Missing options` : 'Missing options'
+        error = error ? `${error}; Need at least 2 options` : 'Need at least 2 options'
       }
-      
+
       if (!answerText) {
         isValid = false
         error = error ? `${error}; Answer is empty` : 'Answer is empty'
       } else if (isValid) {
-        const options = [option1, option2, option3, option4]
         const match = findMatchingOption(answerText, options)
-        
+
         if (match.index === -1) {
           isValid = false
           error = `Answer "${answerText}" does not match any option`
@@ -136,7 +152,7 @@ export async function POST(req: Request) {
           }
         }
       }
-      
+
       parsedRows.push({
         srNo,
         question,
@@ -144,6 +160,7 @@ export async function POST(req: Request) {
         option2,
         option3,
         option4,
+        options,
         answerText,
         correctIndex,
         isValid,
