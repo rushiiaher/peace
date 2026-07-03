@@ -14,19 +14,31 @@ if (!cached) {
 }
 
 async function connectDB() {
-  if (cached.conn) {
+  // Reuse the cached connection ONLY if it is actually alive (readyState 1).
+  // Previously we returned cached.conn unconditionally — after the pool closed
+  // an idle socket, that stale/dead connection made every query hang on server
+  // reselection until Vercel's 10s function limit fired a 504.
+  if (cached.conn && mongoose.connection.readyState === 1) {
     return cached.conn
+  }
+
+  // Connection is gone/broken — drop it so we establish a fresh one.
+  if (cached.conn && mongoose.connection.readyState !== 1) {
+    cached.conn = null
+    cached.promise = null
   }
 
   if (!cached.promise) {
     const opts = {
       bufferCommands: false,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 10000,
-      connectTimeoutMS: 10000,
-      maxPoolSize: 1,
-      minPoolSize: 1,
-      maxIdleTimeMS: 10000,
+      // Fail server-selection BEFORE the 10s function limit so the route can
+      // return its own error instead of a raw Vercel 504.
+      serverSelectionTimeoutMS: 8000,
+      // Allow concurrency; don't force-hold or tear down idle sockets in a
+      // serverless pool. Removing maxIdleTimeMS/socketTimeoutMS keeps the
+      // connection warm across invocations (the core fix).
+      maxPoolSize: 10,
+      minPoolSize: 0,
     }
 
     cached.promise = mongoose.connect(MONGODB_URI, opts)
