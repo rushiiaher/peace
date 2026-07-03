@@ -34,11 +34,19 @@ export async function GET(req: Request) {
       }
     }
 
+    // Cap result size; honor the client's ?limit (page requests up to 1000).
+    const limit = Math.min(parseInt(searchParams.get('limit') || '1000', 10) || 1000, 5000)
+
+    // NOTE: do NOT select `documents` here — photo/idProof/certificates are
+    // base64 strings (often hundreds of KB each). Fetching them for the whole
+    // list produced multi-MB payloads that timed out the function (504). The
+    // list UI never renders them; the edit view fetches the full user by id.
     const users = await User.find(query)
-      .select('name email role instituteId status createdAt lastLogin rollNo phone documents courses motherName aadhaarCardNo dateOfBirth')
+      .select('name email role instituteId status createdAt lastLogin rollNo phone courses motherName aadhaarCardNo dateOfBirth')
       .populate('instituteId', 'name code')
       .populate('courses.courseId', 'name code')
       .sort({ createdAt: -1 })
+      .limit(limit)
       .lean()
     return NextResponse.json(users)
   } catch (error) {
