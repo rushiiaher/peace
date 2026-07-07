@@ -8,7 +8,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
-import { Clock, User, FileText, ChevronLeft, ChevronRight, Flag, CheckCircle2, Circle, AlertCircle } from "lucide-react"
+import { Clock, User, FileText, ChevronLeft, ChevronRight, Flag, CheckCircle2, Circle, AlertCircle, RotateCcw } from "lucide-react"
 import Loader from "@/components/ui/loader"
 
 export default function ExamPage({ params }: { params: Promise<{ id: string }> }) {
@@ -17,6 +17,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
   const [exam, setExam] = useState<any>(null)
   const [answers, setAnswers] = useState<number[]>([])
   const [markedForReview, setMarkedForReview] = useState<boolean[]>([])
+  const [visited, setVisited] = useState<boolean[]>([])
   const [currentQuestion, setCurrentQuestion] = useState(0)
   const [startTime] = useState(Date.now())
   const [studentId, setStudentId] = useState<string | null>(null)
@@ -156,6 +157,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
         setExam({ ...data, questions: shuffledQuestions })
         setAnswers(new Array(shuffledQuestions.length).fill(-1))
         setMarkedForReview(new Array(shuffledQuestions.length).fill(false))
+        setVisited(new Array(shuffledQuestions.length).fill(false))
 
         // Duration from API is in minutes, convert to seconds for the timer
         const durationInMinutes = data.duration || 60
@@ -186,6 +188,18 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
         }
       })
   }, [id, studentId])
+
+  // Mark the current question as "visited" so the navigator can distinguish
+  // visited-but-not-answered from never-visited.
+  useEffect(() => {
+    if (!exam) return
+    setVisited(prev => {
+      if (prev[currentQuestion]) return prev
+      const next = [...prev]
+      next[currentQuestion] = true
+      return next
+    })
+  }, [currentQuestion, exam])
 
   useEffect(() => {
     if (countdown !== null && countdown > 0) {
@@ -410,7 +424,9 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
   const currentQ = exam.questions?.[currentQuestion]
   const answeredCount = answers.filter(a => a !== -1).length
   const markedCount = markedForReview.filter(m => m).length
-  // const notVisitedCount = exam.questions?.length - answeredCount - markedCount // Removed unused variable
+  // Visited but not answered (red) vs never visited (gray)
+  const notAnsweredCount = exam.questions?.filter((_: any, i: number) => visited[i] && answers[i] === -1).length || 0
+  const notVisitedCount = exam.questions?.filter((_: any, i: number) => !visited[i]).length || 0
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-900 dark:to-gray-800 select-none" onContextMenu={(e) => e.preventDefault()}>
@@ -555,15 +571,17 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
               </Button>
               <Button
                 type="button"
-                variant="outline"
+                variant="secondary"
                 onClick={() => {
                   const newAnswers = [...answers]
                   newAnswers[currentQuestion] = -1
                   setAnswers(newAnswers)
                 }}
+                disabled={answers[currentQuestion] === -1}
                 size="lg"
               >
-                Clear Response
+                <RotateCcw className="w-4 h-4 mr-2" />
+                Reset Answer
               </Button>
               {currentQuestion < exam.questions?.length - 1 && (
                 <Button
@@ -649,8 +667,12 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
                   <span>Answered</span>
                 </div>
                 <div className="flex items-center gap-2 text-xs">
-                  <div className="w-6 h-6 rounded bg-red-500 flex items-center justify-center text-white font-medium">{exam.questions?.length - answeredCount}</div>
-                  <span>Not Answered</span>
+                  <div className="w-6 h-6 rounded bg-red-500 flex items-center justify-center text-white font-medium">{notAnsweredCount}</div>
+                  <span>Visited, Not Answered</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs">
+                  <div className="w-6 h-6 rounded bg-slate-300 dark:bg-slate-600 flex items-center justify-center text-slate-700 dark:text-white font-medium">{notVisitedCount}</div>
+                  <span>Not Visited</span>
                 </div>
                 <div className="flex items-center gap-2 text-xs">
                   <div className="w-6 h-6 rounded bg-violet-500 flex items-center justify-center text-white font-medium">{markedCount}</div>
@@ -667,6 +689,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
                   {exam.questions?.map((_: any, i: number) => {
                     const isAnswered = answers[i] !== -1
                     const isMarked = markedForReview[i]
+                    const isVisited = visited[i]
                     const isCurrent = i === currentQuestion
 
                     return (
@@ -681,7 +704,9 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
                               ? 'bg-green-500 text-white hover:bg-green-600'
                               : isMarked
                                 ? 'bg-violet-500 text-white hover:bg-violet-600'
-                                : 'bg-red-500 text-white hover:bg-red-600'
+                                : isVisited
+                                  ? 'bg-red-500 text-white hover:bg-red-600'
+                                  : 'bg-slate-300 dark:bg-slate-600 text-slate-700 dark:text-white hover:bg-slate-400 dark:hover:bg-slate-500'
                           }`}
                       >
                         {i + 1}
