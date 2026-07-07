@@ -46,6 +46,11 @@ const ExamSchema = new mongoose.Schema({
   multiSection: { type: Boolean, default: false },
   status: { type: String, enum: ['Scheduled', 'Active', 'Completed'], default: 'Scheduled' },
   createdAt: { type: Date, default: Date.now }
+}, {
+  // Adds/maintains `updatedAt` (and `createdAt`) automatically. `updatedAt`
+  // bumps on every save/update — including in-place reschedules — so the
+  // listing can surface the most recently changed exam first.
+  timestamps: true,
 })
 
 ExamSchema.index({ courseId: 1, instituteId: 1, type: 1 })

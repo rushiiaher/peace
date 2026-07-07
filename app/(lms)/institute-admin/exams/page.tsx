@@ -502,6 +502,13 @@ export default function InstituteExamsPage() {
 
       return reschMatch && courseMatch && statusMatch && searchMatch
     })
+      // Newest change first: rescheduled/updated exams surface at the top.
+      // updatedAt bumps on every reschedule; fall back to createdAt then date.
+      .sort((a: any, b: any) => {
+        const ta = new Date(a.updatedAt || a.createdAt || a.date).getTime()
+        const tb = new Date(b.updatedAt || b.createdAt || b.date).getTime()
+        return tb - ta
+      })
   }
 
   const isExamStarted = (exam: any) => {
