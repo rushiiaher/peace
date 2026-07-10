@@ -76,6 +76,7 @@ export async function GET(req: Request) {
         if (status) query.status = status
 
         const requests = await RescheduleRequest.find(query)
+            .populate('instituteId', 'name code')
             .populate('studentId', 'name rollNo')
             .populate('originalExamId', 'title date')
             .populate('courseId', 'name')
