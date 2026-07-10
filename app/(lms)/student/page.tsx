@@ -47,7 +47,28 @@ export default function StudentDashboard() {
       const student = users.find((u: any) => u._id === studentId)
 
       const totalCourses = student?.courses?.length || 0
-      const upcomingExams = exams.filter((e: any) => new Date(e.date) > new Date()).length
+
+      // Only show exams for the student's enrolled course(s) at their institute.
+      // Previously all exams were shown (date-filtered only), so a student saw
+      // exams for courses they aren't enrolled in (e.g. Tally for an AI student).
+      const enrolledCourseIds = new Set(
+        (student?.courses || []).map((c: any) => String(c.courseId?._id || c.courseId))
+      )
+      const studentInstituteId = String(student?.instituteId?._id || student?.instituteId || '')
+
+      const isMyExam = (e: any) => {
+        const cid = String(e.courseId?._id || e.courseId || '')
+        if (!enrolledCourseIds.has(cid)) return false
+        // Guard against same course existing across institutes.
+        const iid = String(e.instituteId?._id || e.instituteId || '')
+        return !studentInstituteId || !iid || iid === studentInstituteId
+      }
+
+      const myUpcomingExams = exams
+        .filter((e: any) => new Date(e.date) > new Date() && isMyExam(e))
+        .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime())
+
+      const upcomingExams = myUpcomingExams.length
       const avgScore = results.length > 0
         ? results.reduce((acc: number, curr: any) => acc + (curr.percentage || 0), 0) / results.length
         : 0
@@ -63,7 +84,7 @@ export default function StudentDashboard() {
 
       setCourses(student?.courses || [])
       setExamResults(results)
-      setUpcomingExamsList(exams.filter((e: any) => new Date(e.date) > new Date()).slice(0, 3))
+      setUpcomingExamsList(myUpcomingExams.slice(0, 3))
 
     } catch (error) {
       console.error('Failed to fetch dashboard data')
