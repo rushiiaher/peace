@@ -124,11 +124,26 @@ export async function POST(req: Request) {
     if (studentIds && studentIds.length > 0) {
       students = await User.find({ _id: { $in: studentIds } })
     } else {
+      // Only royalty-paid students for this course (same $elemMatch as the list API).
       students = await User.find({
         instituteId,
         role: 'student',
-        'courses.courseId': courseId
+        courses: { $elemMatch: { courseId, royaltyPaid: true } }
       })
+    }
+
+    // Authoritative payment gate: never schedule a student who has not paid the
+    // royalty for THIS course, even if the client sent their id directly. The UI
+    // filter can be bypassed; this endpoint is the source of truth.
+    const isRoyaltyPaid = (student: any) =>
+      (student.courses || []).some((c: any) =>
+        String(c.courseId) === String(courseId) && c.royaltyPaid === true
+      )
+    const unpaid = students.filter((s: any) => !isRoyaltyPaid(s))
+    if (unpaid.length > 0) {
+      return NextResponse.json({
+        error: `${unpaid.length} selected student(s) have not paid the royalty for this course and cannot be scheduled: ${unpaid.map((s: any) => s.name).join(', ')}`
+      }, { status: 400 })
     }
 
     if (students.length > availableSystems.length) {

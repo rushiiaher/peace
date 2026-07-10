@@ -79,8 +79,17 @@ export default function InstituteExamsPage() {
   const selectedBatch = batches.find(b => b._id === selectedBatchId)
   const batchStudentIds = selectedBatch?.students?.map((s: any) => s._id || s) || []
 
+  // Payment gate: student must have royaltyPaid === true on the SELECTED course
+  // entry. Backend already filters (?royaltyPaid=true); this is a defensive
+  // second check so an unpaid student can never render as eligible/selectable.
+  const isRoyaltyPaidForCourse = (student: any, courseId: string) =>
+    (student.courses || []).some((c: any) =>
+      String(c.courseId?._id || c.courseId) === String(courseId) && c.royaltyPaid === true
+    )
+
   const eligibleStudents = allCourseStudents
     .filter(s => batchStudentIds.includes(s._id))
+    .filter(s => isRoyaltyPaidForCourse(s, selectedCourseId))
     .filter(student => isStudentEligible(student, parseInt(selectedExamNumber)))
 
   // ...

@@ -16,11 +16,23 @@ export async function GET(req: Request) {
 
     const courseId = searchParams.get('courseId')
     const batchId = searchParams.get('batchId')
+    const royaltyPaid = searchParams.get('royaltyPaid') === 'true'
 
     let query: any = {}
     if (instituteId) query.instituteId = instituteId
     if (role) query.role = role
-    if (courseId) query['courses.courseId'] = courseId
+
+    // Course + payment filter. Use $elemMatch so the SAME course entry is both
+    // the requested course AND royalty-paid — otherwise dot-notation could match
+    // a paid *other* course. Previously `royaltyPaid` was ignored entirely, so
+    // unpaid students showed as eligible for exam scheduling.
+    if (courseId) {
+      const courseMatch: any = { courseId }
+      if (royaltyPaid) courseMatch.royaltyPaid = true
+      query.courses = { $elemMatch: courseMatch }
+    } else if (royaltyPaid) {
+      query['courses.royaltyPaid'] = true
+    }
 
     // Handle batchId filtering - if batchId is provided, we fetch students from that batch
     if (batchId) {
