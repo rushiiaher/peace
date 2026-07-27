@@ -11,6 +11,16 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   try {
     await connectDB()
     const { id } = await params
+
+    // ?fields=photo — photo only, no idProof/certificates/populate. The list
+    // endpoint can't ship base64 documents (multi-MB payloads time out), so
+    // photo consumers fetch them one student at a time through here.
+    if (new URL(req.url).searchParams.get('fields') === 'photo') {
+      const u = await User.findById(id).select('documents.photo').lean() as any
+      if (!u) return NextResponse.json({ error: 'User not found' }, { status: 404 })
+      return NextResponse.json({ photo: u.documents?.photo || null })
+    }
+
     const user = await User.findById(id)
       .populate('instituteId', 'name code location')
       .populate('courses.courseId', 'name code')

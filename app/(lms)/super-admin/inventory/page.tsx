@@ -455,53 +455,44 @@ export default function InventoryPage() {
             ? filteredResults.filter(s => selectedIds.includes(s._id))
             : filteredResults
 
-        console.log('=== Download Photos Clicked ===')
-        console.log('Data count:', dataToDownload.length)
-
         if (dataToDownload.length === 0) {
             toast.error('No students to download photos for')
             return
         }
 
-        const studentsWithPhotos = dataToDownload.filter((s: any) => s.documents?.photo)
-        console.log('Students with photos:', studentsWithPhotos.length)
-
-        if (studentsWithPhotos.length === 0) {
-            toast.error('No student photos available')
-            return
-        }
-
-        toast.info(`Preparing to download ${studentsWithPhotos.length} photos...`)
+        toast.info(`Preparing to download ${dataToDownload.length} photos...`)
 
         try {
-            console.log('Importing JSZip...')
             // Dynamically import JSZip
             const JSZip = (await import('jszip')).default
-            console.log('JSZip imported successfully:', !!JSZip)
             const zip = new JSZip()
 
             let successCount = 0
+            let missingStudents: string[] = []
             let failedStudents: string[] = []
             const usedFilenames = new Set<string>()
 
-            // Fetch and add each photo to ZIP
-            const photoPromises = studentsWithPhotos.map(async (s: any, index: number) => {
-                const photoUrl = s.documents?.photo
-
-                if (!photoUrl) {
-                    failedStudents.push(s.name || 'Unknown')
-                    return
-                }
-
+            // The /api/users list strips `documents` (base64 photos made the
+            // payload multi-MB and timed the function out), so fetch each
+            // student's photo on demand — 5 in flight at a time.
+            const addPhoto = async (s: any, index: number) => {
                 try {
                     // Fetch with timeout
                     const controller = new AbortController()
                     const timeoutId = setTimeout(() => controller.abort(), 15000)
-                    const response = await fetch(photoUrl, { signal: controller.signal })
+                    const response = await fetch(`/api/users/${s._id}?fields=photo`, { signal: controller.signal })
                     clearTimeout(timeoutId)
 
                     if (!response.ok) throw new Error(`HTTP ${response.status}`)
-                    const blob = await response.blob()
+                    const photoUrl = (await response.json())?.photo
+
+                    if (!photoUrl) {
+                        missingStudents.push(s.name || 'Unknown')
+                        return
+                    }
+
+                    // Stored as a data: URL — fetch decodes it to a Blob
+                    const blob = await (await fetch(photoUrl)).blob()
 
                     // Verify image type
                     if (!blob.type.startsWith('image/')) {
@@ -537,12 +528,18 @@ export default function InventoryPage() {
                     console.error(`Failed: ${s.name}`, err)
                     failedStudents.push(s.name || 'Unknown')
                 }
-            })
+            }
 
-            await Promise.all(photoPromises)
+            const queue = dataToDownload.map((s: any, index: number) => ({ s, index }))
+            await Promise.all(Array.from({ length: 5 }, async () => {
+                let next
+                while ((next = queue.shift())) await addPhoto(next.s, next.index)
+            }))
 
             if (successCount === 0) {
-                toast.error('Failed to download any photos')
+                toast.error(failedStudents.length > 0
+                    ? 'Failed to download photos'
+                    : 'Photo not available for the selected students')
                 return
             }
 
@@ -570,12 +567,16 @@ export default function InventoryPage() {
             document.body.appendChild(link)
             link.click()
             document.body.removeChild(link)
-            URL.revokeObjectURL(url)
+            // Firefox aborts the save if the blob URL is revoked in the same tick
+            setTimeout(() => URL.revokeObjectURL(url), 1000)
 
             // Show detailed result
-            if (failedStudents.length > 0) {
-                toast.warning(`Downloaded ${successCount} of ${studentsWithPhotos.length} photos. ${failedStudents.length} failed.`)
-                console.log('Failed students:', failedStudents)
+            if (failedStudents.length > 0 || missingStudents.length > 0) {
+                const parts = [`Downloaded ${successCount} of ${dataToDownload.length} photos`]
+                if (missingStudents.length > 0) parts.push(`${missingStudents.length} photo not available`)
+                if (failedStudents.length > 0) parts.push(`${failedStudents.length} failed`)
+                toast.warning(`${parts.join('. ')}.`)
+                console.log('No photo:', missingStudents, 'Failed:', failedStudents)
             } else {
                 toast.success(`Successfully downloaded all ${successCount} photos!`)
             }
