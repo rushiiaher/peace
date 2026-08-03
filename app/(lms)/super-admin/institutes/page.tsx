@@ -27,11 +27,26 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 export default function InstitutesPage() {
   const [institutes, setInstitutes] = useState<any[]>([])
   const [courses, setCourses] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [initialLoading, setInitialLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [busyCourseId, setBusyCourseId] = useState<string | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<any>(null)
+  const [deleting, setDeleting] = useState(false)
   const [coursesOpen, setCoursesOpen] = useState(false)
   const [editCourseOpen, setEditCourseOpen] = useState(false)
   const [selectedInstitute, setSelectedInstitute] = useState<any>(null)
@@ -57,7 +72,9 @@ export default function InstitutesPage() {
   }, [])
 
   const fetchInstitutes = async () => {
-    setLoading(true)
+    // Keep the current list on screen while re-fetching (search / after an action);
+    // only the very first load shows skeletons.
+    setRefreshing(true)
     try {
       const params = new URLSearchParams()
       if (debouncedSearch) params.append('search', debouncedSearch)
@@ -68,8 +85,15 @@ export default function InstitutesPage() {
     } catch (error) {
       toast.error('Failed to fetch institutes')
     } finally {
-      setLoading(false)
+      setRefreshing(false)
+      setInitialLoading(false)
     }
+  }
+
+  // Surface the server's error message instead of failing silently on !res.ok
+  const errorFrom = async (res: Response, fallback: string) => {
+    const data = await res.json().catch(() => ({}))
+    return data?.error || fallback
   }
 
   const fetchCourses = async () => {
@@ -86,23 +110,40 @@ export default function InstitutesPage() {
 
 
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this institute?')) return
-
+  const handleDelete = async () => {
+    if (!deleteTarget) return
+    setDeleting(true)
     try {
-      const res = await fetch(`/api/institutes/${id}`, { method: 'DELETE' })
+      const res = await fetch(`/api/institutes/${deleteTarget._id}`, { method: 'DELETE' })
       if (res.ok) {
-        toast.success('Institute deleted successfully')
+        toast.success(`${deleteTarget.name} deleted`)
+        setDeleteTarget(null)
         fetchInstitutes()
+      } else {
+        toast.error(await errorFrom(res, 'Failed to delete institute'))
       }
     } catch (error) {
       toast.error('Failed to delete institute')
+    } finally {
+      setDeleting(false)
     }
+  }
+
+  // Shared by both dialogs — the API accepts any dates, so guard here
+  const invalidRange = (start: any, end: any) => {
+    if (!start || !end) return false
+    return new Date(String(end)) < new Date(String(start))
   }
 
   const handleAssignCourses = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    const formData = new FormData(e.currentTarget)
+    const form = e.currentTarget
+    const formData = new FormData(form)
+    if (invalidRange(formData.get('startDate'), formData.get('endDate'))) {
+      toast.error('End date must be on or after the start date')
+      return
+    }
+    setSubmitting(true)
     try {
       const res = await fetch(`/api/institutes/${selectedInstitute._id}/courses`, {
         method: 'POST',
@@ -117,10 +158,14 @@ export default function InstitutesPage() {
         toast.success('Course assigned successfully')
         setCoursesOpen(false)
         fetchInstitutes()
-        e.currentTarget.reset()
+        form.reset()
+      } else {
+        toast.error(await errorFrom(res, 'Failed to assign course'))
       }
     } catch (error) {
       toast.error('Failed to assign course')
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -131,6 +176,11 @@ export default function InstitutesPage() {
       startDate: formData.get('startDate'),
       endDate: formData.get('endDate')
     }
+    if (invalidRange(payload.startDate, payload.endDate)) {
+      toast.error('End date must be on or after the start date')
+      return
+    }
+    setSubmitting(true)
     try {
       const res = await fetch(`/api/institutes/${selectedInstitute._id}/courses/${selectedCourseAssignment._id}`, {
         method: 'PUT',
@@ -142,15 +192,17 @@ export default function InstitutesPage() {
         setEditCourseOpen(false)
         fetchInstitutes()
       } else {
-        const error = await res.json()
-        toast.error(error.error || 'Failed to update course')
+        toast.error(await errorFrom(res, 'Failed to update course'))
       }
     } catch (error) {
       toast.error('Failed to update course')
+    } finally {
+      setSubmitting(false)
     }
   }
 
   const handleRemoveCourse = async (instituteId: string, courseAssignmentId: string) => {
+    setBusyCourseId(courseAssignmentId)
     try {
       const res = await fetch(`/api/institutes/${instituteId}/courses`, {
         method: 'DELETE',
@@ -160,11 +212,41 @@ export default function InstitutesPage() {
       if (res.ok) {
         toast.success('Course removed successfully')
         fetchInstitutes()
+      } else {
+        toast.error(await errorFrom(res, 'Failed to remove course'))
       }
     } catch (error) {
       toast.error('Failed to remove course')
+    } finally {
+      setBusyCourseId(null)
     }
   }
+
+  const handleToggleEnrollment = async (instituteId: string, courseAssignment: any) => {
+    const activating = courseAssignment.enrollmentActive === false
+    setBusyCourseId(courseAssignment._id)
+    try {
+      const res = await fetch(`/api/institutes/${instituteId}/courses/${courseAssignment._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enrollmentActive: activating })
+      })
+      if (res.ok) {
+        toast.success(activating ? 'Enrollment activated' : 'Enrollment paused')
+        fetchInstitutes()
+      } else {
+        toast.error(await errorFrom(res, 'Failed to update status'))
+      }
+    } catch (error) {
+      toast.error('Failed to update status')
+    } finally {
+      setBusyCourseId(null)
+    }
+  }
+
+  const availableCourses = courses.filter((c: any) =>
+    !selectedInstitute?.courses?.some((assignment: any) => (assignment.courseId?._id || assignment.courseId) === c._id)
+  )
 
   return (
     <div className="space-y-6">
@@ -172,36 +254,54 @@ export default function InstitutesPage() {
         <SectionHeader title="Institute Management" subtitle="Add, manage, and assign courses to institutes" />
 
         {/* Sticky Search & Actions Bar */}
-        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur py-4 border-b flex flex-col sm:flex-row gap-4 justify-between items-center transition-all">
+        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur py-4 border-b flex flex-col sm:flex-row gap-4 justify-between sm:items-center transition-all">
           <div className="relative w-full sm:w-96">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
+              aria-label="Search institutes"
               placeholder="Search by name, city or code..."
-              className="pl-9 bg-secondary/50 border-border/50 focus:bg-background transition-colors"
+              className="pl-9 pr-9 bg-secondary/50 border-border/50 focus:bg-background transition-colors"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
+            {refreshing && !initialLoading && (
+              <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-muted-foreground" />
+            )}
+            {!refreshing && searchQuery && (
+              <button
+                type="button"
+                aria-label="Clear search"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
 
-          <Button asChild className="gap-2 shrink-0 shadow-lg shadow-primary/20">
-            <Link href="/super-admin/institutes/add">
-              <Plus className="w-4 h-4" />
-              Add Institute
-            </Link>
-          </Button>
+          <div className="flex items-center gap-4 shrink-0">
+            {!initialLoading && (
+              <p className="text-sm text-muted-foreground whitespace-nowrap" aria-live="polite">
+                {institutes.length} institute{institutes.length === 1 ? '' : 's'}
+              </p>
+            )}
+            <Button asChild className="gap-2 shadow-lg shadow-primary/20">
+              <Link href="/super-admin/institutes/add">
+                <Plus className="w-4 h-4" />
+                Add Institute
+              </Link>
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* Loading State */}
-      {loading && (
+      {initialLoading ? (
         <div className="grid gap-4 animate-pulse">
           {[1, 2, 3].map(i => (
             <div key={i} className="h-32 bg-muted rounded-xl"></div>
           ))}
         </div>
-      )}
-
-      {!loading && institutes.length === 0 ? (
+      ) : institutes.length === 0 ? (
         <div className="text-center py-20 bg-muted/20 rounded-xl border border-dashed">
           <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
             <Building2 className="w-8 h-8 text-muted-foreground" />
@@ -210,14 +310,21 @@ export default function InstitutesPage() {
           <p className="text-muted-foreground max-w-sm mx-auto mb-6">
             {searchQuery ? `No matches for "${searchQuery}"` : "Get started by adding your first institute."}
           </p>
-          {searchQuery && (
+          {searchQuery ? (
             <Button variant="outline" onClick={() => setSearchQuery('')}>
               Clear Search
+            </Button>
+          ) : (
+            <Button asChild className="gap-2">
+              <Link href="/super-admin/institutes/add">
+                <Plus className="w-4 h-4" />
+                Add Institute
+              </Link>
             </Button>
           )}
         </div>
       ) : (
-        <div className="grid gap-4">
+        <div className={`grid gap-4 transition-opacity ${refreshing ? 'opacity-60' : ''}`} aria-busy={refreshing}>
           {institutes.map((inst: any) => (
             <Card key={inst._id} className="group hover:shadow-lg transition-all duration-300 border-border/60 hover:border-primary/20">
               <CardHeader className="pb-4 relative">
@@ -238,7 +345,7 @@ export default function InstitutesPage() {
 
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
+                      <Button variant="ghost" size="icon" aria-label={`Actions for ${inst.name}`} className="h-8 w-8 text-muted-foreground hover:text-foreground">
                         <MoreVertical className="w-4 h-4" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -255,7 +362,7 @@ export default function InstitutesPage() {
                         Assign Courses
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10" onClick={() => handleDelete(inst._id)}>
+                      <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10" onClick={() => setDeleteTarget(inst)}>
                         <Trash2 className="w-4 h-4 mr-2" />
                         Delete Institute
                       </DropdownMenuItem>
@@ -316,31 +423,22 @@ export default function InstitutesPage() {
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover/item:opacity-100 transition-opacity">
+                          {/* focus-within keeps the cluster visible for keyboard users */}
+                          <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover/item:opacity-100 sm:group-focus-within/item:opacity-100 transition-opacity">
                             <TooltipProvider delayDuration={0}>
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <Button
                                     size="icon"
                                     variant="ghost"
+                                    disabled={busyCourseId === courseAssignment._id}
+                                    aria-label={courseAssignment.enrollmentActive === false ? 'Activate enrollment' : 'Pause enrollment'}
                                     className={`h-7 w-7 ${courseAssignment.enrollmentActive === false ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-orange-600 hover:text-orange-700 hover:bg-orange-50'}`}
-                                    onClick={async () => {
-                                      try {
-                                        const res = await fetch(`/api/institutes/${inst._id}/courses/${courseAssignment._id}`, {
-                                          method: 'PUT',
-                                          headers: { 'Content-Type': 'application/json' },
-                                          body: JSON.stringify({ enrollmentActive: !courseAssignment.enrollmentActive })
-                                        })
-                                        if (res.ok) {
-                                          toast.success(courseAssignment.enrollmentActive === false ? 'Enrollment activated' : 'Enrollment deactivated')
-                                          fetchInstitutes()
-                                        }
-                                      } catch (error) {
-                                        toast.error('Failed to update status')
-                                      }
-                                    }}
+                                    onClick={() => handleToggleEnrollment(inst._id, courseAssignment)}
                                   >
-                                    {courseAssignment.enrollmentActive === false ? <PlayCircle className="w-4 h-4" /> : <PauseCircle className="w-4 h-4" />}
+                                    {busyCourseId === courseAssignment._id
+                                      ? <Loader2 className="w-4 h-4 animate-spin" />
+                                      : courseAssignment.enrollmentActive === false ? <PlayCircle className="w-4 h-4" /> : <PauseCircle className="w-4 h-4" />}
                                   </Button>
                                 </TooltipTrigger>
                                 <TooltipContent side="top">{courseAssignment.enrollmentActive === false ? 'Activate Enrollment' : 'Pause Enrollment'}</TooltipContent>
@@ -351,6 +449,7 @@ export default function InstitutesPage() {
                                   <Button
                                     size="icon"
                                     variant="ghost"
+                                    aria-label={`Edit dates for ${courseAssignment.courseId?.name || 'course'}`}
                                     className="h-7 w-7 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                                     onClick={() => {
                                       setSelectedInstitute(inst)
@@ -369,6 +468,8 @@ export default function InstitutesPage() {
                                   <Button
                                     size="icon"
                                     variant="ghost"
+                                    disabled={busyCourseId === courseAssignment._id}
+                                    aria-label={`Remove ${courseAssignment.courseId?.name || 'course'}`}
                                     className="h-7 w-7 text-red-500 hover:text-red-700 hover:bg-red-50"
                                     onClick={() => handleRemoveCourse(inst._id, courseAssignment._id)}
                                   >
@@ -406,20 +507,23 @@ export default function InstitutesPage() {
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="courseId">Select Course</Label>
-                <Select name="courseId" required>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select course to assign" />
+                <Select name="courseId" required disabled={availableCourses.length === 0}>
+                  <SelectTrigger id="courseId">
+                    <SelectValue placeholder={availableCourses.length === 0 ? 'No courses left to assign' : 'Select course to assign'} />
                   </SelectTrigger>
                   <SelectContent>
-                    {courses
-                      .filter((c: any) => !selectedInstitute?.courses?.some((assignment: any) => (assignment.courseId?._id || assignment.courseId) === c._id))
-                      .map((course: any) => (
-                        <SelectItem key={course._id} value={course._id}>
-                          {course.name} ({course.code})
-                        </SelectItem>
-                      ))}
+                    {availableCourses.map((course: any) => (
+                      <SelectItem key={course._id} value={course._id}>
+                        {course.name} ({course.code})
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
+                {availableCourses.length === 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    Every course is already assigned to this institute.
+                  </p>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -435,7 +539,10 @@ export default function InstitutesPage() {
 
             <div className="flex justify-end gap-3 pt-4 border-t mt-6">
               <Button type="button" variant="outline" onClick={() => setCoursesOpen(false)}>Cancel</Button>
-              <Button type="submit">Assign Course</Button>
+              <Button type="submit" disabled={submitting || availableCourses.length === 0}>
+                {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                {submitting ? 'Assigning...' : 'Assign Course'}
+              </Button>
             </div>
           </form>
         </DialogContent>
@@ -483,12 +590,36 @@ export default function InstitutesPage() {
 
               <div className="flex justify-end gap-3 pt-4 border-t mt-6">
                 <Button type="button" variant="outline" onClick={() => setEditCourseOpen(false)}>Cancel</Button>
-                <Button type="submit">Update Course</Button>
+                <Button type="submit" disabled={submitting}>
+                  {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                  {submitting ? 'Saving...' : 'Update Course'}
+                </Button>
               </div>
             </form>
           )}
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {deleteTarget?.name}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This removes the institute ({deleteTarget?.code}) along with its course assignments. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); handleDelete() }}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? 'Deleting...' : 'Delete Institute'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

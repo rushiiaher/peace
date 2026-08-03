@@ -23,11 +23,14 @@ export async function GET(req: Request) {
       ]
     }
 
-    const limit = parseInt(searchParams.get('limit') || '50')
+    // No default cap: every consumer (institute/user/inventory management) needs the
+    // full institute list, otherwise institutes past the cap are invisible everywhere
+    // except server-side search.
+    const limit = parseInt(searchParams.get('limit') || '0') || 0
 
     const institutes = await Institute.find(query)
       .populate('courses.courseId')
-      .sort({ createdAt: -1 })
+      .sort({ createdAt: -1, _id: -1 }) // _id tiebreak: legacy docs without createdAt still order sanely
       .limit(limit)
 
     // Optimized: Calculate pending payments in ONE query
@@ -60,7 +63,9 @@ export async function GET(req: Request) {
       pendingPayment: paymentMap[inst._id.toString()] || 0
     }))
 
-    return NextResponse.json(institutesWithPayment)
+    return NextResponse.json(institutesWithPayment, {
+      headers: { 'Cache-Control': 'no-store' }
+    })
   } catch (error) {
     console.error('Error fetching institutes:', error)
     return NextResponse.json([], { status: 200 })
