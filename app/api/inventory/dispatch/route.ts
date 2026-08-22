@@ -19,7 +19,7 @@ export async function POST(req: Request) {
 
             // Bulk update Users
             // Update the element in 'courses' array where courseId matches
-            await User.updateMany(
+            const result = await User.updateMany(
                 {
                     _id: { $in: ids },
                     'courses.courseId': courseId
@@ -28,10 +28,10 @@ export async function POST(req: Request) {
                     $set: { 'courses.$.booksDispatched': true }
                 }
             )
-            return NextResponse.json({ message: 'Books marked as dispatched' })
+            return NextResponse.json({ message: 'Books marked as dispatched', matchedCount: result.matchedCount })
 
         } else if (type === 'certificate') {
-            await FinalResult.updateMany(
+            const result = await FinalResult.updateMany(
                 { _id: { $in: ids } },
                 {
                     $set: {
@@ -40,7 +40,7 @@ export async function POST(req: Request) {
                     }
                 }
             )
-            return NextResponse.json({ message: 'Certificates marked as dispatched' })
+            return NextResponse.json({ message: 'Certificates marked as dispatched', matchedCount: result.matchedCount })
         }
 
         return NextResponse.json({ error: 'Invalid type' }, { status: 400 })

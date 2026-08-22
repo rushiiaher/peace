@@ -237,23 +237,39 @@ export default function InventoryPage() {
     const handleDispatch = async (type: 'book' | 'certificate') => {
         if (selectedIds.length === 0) return toast.error("Select items to dispatch")
 
+        // Certificates live in FinalResult, but the table rows (and therefore
+        // selectedIds) are keyed by student _id so CSV/photo export can use them.
+        // Map to the FinalResult _id the dispatch API actually matches on.
+        const ids = type === 'certificate'
+            ? filteredResults.filter((s: any) => selectedIds.includes(s._id) && s.resultId).map((s: any) => s.resultId)
+            : selectedIds
+
+        if (ids.length === 0) return toast.error("Selected students have no final result to dispatch")
+
         try {
             const res = await fetch('/api/inventory/dispatch', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     type,
-                    ids: selectedIds,
+                    ids,
                     courseId: selectedCourse
                 })
             })
 
-            if (res.ok) {
-                toast.success(`Marked as Dispatched`)
-                setSelectedIds([])
-                if (type === 'book') fetchBookData()
-                else fetchCertificateData()
+            const data = await res.json().catch(() => ({}))
+
+            if (!res.ok) {
+                return toast.error(data.error || 'Failed to update status')
             }
+            if (data.matchedCount === 0) {
+                return toast.error('Nothing was updated - records not found')
+            }
+
+            toast.success(`Marked ${data.matchedCount ?? ids.length} as Dispatched`)
+            setSelectedIds([])
+            if (type === 'book') fetchBookData()
+            else fetchCertificateData()
         } catch (error) {
             toast.error("Failed to update status")
         }
