@@ -54,8 +54,9 @@ export default function BatchesPage() {
   const fetchData = async () => {
     try {
       const [batchesRes, usersRes, coursesRes] = await Promise.all([
-        fetch(`/api/batches?instituteId=${instituteId}&limit=100`),
-        fetch(`/api/users?role=student&instituteId=${instituteId}&limit=100`),
+        // ponytail: 100 cap hid batches/students past the newest 100; raised. Paginate if institutes outgrow this.
+        fetch(`/api/batches?instituteId=${instituteId}&limit=1000`),
+        fetch(`/api/users?role=student&instituteId=${instituteId}&limit=5000`),
         fetch(`/api/institutes/${instituteId}/courses`)
       ])
 
