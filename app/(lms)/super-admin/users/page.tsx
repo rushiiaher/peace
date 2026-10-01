@@ -37,7 +37,9 @@ export default function UsersPage() {
 
   const fetchUsers = async () => {
     try {
-      const res = await fetch('/api/users?limit=1000')
+      // ponytail: whole list loaded client-side; 1000 cut off older admins once students passed it.
+      // 5000 = API cap. Past that, move to server-side role tabs/pagination.
+      const res = await fetch('/api/users?limit=5000')
       if (!res.ok) {
         throw new Error('Failed to fetch users')
       }
