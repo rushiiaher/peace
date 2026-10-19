@@ -19,6 +19,7 @@ export default function SuperAdminDashboard() {
   const fetchDashboardData = async () => {
     try {
       const res = await fetch('/api/dashboard')
+      if (!res.ok) throw new Error('Dashboard request failed')
       const dashboardData = await res.json()
       setData(dashboardData)
     } catch (error) {

@@ -24,6 +24,7 @@ export default function QBPracticePage({ params }: { params: Promise<{ id: strin
     fetch(`/api/question-banks/${id}`)
       .then(res => res.json())
       .then(setQb)
+      .catch(() => setQb({}))
   }, [id])
 
   const handleStepAnswer = (answerIdx: number) => {
@@ -52,6 +53,8 @@ export default function QBPracticePage({ params }: { params: Promise<{ id: strin
   const score = answers.filter((a, i) => a === qb?.questions[i]?.correctAnswer).length
 
   if (!qb) return <div className="flex h-[calc(100vh-140px)] items-center justify-center"><Loader /></div>
+  // API error ({ error }) or empty bank: nothing to practice
+  if (!Array.isArray(qb.questions) || qb.questions.length === 0) return <div className="p-6 text-muted-foreground">This question bank is unavailable or has no questions.</div>
 
   if (mode === 'select') {
     return (

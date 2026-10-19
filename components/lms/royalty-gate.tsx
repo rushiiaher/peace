@@ -15,11 +15,10 @@ export function RoyaltyGate({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         const checkAccess = () => {
             // Only run for students
-            const userStr = localStorage.getItem('user')
-            if (!userStr) return
-
-            const user = JSON.parse(userStr)
-            if (user.role !== 'student') {
+            let user: any = null
+            try { user = JSON.parse(localStorage.getItem('user') || 'null') } catch { }
+            // No/corrupt user: let the page's own auth guard handle it instead of rendering nothing forever
+            if (!user || user.role !== 'student') {
                 setChecking(false)
                 return
             }

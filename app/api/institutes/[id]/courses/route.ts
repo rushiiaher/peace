@@ -9,7 +9,8 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
     await connectDB()
     const institute = await Institute.findById(params.id).populate('courses.courseId')
     if (!institute) return NextResponse.json({ error: 'Institute not found' }, { status: 404 })
-    return NextResponse.json(institute.courses)
+    // Skip assignments whose course was deleted (populate yields null)
+    return NextResponse.json(institute.toJSON().courses.filter((c: any) => c.courseId))
   } catch (error) {
     return NextResponse.json({ error: 'Failed to fetch courses' }, { status: 500 })
   }

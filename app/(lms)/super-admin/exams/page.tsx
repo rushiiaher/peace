@@ -116,7 +116,7 @@ export default function SuperAdminExamsPage() {
     try {
       const res = await fetch('/api/question-banks')
       const data = await res.json()
-      setQbs(data)
+      setQbs(Array.isArray(data) ? data : [])
     } catch (error) {
       toast.error('Failed to fetch question banks')
     }

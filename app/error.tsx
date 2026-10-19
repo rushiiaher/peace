@@ -10,18 +10,20 @@ export default function Error({
     error: Error & { digest?: string }
     reset: () => void
 }) {
+    // Webpack says "Loading chunk"/ChunkLoadError; Turbopack (Next 16 default) says "Failed to load chunk".
+    // Happens when a new deployment invalidates the chunks an open tab still references.
+    const isChunkError = /ChunkLoadError|Loading chunk|Failed to load chunk/i.test(`${error.name} ${error.message}`)
+
     useEffect(() => {
-        // Log the error to an error reporting service
         console.error('Unhandled app error:', error)
 
-        // Automatically reload the page if a ChunkLoadError occurs
-        // This usually happens when a new deployment invalidates cached chunks
-        if (error.message.includes('ChunkLoadError') || error.message.includes('Loading chunk')) {
+        // Reload to pick up the new deployment, at most once per 10s so a genuinely missing chunk can't loop.
+        const last = Number(sessionStorage.getItem('chunk-reload-at') || 0)
+        if (isChunkError && Date.now() - last > 10000) {
+            sessionStorage.setItem('chunk-reload-at', String(Date.now()))
             window.location.reload()
         }
-    }, [error])
-
-    const isChunkError = error.message.includes('ChunkLoadError') || error.message.includes('Loading chunk')
+    }, [error, isChunkError])
 
     return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 text-center px-4">

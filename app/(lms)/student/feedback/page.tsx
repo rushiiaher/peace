@@ -42,8 +42,9 @@ export default function StudentFeedbackPage() {
         fetch(`/api/feedback-forms?instituteId=${instituteId}`),
         fetch(`/api/feedback-responses?studentId=${studentId}`)
       ])
-      setForms(await formsRes.json())
-      setMyResponses(await responsesRes.json())
+      const [formsData, responsesData] = await Promise.all([formsRes.json(), responsesRes.json()])
+      setForms(Array.isArray(formsData) ? formsData : [])
+      setMyResponses(Array.isArray(responsesData) ? responsesData : [])
     } catch (error) {
       toast.error('Failed to fetch data')
     } finally {

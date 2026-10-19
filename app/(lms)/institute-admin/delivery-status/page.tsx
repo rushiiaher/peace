@@ -54,7 +54,8 @@ export default function DeliveryStatusPage() {
             return
         }
         const res = await fetch(`/api/batches?instituteId=${instituteId}&courseId=${selectedCourse}`)
-        setBatches(await res.json())
+        const data = await res.json()
+        setBatches(Array.isArray(data) ? data : [])
     }
 
     // Cascade: Reset batch when course changes

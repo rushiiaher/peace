@@ -73,7 +73,7 @@ export default function FeesPage() {
       const batchesData = await batchesRes.json()
 
       setStudents(Array.isArray(studentsData) ? studentsData : [])
-      setPayments(paymentsData)
+      setPayments(Array.isArray(paymentsData) ? paymentsData : [])
       setInstitute(instituteData)
       setCourses(instituteData.courses || [])
       setBatches(Array.isArray(batchesData) ? batchesData : [])

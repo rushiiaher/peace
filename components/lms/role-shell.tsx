@@ -29,9 +29,9 @@ export default function RoleShell({
   const [user, setUser] = React.useState<any>(null)
 
   React.useEffect(() => {
-    const userData = localStorage.getItem('user')
-    if (userData) {
-      const parsed = JSON.parse(userData)
+    let parsed: any = null
+    try { parsed = JSON.parse(localStorage.getItem('user') || 'null') } catch { }
+    if (parsed) {
       setUser(parsed)
 
       // Fetch fresh data for photo

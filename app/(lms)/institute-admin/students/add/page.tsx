@@ -31,7 +31,7 @@ export default function AddStudentPage() {
         try {
             const res = await fetch(`/api/institutes/${instId}/courses`)
             const data = await res.json()
-            setCourses(data)
+            setCourses(Array.isArray(data) ? data : [])
         } catch (error) {
             toast.error('Failed to fetch courses')
         }
@@ -41,7 +41,7 @@ export default function AddStudentPage() {
         try {
             const res = await fetch(`/api/batches?instituteId=${instId}`)
             const data = await res.json()
-            setBatches(data)
+            setBatches(Array.isArray(data) ? data : [])
         } catch (error) {
             toast.error('Failed to fetch batches')
         }

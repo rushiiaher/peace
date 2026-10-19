@@ -50,7 +50,7 @@ export default function AccountingPage() {
       ])
 
       setTransactions(Array.isArray(txnData) ? txnData : [])
-      setStats(statsData)
+      if (statsRes.ok) setStats(statsData)
       setInstitutes(Array.isArray(instData) ? instData : [])
     } catch (error) {
       toast.error('Failed to fetch data')

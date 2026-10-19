@@ -15,9 +15,9 @@ import Link from 'next/link'
 export default function ScheduleExamPage() {
     const router = useRouter()
     const [loading, setLoading] = useState(false)
-    const [courses, setCourses] = useState([])
-    const [institutes, setInstitutes] = useState([])
-    const [qbs, setQbs] = useState([])
+    const [courses, setCourses] = useState<any[]>([])
+    const [institutes, setInstitutes] = useState<any[]>([])
+    const [qbs, setQbs] = useState<any[]>([])
 
     const [selectedCourseId, setSelectedCourseId] = useState('')
     const [selectedQBs, setSelectedQBs] = useState<string[]>([])
@@ -44,17 +44,20 @@ export default function ScheduleExamPage() {
 
     const fetchCourses = async () => {
         const res = await fetch('/api/courses')
-        setCourses(await res.json())
+        const data = await res.json()
+        setCourses(Array.isArray(data) ? data : [])
     }
 
     const fetchInstitutes = async () => {
         const res = await fetch('/api/institutes')
-        setInstitutes(await res.json())
+        const data = await res.json()
+        setInstitutes(Array.isArray(data) ? data : [])
     }
 
     const fetchQBs = async () => {
         const res = await fetch('/api/question-banks')
-        setQbs(await res.json())
+        const data = await res.json()
+        setQbs(Array.isArray(data) ? data : [])
     }
 
     const handleCreateFinalExam = async (e: React.FormEvent<HTMLFormElement>) => {

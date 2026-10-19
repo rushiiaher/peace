@@ -140,7 +140,8 @@ export default function BatchResultEntryPage() {
 
             // 4. Fetch Existing Results
             const resultsRes = await fetch(`/api/final-results?batchId=${batchId}&instituteId=${instituteId}`)
-            const resultsData = await resultsRes.json()
+            const resultsJson = await resultsRes.json()
+            const resultsData = Array.isArray(resultsJson) ? resultsJson : []
             setExistingResults(resultsData)
 
             // 4.1 Fetch Institute Data for Certificate

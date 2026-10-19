@@ -31,7 +31,8 @@ export default function EnquiryList() {
   const fetchEnquiries = async () => {
     try {
       const res = await fetch(`/api/enquiries?instituteId=${instituteId}`)
-      const data = await res.json()
+      const json = await res.json()
+      const data = Array.isArray(json) ? json : []
       setEnquiries(data)
       await fetchHandlers(data)
     } catch (error) {

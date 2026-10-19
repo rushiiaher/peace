@@ -14,7 +14,10 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
       .populate('instituteId', 'name')
       .populate('systemAssignments.studentId', 'name email rollNo')
     if (!exam) return NextResponse.json({ error: 'Exam not found' }, { status: 404 })
-    return NextResponse.json(exam)
+    // Skip assignments for deleted students (populate yields null)
+    const json: any = exam.toJSON()
+    json.systemAssignments = (json.systemAssignments || []).filter((a: any) => a.studentId)
+    return NextResponse.json(json)
   } catch (error) {
     return NextResponse.json({ error: 'Failed to fetch exam' }, { status: 500 })
   }

@@ -15,7 +15,7 @@ import { toast } from "sonner"
 import { Users, UserCog, IndianRupee, Plus, Edit, Trash2, Mail, Phone, MapPin, Briefcase, GraduationCap, Calendar, Monitor, Shield, User } from "lucide-react"
 
 export default function StaffPage() {
-  const [staff, setStaff] = useState([])
+  const [staff, setStaff] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [addOpen, setAddOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
@@ -41,7 +41,7 @@ export default function StaffPage() {
     try {
       const res = await fetch(`/api/staff?instituteId=${instituteId}`)
       const data = await res.json()
-      setStaff(data)
+      setStaff(Array.isArray(data) ? data : [])
     } catch (error) {
       toast.error('Failed to fetch staff')
     } finally {

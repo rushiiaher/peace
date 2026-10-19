@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner"
 
 export default function BatchesPage() {
-  const [batches, setBatches] = useState([])
+  const [batches, setBatches] = useState<any[]>([])
   const [courses, setCourses] = useState([])
   const [institutes, setInstitutes] = useState([])
   const [loading, setLoading] = useState(true)
@@ -30,7 +30,7 @@ export default function BatchesPage() {
     try {
       const res = await fetch('/api/batches')
       const data = await res.json()
-      setBatches(data)
+      setBatches(Array.isArray(data) ? data : [])
     } catch (error) {
       toast.error('Failed to fetch batches')
     } finally {

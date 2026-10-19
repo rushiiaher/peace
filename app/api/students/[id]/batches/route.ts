@@ -7,7 +7,8 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
   try {
     await connectDB()
     const batches = await Batch.find({ students: params.id }).populate('courseId')
-    return NextResponse.json(batches)
+    // Skip batches whose course was deleted (populate yields null)
+    return NextResponse.json(batches.filter((b: any) => b.courseId))
   } catch (error: any) {
     return NextResponse.json({ error: error.message || 'Failed to fetch batches' }, { status: 500 })
   }

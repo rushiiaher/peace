@@ -32,7 +32,7 @@ export default function ExamReviewPage() {
     if (!result) return <div className="p-6 text-center">Result not found.</div>
 
     const questions = result.examId?.questions || []
-    const studentAnswers = result.answers || []
+    const studentAnswers = Array.isArray(result.answers) ? result.answers : []
 
     return (
         <div className="space-y-6 max-w-4xl mx-auto pb-20">
@@ -83,9 +83,9 @@ export default function ExamReviewPage() {
                     // Handle both old format (array of indices) and new format (array of {questionId, selectedOption})
                     let studentChoice
 
-                    if (studentAnswers.length > 0 && typeof studentAnswers[0] === 'object' && studentAnswers[0].questionId) {
+                    if (studentAnswers.some((ans: any) => ans?.questionId)) {
                         // NEW FORMAT: Find the answer for this question by questionId
-                        const answerObj = studentAnswers.find((ans: any) => ans.questionId === q._id.toString())
+                        const answerObj = studentAnswers.find((ans: any) => ans?.questionId === q._id.toString())
                         studentChoice = answerObj ? answerObj.selectedOption : null
                     } else {
                         // OLD FORMAT: Use index-based lookup
